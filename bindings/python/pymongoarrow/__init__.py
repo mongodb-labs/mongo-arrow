@@ -26,6 +26,6 @@ except ImportError:
 
 
 if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
-    raise RuntimeError(
+    raise ImportError(
         "Expected libbson version {} or greater, found {}}".format(
             _MIN_LIBBSON_VERSION, libbson_version))

@@ -31,5 +31,8 @@ MANIFEST
 *.c
 *.cpp
 
+# PyCharm
+*.idea/
+
 # Sphinx documentation
 docs/_build/
