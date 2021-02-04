@@ -12,20 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pymongoarrow.libbson.version import __version__ as libbson_version
-from pymongoarrow.version import __version__, _MIN_LIBBSON_VERSION
+# Cython compiler directives
+# cython: language_level=3
+# distutils: language=c
+from pymongoarrow.libbson cimport bson_get_version
 
 
-try:
-    from pkg_resources import parse_version as _parse_version
-except ImportError:
-    from distutils.version import LooseVersion as _LooseVersion
-
-    def _parse_version(version):
-        return _LooseVersion(version)
-
-
-if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
-    raise RuntimeError(
-        "Expected libbson version {} or greater, found {}}".format(
-            _MIN_LIBBSON_VERSION, libbson_version))
+__version__ = bson_get_version().decode('utf-8')

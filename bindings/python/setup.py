@@ -1,35 +1,30 @@
-from setuptools import find_packages, setup, Extension
+from setuptools import find_packages, setup
 from Cython.Build import cythonize
 
 import os
 
 
-LIBBSON_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'pymongoarrow/libbson/lib')
+def get_pymongoarrow_version():
+    """Single source the version."""
+    version_file = os.path.realpath(os.path.join(
+        os.path.dirname(__file__), 'pymongoarrow', 'version.py'))
+    version = {}
+    with open(version_file) as fp:
+        exec(fp.read(), version)
+    return version['__version__']
 
 
-EXT_MODULES = [
-    Extension('pymongoarrow.bson_util',
-              sources=['pymongoarrow/bson_util.pyx'],
-              language='c++',
-              include_dirs=['pymongoarrow/libbson/include'],
-              libraries=['bson-1.0'],
-              library_dirs=[LIBBSON_PATH],
-              extra_link_args=['-Wl,-rpath,' + LIBBSON_PATH])
-]
+def get_extension_modules():
+    modules = cythonize(['pymongoarrow/*.pyx',
+                         'pymongoarrow/libbson/*.pyx'])
+    for module in modules:
+        module.libraries.append('bson-1.0')
+    return modules
 
-# ext_modules = cythonize("pymongoarrow/*.pyx")
-# for module in ext_modules:
-#     module.include_dirs.append('pymongoarrow/libbson/include')
-#     module.libraries.append('bson-1.0')
-#     module.library_dirs.append('pymongoarrow/libbson/lib')
-
-
-# import ipdb; ipdb.set_trace()
 
 setup(
     name='pymongoarrow',
-    packages=['pymongoarrow'],
-    # ext_modules=ext_modules,
-    ext_modules=cythonize(EXT_MODULES),
+    version=get_pymongoarrow_version(),
+    packages=find_packages(),
+    ext_modules=get_extension_modules(),
     setup_requires=['cython >= 0.29'])
