@@ -22,7 +22,7 @@ import numpy as np
 
 cdef class Int32Builder(_Weakrefable):
     cdef:
-        unique_ptr[CInt32Builder] builder
+        shared_ptr[CInt32Builder] builder
 
     def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
@@ -53,10 +53,13 @@ cdef class Int32Builder(_Weakrefable):
     def __len__(self):
         return self.builder.get().length()
 
+    cdef shared_ptr[CInt32Builder] unwrap(self):
+        return self.builder
+
 
 cdef class Int64Builder(_Weakrefable):
     cdef:
-        unique_ptr[CInt64Builder] builder
+        shared_ptr[CInt64Builder] builder
 
     def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
@@ -86,3 +89,6 @@ cdef class Int64Builder(_Weakrefable):
 
     def __len__(self):
         return self.builder.get().length()
+
+    cdef shared_ptr[CInt64Builder] unwrap(self):
+        return self.builder
