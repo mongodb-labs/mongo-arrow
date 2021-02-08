@@ -49,13 +49,14 @@ class TestInt64Builder(TestCase, TestIntBuildersMixin):
 
 
 class TestDate64Builder(TestCase):
-    def test_simple(self):
+    def test_default_unit(self):
         # Check default unit
         builder = DatetimeBuilder()
         self.assertEqual(builder.unit, timestamp('ms'))
 
-        # Milliseconds
-        datetimes = [datetime(1970, 1, 1) + timedelta(milliseconds=k*100)
+    def _test_simple(self, tstamp_units, kwarg_name):
+        builder = DatetimeBuilder(dtype=timestamp(tstamp_units))
+        datetimes = [datetime(1970, 1, 1) + timedelta(**{kwarg_name: k*100})
                      for k in range(5)]
         builder.append(datetimes[0])
         builder.append_values(datetimes[1:])
@@ -66,7 +67,13 @@ class TestDate64Builder(TestCase):
         self.assertEqual(arr.null_count, 1)
         self.assertEqual(len(arr), len(datetimes) + 1)
         self.assertEqual(arr.to_pylist(), datetimes + [None])
-        self.assertEqual(arr.type, timestamp('ms'))
+        self.assertEqual(arr.type, timestamp(tstamp_units))
+
+    def test_simple(self):
+        # milliseconds
+        self._test_simple('ms', 'milliseconds')
+        # seconds
+        self._test_simple('s', 'seconds')
 
     def test_unsupported_units(self):
         with self.assertRaises(ValueError):
