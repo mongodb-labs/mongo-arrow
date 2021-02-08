@@ -15,12 +15,30 @@
 # Cython compiler directives
 # distutils: language=c++
 # cython: language_level=3
+from datetime import datetime
+
 from pyarrow.lib cimport *
 
 import numpy as np
+from pyarrow import timestamp
+
+from pymongoarrow.utils import datetime_to_int64
 
 
-cdef class Int32Builder(_Weakrefable):
+cdef class _BuilderBase:
+    def append_values(self, values):
+        for value in values:
+            self.append(value)
+
+    @property
+    def null_count(self):
+        return self.builder.get().null_count()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+
+cdef class Int32Builder(_BuilderBase):
     cdef:
         shared_ptr[CInt32Builder] builder
 
@@ -36,28 +54,17 @@ cdef class Int32Builder(_Weakrefable):
         else:
             raise TypeError('Int32Builder only accepts integer objects')
 
-    def append_values(self, values):
-        for value in values:
-            self.append(value)
-
     def finish(self):
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
-    @property
-    def null_count(self):
-        return self.builder.get().null_count()
-
-    def __len__(self):
-        return self.builder.get().length()
-
     cdef shared_ptr[CInt32Builder] unwrap(self):
         return self.builder
 
 
-cdef class Int64Builder(_Weakrefable):
+cdef class Int64Builder(_BuilderBase):
     cdef:
         shared_ptr[CInt64Builder] builder
 
@@ -73,9 +80,66 @@ cdef class Int64Builder(_Weakrefable):
         else:
             raise TypeError('Int64Builder only accepts integer objects')
 
-    def append_values(self, values):
-        for value in values:
-            self.append(value)
+    def finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CInt64Builder] unwrap(self):
+        return self.builder
+
+
+cdef class DoubleBuilder(_BuilderBase):
+    cdef:
+        shared_ptr[CDoubleBuilder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CDoubleBuilder(pool))
+
+    def append(self, value):
+        if value is None or value is np.nan:
+            self.builder.get().AppendNull()
+        elif isinstance(value, (int, float)):
+            self.builder.get().Append(value)
+        else:
+            raise TypeError('DoubleBuilder only accepts floats and ints')
+
+    def finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CDoubleBuilder] unwrap(self):
+        return self.builder
+
+
+cdef class DatetimeBuilder(_BuilderBase):
+    cdef:
+        shared_ptr[CTimestampBuilder] builder
+        TimestampType dtype
+
+    def __cinit__(self, TimestampType dtype=timestamp('ms'),
+                  MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        if dtype in (timestamp('us'), timestamp('ns')):
+            raise ValueError("Microsecond resolution temporal type is not "
+                             "suitable for use with MongoDB's UTC datetime "
+                             "type which has resolution of milliseconds.")
+        self.dtype = dtype
+        self.builder.reset(new CTimestampBuilder(
+            pyarrow_unwrap_data_type(self.dtype), pool))
+
+    def append(self, value):
+        if value is None or value is np.nan:
+            self.builder.get().AppendNull()
+        elif isinstance(value, datetime):
+            self.builder.get().Append(
+                datetime_to_int64(value, self.dtype))
+        else:
+            raise TypeError('TimestampBuilder only accepts datetime objects')
 
     def finish(self):
         cdef shared_ptr[CArray] out
@@ -84,11 +148,8 @@ cdef class Int64Builder(_Weakrefable):
         return pyarrow_wrap_array(out)
 
     @property
-    def null_count(self):
-        return self.builder.get().null_count()
+    def unit(self):
+        return self.dtype
 
-    def __len__(self):
-        return self.builder.get().length()
-
-    cdef shared_ptr[CInt64Builder] unwrap(self):
+    cdef shared_ptr[CTimestampBuilder] unwrap(self):
         return self.builder

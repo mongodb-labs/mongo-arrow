@@ -29,6 +29,8 @@ def get_extension_modules():
         module.include_dirs.append(pa.get_include())
         module.libraries.extend(pa.get_libraries())
         module.library_dirs.extend(pa.get_library_dirs())
+
+        # https://arrow.apache.org/docs/python/extending.html#example
         if os.name == 'posix':
             module.extra_compile_args.append('-std=c++11')
 
@@ -40,4 +42,5 @@ setup(
     version=get_pymongoarrow_version(),
     packages=find_packages(),
     ext_modules=get_extension_modules(),
+    install_requires=['pyarrow >= 3', 'pymongo >= 3.11,<4'],
     setup_requires=['cython >= 0.29', 'pyarrow >= 3', 'numpy >= 1.16.6'])
