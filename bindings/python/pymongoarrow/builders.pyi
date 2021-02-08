@@ -15,15 +15,6 @@
 # Cython compiler directives
 # distutils: language=c++
 # cython: language_level=3
-from datetime import datetime
-
-from pyarrow.lib cimport *
-
-import numpy as np
-from pyarrow import timestamp
-
-from pymongoarrow.utils import datetime_to_int64
-
 
 cdef class _BuilderBase:
     def append_values(self, values):
@@ -135,7 +126,7 @@ cdef class DatetimeBuilder(_BuilderBase):
     def append(self, value):
         if value is None or value is np.nan:
             self.builder.get().AppendNull()
-        elif isinstance(value, datetime):
+        elif isinstance(value, datetime.datetime):
             self.builder.get().Append(
                 datetime_to_int64(value, self.dtype))
         else:

@@ -16,7 +16,7 @@ from unittest import TestCase
 
 from pyarrow import Array, timestamp, int32, int64
 
-from pymongoarrow.builder import (
+from pymongoarrow.lib import (
     DatetimeBuilder, DoubleBuilder, Int32Builder, Int64Builder)
 
 
