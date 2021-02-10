@@ -112,9 +112,13 @@ cdef extern from "bson/bson.h":
 
     double bson_iter_double(const bson_iter_t *iter)
 
+    double bson_iter_as_double(const bson_iter_t *iter)
+
     int32_t bson_iter_int32(const bson_iter_t *iter)
 
     int64_t bson_iter_int64(const bson_iter_t *iter)
+
+    int64_t bson_iter_as_int64(const bson_iter_t *iter)
 
 
 # bson_reader_t API

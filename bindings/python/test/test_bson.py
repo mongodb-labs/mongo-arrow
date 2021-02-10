@@ -53,3 +53,5 @@ class TestBSONUtil(TestCase):
 
         for key, value in table_dict.items():
             self.assertEqual(value, self.as_dict[key])
+
+        print(table.to_pandas())

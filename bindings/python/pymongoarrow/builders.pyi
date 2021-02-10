@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Cython compiler directives
-# distutils: language=c++
-# cython: language_level=3
 
 cdef class _BuilderBase:
     def append_values(self, values):
