@@ -30,12 +30,7 @@ class Schema:
     def _normalize_mapping(mapping):
         normed = {}
         for fname, ftype in mapping.items():
-            normalized_type = _normalize_typeid(ftype)
-            if normalized_type is None:
-                raise ValueError(
-                    "Unsupported type identifier {} for field {}".format(
-                        ftype, fname))
-            normed[fname] = normalized_type
+            normed[fname] = _normalize_typeid(ftype, fname)
         return normed
 
     @staticmethod
@@ -47,10 +42,10 @@ class Schema:
             except ValueError:
                 raise ValueError('schema must be a sequence of 2-tuples')
             else:
-                normalized_type = _normalize_typeid(ftype)
-                if normalized_type is None:
-                    raise ValueError(
-                        "Unsupported type identifier {} for field {}".format(
-                            ftype, fname))
-                normed[fname] = normalized_type
+                normed[fname] = _normalize_typeid(ftype, fname)
         return normed
+
+    def __eq__(self, other):
+        if isinstance(other, type(self)):
+            return self.typemap == other.typemap
+        return False

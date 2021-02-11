@@ -28,9 +28,6 @@ class _BsonArrowTypes(enum.Enum):
     int64 = 4
 
 
-_SUPPORTED_TYPE_IDENTIFIERS = (Int64, float, int, datetime)
-
-
 _TYPE_NORMALIZER_FACTORY = {
     Int64: lambda _: int64(),
     float: lambda _: float64(),
@@ -48,17 +45,19 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
 
 
 def _is_typeid_supported(typeid):
-    return typeid in _SUPPORTED_TYPE_IDENTIFIERS
+    return typeid in _TYPE_NORMALIZER_FACTORY
 
 
-def _normalize_typeid(typeid):
+def _normalize_typeid(typeid, field_name):
     if isinstance(typeid, _ArrowDataType):
         return typeid
     elif _is_typeid_supported(typeid):
         normalizer = _TYPE_NORMALIZER_FACTORY[typeid]
         return normalizer(typeid)
     else:
-        return None
+        raise ValueError(
+            "Unsupported type identifier {} for field {}".format(
+                typeid, field_name))
 
 
 def _get_internal_typemap(typemap):

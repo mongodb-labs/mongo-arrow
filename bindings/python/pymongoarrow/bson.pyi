@@ -64,3 +64,5 @@ def process_bson_stream(bson_stream, context):
                 else:
                     raise TypeError('unknown ftype {}'.format(ftype))
         doc = bson_reader_read(stream_reader, &reached_eof)
+
+    bson_reader_destroy(stream_reader)

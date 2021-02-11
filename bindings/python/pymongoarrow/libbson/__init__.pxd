@@ -127,6 +127,8 @@ cdef extern from "bson/bson.h":
 
     const bson_t * bson_reader_read(bson_reader_t *reader, bint *reached_eof)
 
+    void bson_reader_destroy(bson_reader_t *reader)
+
 
 # runtime version checking API
 cdef extern from "bson/bson.h":

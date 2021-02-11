@@ -25,13 +25,29 @@ _TYPE_TO_BUILDER_CLS = {
 
 
 class PyMongoArrowContext:
+    """A context for converting BSON-formatted data to an Arrow Table."""
     def __init__(self, schema, builder_map, type_map):
+        """Initialize the context.
+
+        :Parameters:
+          - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+          - `builder_map`: Mapping of utf-8-encoded field names to
+            :class:`~pymongoarrow.builders._BuilderBase` instances.
+          - `type_map`: Mapping of utf-8-encoded field names to
+            :class:`~pymongoarrow.types._BsonArrowTypes` instances.
+        """
         self.schema = schema
         self.builder_map = builder_map
         self.type_map = type_map
 
     @classmethod
     def from_schema(cls, schema):
+        """Initialize the context from a :class:`~pymongoarrow.schema.Schema`
+        instance.
+
+        :Parameters:
+          - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+        """
         builder_map = {}
         type_map = {}
         str_type_map = _get_internal_typemap(schema.typemap)
