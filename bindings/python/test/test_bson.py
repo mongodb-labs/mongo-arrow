@@ -22,17 +22,22 @@ from pymongoarrow.schema import Schema
 from pymongoarrow.types import int32, int64
 
 
-class TestBSONUtil(TestCase):
+class TestBsonToArrowConversionBase(TestCase):
     def setUp(self):
         self.schema = Schema({'_id': int32(),
                               'data': int64()})
         self.context = PyMongoArrowContext.from_schema(
             self.schema)
 
-    def _run_test(self, doclist, as_dict):
+    @staticmethod
+    def _generate_payload(doclist):
         payload = b''
         for doc in doclist:
             payload += encode(doc)
+        return payload
+
+    def _run_test(self, doclist, as_dict):
+        payload = type(self)._generate_payload(doclist)
 
         process_bson_stream(payload, self.context)
         table = self.context.finish()
@@ -41,6 +46,8 @@ class TestBSONUtil(TestCase):
         for key, value in table_dict.items():
             self.assertEqual(value, as_dict[key])
 
+
+class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
     def test_simple(self):
         docs = [{'_id': 1, 'data': 10},
                 {'_id': 2, 'data': 20},
@@ -63,3 +70,25 @@ class TestBSONUtil(TestCase):
             'data': [10, 20, None, 40, None]}
 
         self._run_test(docs, as_dict)
+
+
+class TestInvalidBsonToArrowConversion(TestBsonToArrowConversionBase):
+    @staticmethod
+    def _generate_payload(doclist):
+        payload = b''
+        for doc in doclist:
+            payload += encode(doc)
+        return payload[:-2]
+
+    def test_simple(self):
+        docs = [{'_id': 1, 'data': 10},
+                {'_id': 2, 'data': 20},
+                {'_id': 3, 'data': 30},
+                {'_id': 4, 'data': 40}]
+        as_dict = {
+            '_id': [1, 2, 3, 4],
+            'data': [10, 20, 30, 40]}
+
+        with self.assertRaisesRegex(
+                RuntimeError, "Could not read BSON stream"):
+            self._run_test(docs, as_dict)

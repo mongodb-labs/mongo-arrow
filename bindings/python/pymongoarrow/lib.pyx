@@ -28,6 +28,7 @@ from pymongoarrow.types import _BsonArrowTypes
 
 # Cython imports
 from cpython cimport PyBytes_Size, object
+from cython.operator cimport dereference
 from libcpp cimport bool as cbool
 from libcpp.map cimport map
 from libcpp.string cimport string

@@ -13,12 +13,19 @@
 # limitations under the License.
 
 
+cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader, cbool* reached_eof) except *:
+    cdef const bson_t* doc = bson_reader_read(stream_reader, reached_eof)
+    if doc == NULL and dereference(reached_eof) == False:
+        raise RuntimeError("Could not read BSON stream")
+    return doc
+
+
 def process_bson_stream(bson_stream, context):
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
     cdef size_t length = <size_t>PyBytes_Size(bson_stream)
     cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
     cdef cbool reached_eof = False
-    cdef const bson_t * doc = bson_reader_read(stream_reader, & reached_eof)
+    cdef const bson_t * doc = bson_reader_read_safe(stream_reader, &reached_eof)
     cdef bson_iter_t doc_iter
     cdef const char* key
     cdef bson_type_t value_t
@@ -69,6 +76,6 @@ def process_bson_stream(bson_stream, context):
             for _, builder in builder_map.items():
                 if len(builder) != count:
                     builder.append_null()
-            doc = bson_reader_read(stream_reader, &reached_eof)
+            doc = bson_reader_read_safe(stream_reader, &reached_eof)
     finally:
         bson_reader_destroy(stream_reader)
