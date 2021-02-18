@@ -26,43 +26,44 @@ def process_bson_stream(bson_stream, context):
     builder_map = context.builder_map
     type_map = context.type_map
 
-    while doc != NULL:
-        if not bson_iter_init(&doc_iter, doc):
-            raise RuntimeError
-        while bson_iter_next(&doc_iter):
-            key = bson_iter_key(&doc_iter)
-            if key in builder_map:
-                builder = builder_map[key]
-                ftype = type_map[key]
-                value_t = bson_iter_type(&doc_iter)
-                if ftype == _BsonArrowTypes.int32:
-                    if value_t == BSON_TYPE_INT32:
-                        builder.append(bson_iter_int32(&doc_iter))
+    try:
+        while doc != NULL:
+            if not bson_iter_init(&doc_iter, doc):
+                raise RuntimeError
+            while bson_iter_next(&doc_iter):
+                key = bson_iter_key(&doc_iter)
+                if key in builder_map:
+                    builder = builder_map[key]
+                    ftype = type_map[key]
+                    value_t = bson_iter_type(&doc_iter)
+                    if ftype == _BsonArrowTypes.int32:
+                        if value_t == BSON_TYPE_INT32:
+                            builder.append(bson_iter_int32(&doc_iter))
+                        else:
+                            builder.append_null()
+                    elif ftype == _BsonArrowTypes.int64:
+                        if (value_t == BSON_TYPE_INT64 or
+                                value_t == BSON_TYPE_BOOL or
+                                value_t == BSON_TYPE_DOUBLE or
+                                value_t == BSON_TYPE_INT32):
+                            builder.append(bson_iter_as_int64(&doc_iter))
+                        else:
+                            builder.append_null()
+                    elif ftype == _BsonArrowTypes.double:
+                        if (value_t == BSON_TYPE_DOUBLE or
+                                value_t == BSON_TYPE_BOOL or
+                                value_t == BSON_TYPE_INT32 or
+                                value_t == BSON_TYPE_INT64):
+                            builder.append(bson_iter_as_double(&doc_iter))
+                        else:
+                            builder.append_null()
+                    elif ftype == _BsonArrowTypes.datetime:
+                        if value_t == BSON_TYPE_DATE_TIME:
+                            builder.append(bson_iter_date_time(&doc_iter))
+                        else:
+                            builder.append_null()
                     else:
-                        builder.append_null()
-                elif ftype == _BsonArrowTypes.int64:
-                    if (value_t == BSON_TYPE_INT64 or
-                            value_t == BSON_TYPE_BOOL or
-                            value_t == BSON_TYPE_DOUBLE or
-                            value_t == BSON_TYPE_INT32):
-                        builder.append(bson_iter_as_int64(&doc_iter))
-                    else:
-                        builder.append_null()
-                elif ftype == _BsonArrowTypes.double:
-                    if (value_t == BSON_TYPE_DOUBLE or
-                            value_t == BSON_TYPE_BOOL or
-                            value_t == BSON_TYPE_INT32 or
-                            value_t == BSON_TYPE_INT64):
-                        builder.append(bson_iter_as_double(&doc_iter))
-                    else:
-                        builder.append_null()
-                elif ftype == _BsonArrowTypes.datetime:
-                    if value_t == BSON_TYPE_DATE_TIME:
-                        builder.append(bson_iter_date_time(&doc_iter))
-                    else:
-                        builder.append_null()
-                else:
-                    raise TypeError('unknown ftype {}'.format(ftype))
-        doc = bson_reader_read(stream_reader, &reached_eof)
-
-    bson_reader_destroy(stream_reader)
+                        raise TypeError('unknown ftype {}'.format(ftype))
+            doc = bson_reader_read(stream_reader, &reached_eof)
+    finally:
+        bson_reader_destroy(stream_reader)

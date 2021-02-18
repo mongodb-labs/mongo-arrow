@@ -58,14 +58,6 @@ class PyMongoArrowContext:
             type_map[encoded_fname] = ftype
         return cls(schema, builder_map, type_map)
 
-    def __contains__(self, item):
-        if isinstance(item, str):
-            return item in self.schema
-        elif isinstance(item, bytes):
-            return item in self.builder_map
-        else:
-            raise TypeError('context keys are either str or bytes type')
-
     def finish(self):
         arrays = []
         names = []
