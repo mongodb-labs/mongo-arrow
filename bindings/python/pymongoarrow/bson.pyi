@@ -22,6 +22,7 @@ def process_bson_stream(bson_stream, context):
     cdef bson_iter_t doc_iter
     cdef const char* key
     cdef bson_type_t value_t
+    cdef uint64_t count = 0
 
     builder_map = context.builder_map
     type_map = context.type_map
@@ -64,6 +65,10 @@ def process_bson_stream(bson_stream, context):
                             builder.append_null()
                     else:
                         raise TypeError('unknown ftype {}'.format(ftype))
+            count += 1
+            for _, builder in builder_map.items():
+                if len(builder) != count:
+                    builder.append_null()
             doc = bson_reader_read(stream_reader, &reached_eof)
     finally:
         bson_reader_destroy(stream_reader)

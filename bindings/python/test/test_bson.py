@@ -23,33 +23,43 @@ from pymongoarrow.types import int32, int64
 
 
 class TestBSONUtil(TestCase):
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
+        self.schema = Schema({'_id': int32(),
+                              'data': int64()})
+        self.context = PyMongoArrowContext.from_schema(
+            self.schema)
+
+    def _run_test(self, doclist, as_dict):
+        payload = b''
+        for doc in doclist:
+            payload += encode(doc)
+
+        process_bson_stream(payload, self.context)
+        table = self.context.finish()
+        table_dict = table.to_pydict()
+
+        for key, value in table_dict.items():
+            self.assertEqual(value, as_dict[key])
+
+    def test_simple(self):
         docs = [{'_id': 1, 'data': 10},
                 {'_id': 2, 'data': 20},
                 {'_id': 3, 'data': 30},
                 {'_id': 4, 'data': 40}]
+        as_dict = {
+            '_id': [1, 2, 3, 4],
+            'data': [10, 20, 30, 40]}
 
-        payload = b''
-        for doc in docs:
-            payload += encode(doc)
+        self._run_test(docs, as_dict)
 
-        as_dict = defaultdict(list)
-        for doc in docs:
-            for key, value in doc.items():
-                as_dict[key].append(value)
+    def test_with_nulls(self):
+        docs = [{'_id': 1, 'data': 10},
+                {'_id': 2, 'data': 20},
+                {'_id': 3},
+                {'_id': 4, 'data': 40},
+                {'foo': 1}]
+        as_dict = {
+            '_id': [1, 2, 3, 4, None],
+            'data': [10, 20, None, 40, None]}
 
-        cls.as_dict = as_dict
-        cls.docs = docs
-        cls.schema = Schema({'_id': int32(),
-                             'data': int64()})
-        cls.bson_stream = payload
-
-    def test_simple(self):
-        context = PyMongoArrowContext.from_schema(self.schema)
-        process_bson_stream(self.bson_stream, context)
-        table = context.finish()
-        table_dict = table.to_pydict()
-
-        for key, value in table_dict.items():
-            self.assertEqual(value, self.as_dict[key])
+        self._run_test(docs, as_dict)
