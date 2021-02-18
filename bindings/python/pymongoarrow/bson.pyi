@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader, cbool* reached_eof) except *:
+cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader, cbool* reached_eof) except? NULL:
     cdef const bson_t* doc = bson_reader_read(stream_reader, reached_eof)
     if doc == NULL and dereference(reached_eof) == False:
         raise RuntimeError("Could not read BSON stream")
