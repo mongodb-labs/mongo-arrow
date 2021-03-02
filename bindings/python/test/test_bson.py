@@ -64,10 +64,11 @@ class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
                 {'_id': 2, 'data': 20},
                 {'_id': 3},
                 {'_id': 4, 'data': 40},
-                {'foo': 1}]
+                {'foo': 1},
+                {}]
         as_dict = {
-            '_id': [1, 2, 3, 4, None],
-            'data': [10, 20, None, 40, None]}
+            '_id': [1, 2, 3, 4, None, None],
+            'data': [10, 20, None, 40, None, None]}
 
         self._run_test(docs, as_dict)
 
