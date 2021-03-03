@@ -40,7 +40,7 @@ def process_bson_stream(bson_stream, context):
             if doc == NULL:
                 break
             if not bson_iter_init(&doc_iter, doc):
-                raise RuntimeError
+                raise RuntimeError("Could not read BSON document")
             while bson_iter_next(&doc_iter):
                 key = bson_iter_key(&doc_iter)
                 if key in builder_map:

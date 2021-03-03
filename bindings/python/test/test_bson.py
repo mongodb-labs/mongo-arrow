@@ -76,10 +76,8 @@ class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
 class TestInvalidBsonToArrowConversion(TestBsonToArrowConversionBase):
     @staticmethod
     def _generate_payload(doclist):
-        payload = b''
-        for doc in doclist:
-            payload += encode(doc)
-        return payload[:-2]
+        return TestBsonToArrowConversionBase._generate_payload(
+            doclist)[:-2]
 
     def test_simple(self):
         docs = [{'_id': 1, 'data': 10},
