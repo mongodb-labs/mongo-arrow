@@ -17,15 +17,27 @@
 # cython: language_level=3
 
 # Stdlib imports
+import copy
 import datetime
+import enum
 
 # Python imports
 import numpy as np
 from pyarrow import timestamp
+from pymongoarrow.types import _BsonArrowTypes
 
 # Cython imports
+from cpython cimport PyBytes_Size, object
+from cython.operator cimport dereference
+from libcpp cimport bool as cbool
+from libcpp.map cimport map
+from libcpp.string cimport string
 from pyarrow.lib cimport *
+from pymongoarrow.libbson cimport *
 
+
+# BSON tools
+include "bson.pyi"
 
 # Utilities
 include "utils.pyi"

@@ -12,30 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Cython compiler directives
-# distutils: language=c++
-# cython: language_level=3
 
-cdef class _BuilderBase:
+cdef class _ArrayBuilderBase:
     def append_values(self, values):
         for value in values:
             self.append(value)
 
-    @property
-    def null_count(self):
-        return self.builder.get().null_count()
 
-    def __len__(self):
-        return self.builder.get().length()
-
-
-cdef class Int32Builder(_BuilderBase):
+cdef class Int32Builder(_ArrayBuilderBase):
     cdef:
         shared_ptr[CInt32Builder] builder
 
     def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CInt32Builder(pool))
+
+    def append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
 
     def append(self, value):
         if value is None or value is np.nan:
@@ -55,13 +51,19 @@ cdef class Int32Builder(_BuilderBase):
         return self.builder
 
 
-cdef class Int64Builder(_BuilderBase):
+cdef class Int64Builder(_ArrayBuilderBase):
     cdef:
         shared_ptr[CInt64Builder] builder
 
     def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CInt64Builder(pool))
+
+    def append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
 
     def append(self, value):
         if value is None or value is np.nan:
@@ -81,13 +83,19 @@ cdef class Int64Builder(_BuilderBase):
         return self.builder
 
 
-cdef class DoubleBuilder(_BuilderBase):
+cdef class DoubleBuilder(_ArrayBuilderBase):
     cdef:
         shared_ptr[CDoubleBuilder] builder
 
     def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CDoubleBuilder(pool))
+
+    def append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
 
     def append(self, value):
         if value is None or value is np.nan:
@@ -107,7 +115,7 @@ cdef class DoubleBuilder(_BuilderBase):
         return self.builder
 
 
-cdef class DatetimeBuilder(_BuilderBase):
+cdef class DatetimeBuilder(_ArrayBuilderBase):
     cdef:
         shared_ptr[CTimestampBuilder] builder
         TimestampType dtype
@@ -122,6 +130,12 @@ cdef class DatetimeBuilder(_BuilderBase):
         self.dtype = dtype
         self.builder.reset(new CTimestampBuilder(
             pyarrow_unwrap_data_type(self.dtype), pool))
+
+    def append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
 
     def append(self, value):
         if value is None or value is np.nan:

@@ -112,9 +112,13 @@ cdef extern from "bson/bson.h":
 
     double bson_iter_double(const bson_iter_t *iter)
 
+    double bson_iter_as_double(const bson_iter_t *iter)
+
     int32_t bson_iter_int32(const bson_iter_t *iter)
 
     int64_t bson_iter_int64(const bson_iter_t *iter)
+
+    int64_t bson_iter_as_int64(const bson_iter_t *iter)
 
 
 # bson_reader_t API
@@ -122,6 +126,8 @@ cdef extern from "bson/bson.h":
     bson_reader_t * bson_reader_new_from_data(const uint8_t *data, size_t length)
 
     const bson_t * bson_reader_read(bson_reader_t *reader, bint *reached_eof)
+
+    void bson_reader_destroy(bson_reader_t *reader)
 
 
 # runtime version checking API
