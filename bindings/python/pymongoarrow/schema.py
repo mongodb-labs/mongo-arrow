@@ -68,6 +68,12 @@ class Schema:
                 normed[fname] = _normalize_typeid(ftype, fname)
         return normed
 
+    def _get_projection(self):
+        projection = {'_id': False}
+        for fname, _ in self.typemap.items():
+            projection[fname] = True
+        return projection
+
     def __eq__(self, other):
         if isinstance(other, type(self)):
             return self.typemap == other.typemap

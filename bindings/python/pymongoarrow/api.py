@@ -24,7 +24,7 @@ __all__ = [
 ]
 
 
-def find_arrow_all(collection, query, schema, **kwargs):
+def find_arrow_all(collection, query, *, schema, **kwargs):
     """Method that returns the results of a find query as a
     :class:`pyarrow.Table` instance.
 
@@ -42,12 +42,13 @@ def find_arrow_all(collection, query, schema, **kwargs):
     """
     context = PyMongoArrowContext.from_schema(schema)
 
-    for opt in ('session', 'cursor_type', 'session'):
+    for opt in ('session', 'cursor_type', 'session', 'projection'):
         if kwargs.pop(opt, None):
             warnings.warn(
                 'Ignoring option {!r} as it is not supported by '
                 'PyMongoArrow'.format(opt), UserWarning, stacklevel=2)
 
+    kwargs['projection'] = schema._get_projection()
     raw_batch_cursor = collection.find_raw_batches(
         query, **kwargs)
     for batch in raw_batch_cursor:

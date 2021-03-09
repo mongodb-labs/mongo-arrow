@@ -24,22 +24,26 @@ from test import client_context
 from test.utils import WhiteListEventListener
 
 
-class TestArrow(unittest.TestCase):
+class TestFindArrow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not client_context.connected:
             raise unittest.SkipTest("cannot connect to MongoDB")
-        cls.listener = WhiteListEventListener('getMore')
-        cls.client = client_context.get_client(event_listeners=[cls.listener])
+        cls.find_listener = WhiteListEventListener('find')
+        cls.getmore_listener = WhiteListEventListener('getMore')
+        cls.client = client_context.get_client(
+            event_listeners=[cls.getmore_listener, cls.find_listener])
         cls.schema = Schema({'_id': int32(), 'data': int64()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             'test', write_concern=WriteConcern(w='majority'))
 
     def _run_test(self, doclist, query, expectation, **kwargs):
         self.coll.drop()
-        self.listener.reset()
+        self.find_listener.reset()
+        self.getmore_listener.reset()
         self.coll.insert_many(doclist)
-        table = find_arrow_all(self.coll, query, self.schema, **kwargs)
+        table = find_arrow_all(self.coll, query,
+                               schema=self.schema, **kwargs)
         self.assertEqual(table, expectation)
 
     def test_simple(self):
@@ -58,6 +62,19 @@ class TestArrow(unittest.TestCase):
             ArrowSchema([('_id', int32()), ('data', int64())]))
         self._run_test(docs, {'_id': {'$gt': 2}}, expected,
                        sort=[('_id', DESCENDING)])
+
+    def test_extra_fields(self):
+        docs = [{'_id': 1, 'data': 10, 'data2': 1},
+                {'_id': 2, 'data': 20, 'data2': 2},
+                {'_id': 3, 'data': 30, 'data2': 3},
+                {'_id': 4, 'data': 40, 'data2': 4}]
+
+        expected = Table.from_pydict(
+            {'_id': [1, 2, 3, 4], 'data': [10, 20, 30, 40]},
+            ArrowSchema([('_id', int32()), ('data', int64())]))
+        self._run_test(docs, {}, expected)
+        find_cmd = self.find_listener.results['started'][-1].command
+        self.assertEqual(find_cmd['projection'], {'_id': True, 'data': True})
 
     def test_multiple_batches(self):
         docs = [{'_id': 1, 'data': 10},
@@ -78,7 +95,7 @@ class TestArrow(unittest.TestCase):
                 {'_id': [1, 2, 3, 4], 'data': [10, 20, 30, 40]},
                 ArrowSchema([('_id', int32()), ('data', int64())]))
             self._run_test(docs, {}, expected)
-        self.assertGreater(len(self.listener.results['started']), 1)
+        self.assertGreater(len(self.getmore_listener.results['started']), 1)
 
     def test_with_nulls(self):
         docs = [{'_id': 1, 'data': 10},
@@ -90,13 +107,3 @@ class TestArrow(unittest.TestCase):
             {'_id': [1, 2, 3, 4], 'data': [10, None, 30, None]},
             ArrowSchema([('_id', int32()), ('data', int64())]))
         self._run_test(docs, {}, expected)
-
-    def test_with_project(self):
-        docs = [{'_id': 1, 'data': 10},
-                {'_id': 2, 'data': 20},
-                {'_id': 3, 'data': 30},
-                {'_id': 4, 'data': 40}]
-        expected = Table.from_pydict(
-            {'_id': [None] * 4, 'data': [10, 20, 30, 40]},
-            ArrowSchema([('_id', int32()), ('data', int64())]))
-        self._run_test(docs, {}, expected, projection={'_id': False})
