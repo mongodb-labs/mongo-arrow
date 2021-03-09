@@ -15,11 +15,19 @@ import pymongo
 
 
 class ClientContext:
-    def __init__(self, host='localhost', port=27017):
+    def __init__(self, host='localhost', port=27017, client_kwargs=None):
         self.host = host
         self.port = port
+        self.client_kwargs = client_kwargs or {}
         self.client = None
         self.connected = False
+
+    def get_client(self, **args):
+        kwargs = {'directConnection': False}
+        kwargs.update(self.client_kwargs)
+        kwargs.update(args)
+        return pymongo.MongoClient(
+            self.host, self.port, **kwargs)
 
     def init(self):
         client = pymongo.MongoClient(self.host, self.port,
@@ -35,8 +43,7 @@ class ClientContext:
             client.close()
 
         if self.connected:
-            self.client = pymongo.MongoClient(
-                self.host, self.port, directConnection=False)
+            self.client = self.get_client()
 
 
 client_context = ClientContext()
