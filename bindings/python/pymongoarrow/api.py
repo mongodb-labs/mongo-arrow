@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import warnings
+
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
@@ -39,8 +41,16 @@ def find_arrow_all(collection, query, schema, **kwargs):
       An instance of class:`pyarrow.Table`.
     """
     context = PyMongoArrowContext.from_schema(schema)
+
+    for opt in ('session', 'cursor_type', 'session'):
+        if kwargs.pop(opt, None):
+            warnings.warn(
+                'Ignoring option {!r} as it is not supported by '
+                'PyMongoArrow'.format(opt), UserWarning, stacklevel=2)
+
     raw_batch_cursor = collection.find_raw_batches(
         query, **kwargs)
     for batch in raw_batch_cursor:
         process_bson_stream(batch, context)
+
     return context.finish()

@@ -13,9 +13,11 @@
 # limitations under the License.
 # from datetime import datetime, timedelta
 import unittest
+import unittest.mock as mock
 
 from pyarrow import int32, int64, schema as ArrowSchema, Table
 from pymongo import WriteConcern, DESCENDING
+import pymongo
 from pymongoarrow.api import find_arrow_all, Schema
 
 from test import client_context
@@ -63,10 +65,19 @@ class TestArrow(unittest.TestCase):
                 {'_id': 3, 'data': 30},
                 {'_id': 4, 'data': 40}]
 
-        expected = Table.from_pydict(
-            {'_id': [1, 2, 3, 4], 'data': [10, 20, 30, 40]},
-            ArrowSchema([('_id', int32()), ('data', int64())]))
-        self._run_test(docs, {}, expected, batch_size=2)
+        orig_method = self.coll.find_raw_batches
+
+        def mock_find_raw_batches(*args, **kwargs):
+            kwargs['batch_size'] = 2
+            return orig_method(*args, **kwargs)
+
+        with mock.patch.object(
+                pymongo.collection.Collection, 'find_raw_batches',
+                wraps=mock_find_raw_batches):
+            expected = Table.from_pydict(
+                {'_id': [1, 2, 3, 4], 'data': [10, 20, 30, 40]},
+                ArrowSchema([('_id', int32()), ('data', int64())]))
+            self._run_test(docs, {}, expected)
         self.assertGreater(len(self.listener.results['started']), 1)
 
     def test_with_nulls(self):
