@@ -11,3 +11,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pymongo
+
+
+class ClientContext:
+    def __init__(self, host='localhost', port=27017):
+        self.host = host
+        self.port = port
+        self.client = None
+        self.connected = False
+
+    def init(self):
+        client = pymongo.MongoClient(self.host, self.port,
+                                     serverSelectionTimeoutMS=5000)
+        try:
+            client.admin.command('isMaster')
+        except (pymongo.errors.OperationFailure,
+                pymongo.errors.ConnectionFailure):
+            self.connected = False
+        else:
+            self.connected = True
+        finally:
+            client.close()
+
+        if self.connected:
+            self.client = pymongo.MongoClient(
+                self.host, self.port, directConnection=False)
+
+
+client_context = ClientContext()
+client_context.init()

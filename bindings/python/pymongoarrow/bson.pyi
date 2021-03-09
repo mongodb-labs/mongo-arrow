@@ -34,6 +34,11 @@ def process_bson_stream(bson_stream, context):
     builder_map = context.builder_map
     type_map = context.type_map
 
+    # initialize count to current length of builders
+    for _, builder in builder_map.items():
+        count = len(builder)
+        break
+
     try:
         while True:
             doc = bson_reader_read_safe(stream_reader)
