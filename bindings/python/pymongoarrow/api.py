@@ -15,13 +15,6 @@ import warnings
 
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
-from pymongoarrow.schema import Schema
-
-
-__all__ = [
-    'find_arrow_all',
-    'Schema'
-]
 
 
 def find_arrow_all(collection, query, *, schema, **kwargs):
@@ -51,6 +44,43 @@ def find_arrow_all(collection, query, *, schema, **kwargs):
     kwargs['projection'] = schema._get_projection()
     raw_batch_cursor = collection.find_raw_batches(
         query, **kwargs)
+    for batch in raw_batch_cursor:
+        process_bson_stream(batch, context)
+
+    return context.finish()
+
+
+def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
+    """Method that returns the results of an aggregation pipeline as a
+    :class:`pyarrow.Table` instance.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``aggregate`` operation.
+      - `pipeline`: A list of aggregation pipeline stages.
+      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+
+    Additional keyword-arguments passed to this method will be passed
+    directly to the underlying ``aggregate`` operation.
+
+    :Returns:
+      An instance of class:`pyarrow.Table`.
+    """
+    context = PyMongoArrowContext.from_schema(schema)
+
+    if pipeline and ("$out" in pipeline[-1] or "$merge" in pipeline[-1]):
+        raise RuntimeError(
+            "Aggregation pipelines containing a '$out' or '$merge' stage are "
+            "not supported by PyMongoArrow")
+
+    for opt in ('batchSize', 'useCursor'):
+        if kwargs.pop(opt, None):
+            warnings.warn(
+                'Ignoring option {!r} as it is not supported by '
+                'PyMongoArrow'.format(opt), UserWarning, stacklevel=2)
+
+    pipeline.append({"$project": schema._get_projection()})
+    raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
     for batch in raw_batch_cursor:
         process_bson_stream(batch, context)
 
