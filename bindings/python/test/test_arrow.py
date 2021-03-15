@@ -93,6 +93,10 @@ class TestExplicitArrowApi(unittest.TestCase):
                                sort=[('data', DESCENDING)])
         self.assertEqual(table, expected)
 
+        find_cmd = self.cmd_listener.results['started'][0]
+        self.assertEqual(find_cmd.command_name, 'find')
+        self.assertFalse(find_cmd.command['projection']['_id'])
+
     def test_aggregate_simple(self):
         expected = Table.from_pydict(
             {'_id': [1, 2, 3, 4], 'data': [20, 40, 60, None]},
@@ -135,3 +139,11 @@ class TestExplicitArrowApi(unittest.TestCase):
         table = aggregate_arrow_all(
             self.coll, [{"$sort": {'data': DESCENDING}}], schema=schema)
         self.assertEqual(table, expected)
+
+        agg_cmd = self.cmd_listener.results['started'][0]
+        self.assertEqual(agg_cmd.command_name, 'aggregate')
+        for stage in agg_cmd.command['pipeline']:
+            op_name = next(iter(stage))
+            if op_name == '$project':
+                self.assertFalse(stage[op_name]['_id'])
+                break
