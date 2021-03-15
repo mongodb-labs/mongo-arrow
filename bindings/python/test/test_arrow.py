@@ -21,7 +21,7 @@ import pymongo
 from pymongoarrow import aggregate_arrow_all, find_arrow_all, Schema
 
 from test import client_context
-from test.utils import WhiteListEventListener
+from test.utils import AllowListEventListener
 
 
 class TestExplicitArrowApi(unittest.TestCase):
@@ -29,8 +29,8 @@ class TestExplicitArrowApi(unittest.TestCase):
     def setUpClass(cls):
         if not client_context.connected:
             raise unittest.SkipTest("cannot connect to MongoDB")
-        cls.cmd_listener = WhiteListEventListener('find', 'aggregate')
-        cls.getmore_listener = WhiteListEventListener('getMore')
+        cls.cmd_listener = AllowListEventListener('find', 'aggregate')
+        cls.getmore_listener = AllowListEventListener('getMore')
         cls.client = client_context.get_client(
             event_listeners=[cls.getmore_listener, cls.cmd_listener])
         cls.schema = Schema({'_id': int32(), 'data': int64()})
@@ -83,6 +83,16 @@ class TestExplicitArrowApi(unittest.TestCase):
             self.assertEqual(table, expected)
         self.assertGreater(len(self.getmore_listener.results['started']), 1)
 
+    def test_find_omits_id_if_not_in_schema(self):
+        schema = Schema({'data': int64()})
+        expected = Table.from_pydict(
+            {'data': [30, 20, 10, None]},
+            ArrowSchema([('data', int64())]))
+
+        table = find_arrow_all(self.coll, {}, schema=schema,
+                               sort=[('data', DESCENDING)])
+        self.assertEqual(table, expected)
+
     def test_aggregate_simple(self):
         expected = Table.from_pydict(
             {'_id': [1, 2, 3, 4], 'data': [20, 40, 60, None]},
@@ -115,3 +125,13 @@ class TestExplicitArrowApi(unittest.TestCase):
                 self.coll, [{'$sort': {'_id': -1}}], schema=self.schema)
             self.assertEqual(table, expected)
         self.assertGreater(len(self.getmore_listener.results['started']), 1)
+
+    def test_aggregate_omits_id_if_not_in_schema(self):
+        schema = Schema({'data': int64()})
+        expected = Table.from_pydict(
+            {'data': [30, 20, 10, None]},
+            ArrowSchema([('data', int64())]))
+
+        table = aggregate_arrow_all(
+            self.coll, [{"$sort": {'data': DESCENDING}}], schema=schema)
+        self.assertEqual(table, expected)

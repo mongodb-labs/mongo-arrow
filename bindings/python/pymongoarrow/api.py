@@ -35,11 +35,11 @@ def find_arrow_all(collection, query, *, schema, **kwargs):
     """
     context = PyMongoArrowContext.from_schema(schema)
 
-    for opt in ('session', 'cursor_type', 'session', 'projection'):
+    for opt in ('session', 'cursor_type', 'projection'):
         if kwargs.pop(opt, None):
             warnings.warn(
-                'Ignoring option {!r} as it is not supported by '
-                'PyMongoArrow'.format(opt), UserWarning, stacklevel=2)
+                f'Ignoring option {opt!r} as it is not supported by '
+                'PyMongoArrow', UserWarning, stacklevel=2)
 
     kwargs['projection'] = schema._get_projection()
     raw_batch_cursor = collection.find_raw_batches(
@@ -69,15 +69,15 @@ def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
     context = PyMongoArrowContext.from_schema(schema)
 
     if pipeline and ("$out" in pipeline[-1] or "$merge" in pipeline[-1]):
-        raise RuntimeError(
+        raise ValueError(
             "Aggregation pipelines containing a '$out' or '$merge' stage are "
             "not supported by PyMongoArrow")
 
     for opt in ('batchSize', 'useCursor'):
         if kwargs.pop(opt, None):
             warnings.warn(
-                'Ignoring option {!r} as it is not supported by '
-                'PyMongoArrow'.format(opt), UserWarning, stacklevel=2)
+                f'Ignoring option {opt!r} as it is not supported by '
+                'PyMongoArrow', UserWarning, stacklevel=2)
 
     pipeline.append({"$project": schema._get_projection()})
     raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
