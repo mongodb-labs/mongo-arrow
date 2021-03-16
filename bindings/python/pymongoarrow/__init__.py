@@ -29,3 +29,14 @@ if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
     raise ImportError(
         "Expected libbson version {} or greater, found {}}".format(
             _MIN_LIBBSON_VERSION, libbson_version))
+
+
+from pymongoarrow.api import aggregate_arrow_all, find_arrow_all
+from pymongoarrow.schema import Schema
+
+
+__all__ = [
+    'aggregate_arrow_all',
+    'find_arrow_all',
+    'Schema'
+]
