@@ -11,12 +11,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import functools
 import warnings
 
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
+from pymongoarrow.schema import Schema
 
 
+__all__ = [
+    'aggregate_arrow_all',
+    'find_arrow_all',
+    'Schema'
+]
+
+
+def patch_function(**kwds):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            return func(*args, **kwargs)
+        for attr, val in kwds.items():
+            setattr(wrapped, attr, val)
+        return wrapped
+    return decorator
+
+
+@patch_function(__target__='pymongo.collection.Collection')
 def find_arrow_all(collection, query, *, schema, **kwargs):
     """Method that returns the results of a find query as a
     :class:`pyarrow.Table` instance.
@@ -50,6 +71,7 @@ def find_arrow_all(collection, query, *, schema, **kwargs):
     return context.finish()
 
 
+@patch_function(__target__='pymongo.collection.Collection')
 def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
     """Method that returns the results of an aggregation pipeline as a
     :class:`pyarrow.Table` instance.

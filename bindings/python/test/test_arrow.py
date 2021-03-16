@@ -18,13 +18,14 @@ import unittest.mock as mock
 from pyarrow import int32, int64, schema as ArrowSchema, Table
 from pymongo import WriteConcern, DESCENDING
 import pymongo
-from pymongoarrow import aggregate_arrow_all, find_arrow_all, Schema
+from pymongoarrow.api import aggregate_arrow_all, find_arrow_all, Schema
+from pymongoarrow.monkey import patch_all
 
 from test import client_context
 from test.utils import AllowListEventListener
 
 
-class TestExplicitArrowApi(unittest.TestCase):
+class TestArrowApiMixin:
     @classmethod
     def setUpClass(cls):
         if not client_context.connected:
@@ -46,19 +47,25 @@ class TestExplicitArrowApi(unittest.TestCase):
         self.cmd_listener.reset()
         self.getmore_listener.reset()
 
+    def run_find(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def run_aggregate(self, *args, **kwargs):
+        raise NotImplementedError
+
     def test_find_simple(self):
         expected = Table.from_pydict(
             {'_id': [1, 2, 3, 4], 'data': [10, 20, 30, None]},
             ArrowSchema([('_id', int32()), ('data', int64())]))
-        table = find_arrow_all(self.coll, {}, schema=self.schema)
+        table = self.run_find({}, schema=self.schema)
         self.assertEqual(table, expected)
 
         expected = Table.from_pydict(
             {'_id': [4, 3], 'data': [None, 30]},
             ArrowSchema([('_id', int32()), ('data', int64())]))
-        table = find_arrow_all(self.coll, {'_id': {'$gt': 2}},
-                               schema=self.schema,
-                               sort=[('_id', DESCENDING)])
+        table = self.run_find({'_id': {'$gt': 2}},
+                              schema=self.schema,
+                              sort=[('_id', DESCENDING)])
         self.assertEqual(table, expected)
 
         find_cmd = self.cmd_listener.results['started'][-1]
@@ -79,7 +86,7 @@ class TestExplicitArrowApi(unittest.TestCase):
             expected = Table.from_pydict(
                 {'_id': [1, 2, 3, 4], 'data': [10, 20, 30, None]},
                 ArrowSchema([('_id', int32()), ('data', int64())]))
-            table = find_arrow_all(self.coll, {}, schema=self.schema)
+            table = self.run_find({}, schema=self.schema)
             self.assertEqual(table, expected)
         self.assertGreater(len(self.getmore_listener.results['started']), 1)
 
@@ -89,8 +96,8 @@ class TestExplicitArrowApi(unittest.TestCase):
             {'data': [30, 20, 10, None]},
             ArrowSchema([('data', int64())]))
 
-        table = find_arrow_all(self.coll, {}, schema=schema,
-                               sort=[('data', DESCENDING)])
+        table = self.run_find({}, schema=schema,
+                              sort=[('data', DESCENDING)])
         self.assertEqual(table, expected)
 
         find_cmd = self.cmd_listener.results['started'][0]
@@ -101,9 +108,8 @@ class TestExplicitArrowApi(unittest.TestCase):
         expected = Table.from_pydict(
             {'_id': [1, 2, 3, 4], 'data': [20, 40, 60, None]},
             ArrowSchema([('_id', int32()), ('data', int64())]))
-        table = aggregate_arrow_all(
-            self.coll, [{'$project': {
-                '_id': True, 'data': {'$multiply': [2, '$data']}}}],
+        table = self.run_aggregate(
+            [{'$project': {'_id': True, 'data': {'$multiply': [2, '$data']}}}],
             schema=self.schema)
         self.assertEqual(table, expected)
 
@@ -125,8 +131,8 @@ class TestExplicitArrowApi(unittest.TestCase):
             expected = Table.from_pydict(
                 {'_id': [4, 3, 2, 1], 'data': [None, 30, 20, 10]},
                 ArrowSchema([('_id', int32()), ('data', int64())]))
-            table = aggregate_arrow_all(
-                self.coll, [{'$sort': {'_id': -1}}], schema=self.schema)
+            table = self.run_aggregate(
+                [{'$sort': {'_id': -1}}], schema=self.schema)
             self.assertEqual(table, expected)
         self.assertGreater(len(self.getmore_listener.results['started']), 1)
 
@@ -136,8 +142,8 @@ class TestExplicitArrowApi(unittest.TestCase):
             {'data': [30, 20, 10, None]},
             ArrowSchema([('data', int64())]))
 
-        table = aggregate_arrow_all(
-            self.coll, [{"$sort": {'data': DESCENDING}}], schema=schema)
+        table = self.run_aggregate(
+            [{"$sort": {'data': DESCENDING}}], schema=schema)
         self.assertEqual(table, expected)
 
         agg_cmd = self.cmd_listener.results['started'][0]
@@ -147,3 +153,24 @@ class TestExplicitArrowApi(unittest.TestCase):
             if op_name == '$project':
                 self.assertFalse(stage[op_name]['_id'])
                 break
+
+
+class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
+    def run_find(self, *args, **kwargs):
+        return find_arrow_all(self.coll, *args, **kwargs)
+
+    def run_aggregate(self, *args, **kwargs):
+        return aggregate_arrow_all(self.coll, *args, **kwargs)
+
+
+class TestArrowPatchedApi(TestArrowApiMixin, unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        patch_all()
+        super().setUpClass()
+
+    def run_find(self, *args, **kwargs):
+        return self.coll.find_arrow_all(*args, **kwargs)
+
+    def run_aggregate(self, *args, **kwargs):
+        return self.coll.aggregate_arrow_all(*args, **kwargs)
