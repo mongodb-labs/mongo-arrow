@@ -100,3 +100,58 @@ def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
         process_bson_stream(batch, context)
 
     return context.finish()
+
+
+def find_pandas_all(collection, query, *, schema, na_value=None, **kwargs):
+    """Method that returns the results of a find query as a
+    :class:`pandas.DataFrame` instance.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``find`` operation.
+      - `query`: A mapping containing the query to use for the find operation.
+      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+      - `na_value`: Scalar or mapping containing the value to use when a
+        field doesn't exist in a query result or when it exists but is of
+        a type that cannot be safely cast to the target type. If this is a
+        scalar, the missing value applies to all fields. If this is a mapping,
+        the keys are field names and the values are the scalars to use for
+        missing entries for the named field.
+
+    Additional keyword-arguments passed to this method will be passed
+    directly to the underlying ``find`` operation.
+
+    :Returns:
+      An instance of class:`pandas.DataFrame`.
+    """
+    arrow_table = find_arrow_all(collection, query, schema=schema, **kwargs)
+    pandas_table = arrow_table.to_pandas(split_blocks=True, self_destruct=True)
+    return pandas_table
+
+
+def aggregate_pandas_all(collection, pipeline, *, schema, na_value=None, **kwargs):
+    """Method that returns the results of an aggregation pipeline as a
+    :class:`pandas.DataFrame` instance.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``find`` operation.
+      - `pipeline`: A list of aggregation pipeline stages.
+      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+      - `na_value`: Scalar or mapping containing the value to use when a
+        field doesn't exist in a query result or when it exists but is of
+        a type that cannot be safely cast to the target type. If this is a
+        scalar, the missing value applies to all fields. If this is a mapping,
+        the keys are field names and the values are the scalars to use for
+        missing entries for the named field.
+
+    Additional keyword-arguments passed to this method will be passed
+    directly to the underlying ``aggregate`` operation.
+
+    :Returns:
+      An instance of class:`pandas.DataFrame`.
+    """
+    arrow_table = aggregate_arrow_all(
+        collection, pipeline, schema=schema, **kwargs)
+    pandas_table = arrow_table.to_pandas(split_blocks=True, self_destruct=True)
+    return pandas_table
