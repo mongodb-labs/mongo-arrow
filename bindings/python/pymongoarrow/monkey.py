@@ -18,13 +18,11 @@ __all__ = [
 
 def patch_all():
     import pymongoarrow.api as api_module
+    from pymongo.collection import Collection
     api_methods = api_module.__all__
     for method_name in api_methods:
         method = getattr(api_module, method_name)
         if not hasattr(method, "__target__"):
             continue
-        target_spec = method.__target__
-        target_module_name, cls_name = target_spec.rsplit('.', maxsplit=1)
-        target_module = __import__(target_module_name, fromlist=[cls_name])
-        target = getattr(target_module, cls_name)
-        setattr(target, method.__name__, method)
+        if method.__target__ == 'Collection':
+            setattr(Collection, method.__name__, method)

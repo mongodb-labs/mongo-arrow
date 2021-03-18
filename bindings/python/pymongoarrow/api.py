@@ -37,7 +37,7 @@ def patch_function(**kwds):
     return decorator
 
 
-@patch_function(__target__='pymongo.collection.Collection')
+@patch_function(__target__='Collection')
 def find_arrow_all(collection, query, *, schema, **kwargs):
     """Method that returns the results of a find query as a
     :class:`pyarrow.Table` instance.
@@ -71,7 +71,7 @@ def find_arrow_all(collection, query, *, schema, **kwargs):
     return context.finish()
 
 
-@patch_function(__target__='pymongo.collection.Collection')
+@patch_function(__target__='Collection')
 def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
     """Method that returns the results of an aggregation pipeline as a
     :class:`pyarrow.Table` instance.
