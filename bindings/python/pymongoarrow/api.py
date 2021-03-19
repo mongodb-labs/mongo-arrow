@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import functools
 import warnings
 
 from pymongoarrow.context import PyMongoArrowContext
@@ -22,6 +21,8 @@ from pymongoarrow.schema import Schema
 __all__ = [
     'aggregate_arrow_all',
     'find_arrow_all',
+    'aggregate_pandas_all',
+    'find_pandas_all',
     'Schema'
 ]
 
@@ -102,7 +103,18 @@ def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
     return context.finish()
 
 
-def find_pandas_all(collection, query, *, schema, na_value=None, **kwargs):
+def _arrow_to_pandas_efficient(arrow_table):
+    """Helper function that converts an Arrow Table to a Pandas DataFrame
+    while minimizing peak memory consumption during conversion. The memory
+    buffers backing the given Arrow Table are also destroyed after conversion.
+
+    See https://arrow.apache.org/docs/python/pandas.html#reducing-memory-use-in-table-to-pandas
+    for details.
+    """
+    return arrow_table.to_pandas(split_blocks=True, self_destruct=True)
+
+
+def find_pandas_all(collection, query, *, schema, **kwargs):
     """Method that returns the results of a find query as a
     :class:`pandas.DataFrame` instance.
 
@@ -111,12 +123,6 @@ def find_pandas_all(collection, query, *, schema, na_value=None, **kwargs):
         against which to run the ``find`` operation.
       - `query`: A mapping containing the query to use for the find operation.
       - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
-      - `na_value`: Scalar or mapping containing the value to use when a
-        field doesn't exist in a query result or when it exists but is of
-        a type that cannot be safely cast to the target type. If this is a
-        scalar, the missing value applies to all fields. If this is a mapping,
-        the keys are field names and the values are the scalars to use for
-        missing entries for the named field.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -124,12 +130,11 @@ def find_pandas_all(collection, query, *, schema, na_value=None, **kwargs):
     :Returns:
       An instance of class:`pandas.DataFrame`.
     """
-    arrow_table = find_arrow_all(collection, query, schema=schema, **kwargs)
-    pandas_table = arrow_table.to_pandas(split_blocks=True, self_destruct=True)
-    return pandas_table
+    return _arrow_to_pandas_efficient(
+        find_arrow_all(collection, query, schema=schema, **kwargs))
 
 
-def aggregate_pandas_all(collection, pipeline, *, schema, na_value=None, **kwargs):
+def aggregate_pandas_all(collection, pipeline, *, schema, **kwargs):
     """Method that returns the results of an aggregation pipeline as a
     :class:`pandas.DataFrame` instance.
 
@@ -138,12 +143,6 @@ def aggregate_pandas_all(collection, pipeline, *, schema, na_value=None, **kwarg
         against which to run the ``find`` operation.
       - `pipeline`: A list of aggregation pipeline stages.
       - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
-      - `na_value`: Scalar or mapping containing the value to use when a
-        field doesn't exist in a query result or when it exists but is of
-        a type that cannot be safely cast to the target type. If this is a
-        scalar, the missing value applies to all fields. If this is a mapping,
-        the keys are field names and the values are the scalars to use for
-        missing entries for the named field.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -151,7 +150,5 @@ def aggregate_pandas_all(collection, pipeline, *, schema, na_value=None, **kwarg
     :Returns:
       An instance of class:`pandas.DataFrame`.
     """
-    arrow_table = aggregate_arrow_all(
-        collection, pipeline, schema=schema, **kwargs)
-    pandas_table = arrow_table.to_pandas(split_blocks=True, self_destruct=True)
-    return pandas_table
+    return _arrow_to_pandas_efficient(aggregate_arrow_all(
+        collection, pipeline, schema=schema, **kwargs))
