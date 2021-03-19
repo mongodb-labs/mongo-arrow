@@ -103,7 +103,7 @@ def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
     return context.finish()
 
 
-def _arrow_to_pandas_efficient(arrow_table):
+def _arrow_to_pandas(arrow_table):
     """Helper function that converts an Arrow Table to a Pandas DataFrame
     while minimizing peak memory consumption during conversion. The memory
     buffers backing the given Arrow Table are also destroyed after conversion.
@@ -130,7 +130,7 @@ def find_pandas_all(collection, query, *, schema, **kwargs):
     :Returns:
       An instance of class:`pandas.DataFrame`.
     """
-    return _arrow_to_pandas_efficient(
+    return _arrow_to_pandas(
         find_arrow_all(collection, query, schema=schema, **kwargs))
 
 
@@ -150,5 +150,5 @@ def aggregate_pandas_all(collection, pipeline, *, schema, **kwargs):
     :Returns:
       An instance of class:`pandas.DataFrame`.
     """
-    return _arrow_to_pandas_efficient(aggregate_arrow_all(
+    return _arrow_to_pandas(aggregate_arrow_all(
         collection, pipeline, schema=schema, **kwargs))
