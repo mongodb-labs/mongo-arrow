@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import functools
 import warnings
 
 from pymongoarrow.context import PyMongoArrowContext
@@ -22,6 +21,8 @@ from pymongoarrow.schema import Schema
 __all__ = [
     'aggregate_arrow_all',
     'find_arrow_all',
+    'aggregate_pandas_all',
+    'find_pandas_all',
     'Schema'
 ]
 
@@ -100,3 +101,54 @@ def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
         process_bson_stream(batch, context)
 
     return context.finish()
+
+
+def _arrow_to_pandas(arrow_table):
+    """Helper function that converts an Arrow Table to a Pandas DataFrame
+    while minimizing peak memory consumption during conversion. The memory
+    buffers backing the given Arrow Table are also destroyed after conversion.
+
+    See https://arrow.apache.org/docs/python/pandas.html#reducing-memory-use-in-table-to-pandas
+    for details.
+    """
+    return arrow_table.to_pandas(split_blocks=True, self_destruct=True)
+
+
+def find_pandas_all(collection, query, *, schema, **kwargs):
+    """Method that returns the results of a find query as a
+    :class:`pandas.DataFrame` instance.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``find`` operation.
+      - `query`: A mapping containing the query to use for the find operation.
+      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+
+    Additional keyword-arguments passed to this method will be passed
+    directly to the underlying ``find`` operation.
+
+    :Returns:
+      An instance of class:`pandas.DataFrame`.
+    """
+    return _arrow_to_pandas(
+        find_arrow_all(collection, query, schema=schema, **kwargs))
+
+
+def aggregate_pandas_all(collection, pipeline, *, schema, **kwargs):
+    """Method that returns the results of an aggregation pipeline as a
+    :class:`pandas.DataFrame` instance.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``find`` operation.
+      - `pipeline`: A list of aggregation pipeline stages.
+      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+
+    Additional keyword-arguments passed to this method will be passed
+    directly to the underlying ``aggregate`` operation.
+
+    :Returns:
+      An instance of class:`pandas.DataFrame`.
+    """
+    return _arrow_to_pandas(aggregate_arrow_all(
+        collection, pipeline, schema=schema, **kwargs))
