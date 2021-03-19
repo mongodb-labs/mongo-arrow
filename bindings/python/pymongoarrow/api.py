@@ -11,10 +11,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import functools
 import warnings
 
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
+from pymongoarrow.schema import Schema
+
+
+__all__ = [
+    'aggregate_arrow_all',
+    'find_arrow_all',
+    'Schema'
+]
+
+
+_PATCH_METHODS = [
+    'aggregate_arrow_all',
+    'find_arrow_all',
+]
 
 
 def find_arrow_all(collection, query, *, schema, **kwargs):
