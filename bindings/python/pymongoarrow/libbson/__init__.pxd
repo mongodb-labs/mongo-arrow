@@ -28,7 +28,7 @@ from libc.stdint cimport int32_t, int64_t, uint8_t, uint32_t, uint64_t
 # - bson_value_t
 # - bson_visitor_t
 # - bson_writer_t
-cdef extern from "bson/bson.h":
+cdef extern from "<bson/bson.h>":
     ctypedef struct bson_t:
         uint32_t flags
         uint32_t len
@@ -80,7 +80,7 @@ cdef extern from "bson/bson.h":
 
 
 # bson_t API
-cdef extern from "bson/bson.h":
+cdef extern from "<bson/bson.h>":
     void bson_destroy(bson_t *bson)
 
     const uint8_t * bson_get_data(const bson_t *bson)
@@ -93,7 +93,7 @@ cdef extern from "bson/bson.h":
 
 
 # bson_iter_t API
-cdef extern from "bson/bson.h":
+cdef extern from "<bson/bson.h>":
     bint bson_iter_init(bson_iter_t *iter, const bson_t *bson)
 
     bint bson_iter_init_from_data(bson_iter_t *iter, const uint8_t *data, size_t length)
@@ -122,7 +122,7 @@ cdef extern from "bson/bson.h":
 
 
 # bson_reader_t API
-cdef extern from "bson/bson.h":
+cdef extern from "<bson/bson.h>":
     bson_reader_t * bson_reader_new_from_data(const uint8_t *data, size_t length)
 
     const bson_t * bson_reader_read(bson_reader_t *reader, bint *reached_eof)
@@ -131,5 +131,5 @@ cdef extern from "bson/bson.h":
 
 
 # runtime version checking API
-cdef extern from "bson/bson.h":
+cdef extern from "<bson/bson.h>":
     const char * bson_get_version()
