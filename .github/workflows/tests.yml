@@ -26,9 +26,9 @@ jobs:
       - name: Install libbson
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-              apt-get install libmongoc-1.0-0
+              sudo apt-get install libmongoc-1.0-0
           elif [ "$RUNNER_OS" == "macOS" ]; then
-              brew install mongo-c-driver
+              sudo brew install mongo-c-driver
           else
               echo "$RUNNER_OS not supported"
               exit 1
