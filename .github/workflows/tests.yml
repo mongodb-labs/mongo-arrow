@@ -26,9 +26,7 @@ jobs:
       - name: Install libbson
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-              sudo apt-get install libbson-1.0-0
-              pkg-config --libs --cflags libbson-1.0
-              pkg-config --modversion libbson-1.0
+              sudo apt-get install libbson-1.0-0 libbson-dev
           elif [ "$RUNNER_OS" == "macOS" ]; then
               sudo brew install mongo-c-driver
           else
