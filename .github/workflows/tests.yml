@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest]
         python_version: ['3.6', '3.9']
     steps:
       - uses: actions/checkout@v2
@@ -23,10 +23,22 @@ jobs:
         with:
           mongodb-version: 4.4
           mongodb-replica-set: test-rs
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install -U pip wheel
+          pip install 'cython>=0.29' 'pyarrow>=3' 'numpy>=1.16.6'
           pip install .
+        working-directory: ./bindings/python
+      - name: Install libbson
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+              apt-get install libmongoc-1.0-0
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+              brew install mongo-c-driver
+          else
+              echo "$RUNNER_OS not supported"
+              exit 1
+          fi
         working-directory: ./bindings/python
       - name: Run test suite
         run: python setup.py test
