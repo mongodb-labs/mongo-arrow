@@ -6,7 +6,7 @@ on:
 
 jobs:
   test:
-    name: Test PyMongoArrow on ${{ matrix.os }}
+    name: Test ${{ matrix.python_version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
