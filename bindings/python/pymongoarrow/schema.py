@@ -49,6 +49,10 @@ class Schema:
             raise ValueError('schema must be a mapping or sequence')
         self.typemap = normed
 
+    def __iter__(self):
+        for fname in self.typemap:
+            yield fname
+
     @staticmethod
     def _normalize_mapping(mapping):
         normed = {}

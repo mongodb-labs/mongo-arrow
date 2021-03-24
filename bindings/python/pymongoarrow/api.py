@@ -23,6 +23,8 @@ __all__ = [
     'find_arrow_all',
     'aggregate_pandas_all',
     'find_pandas_all',
+    'aggregate_numpy_all',
+    'find_numpy_all',
     'Schema'
 ]
 
@@ -152,3 +154,77 @@ def aggregate_pandas_all(collection, pipeline, *, schema, **kwargs):
     """
     return _arrow_to_pandas(aggregate_arrow_all(
         collection, pipeline, schema=schema, **kwargs))
+
+
+def _arrow_to_numpy(arrow_table, schema):
+    """Helper function that converts an Arrow Table to a dictionary
+    containing NumPy arrays. The memory buffers backing the given Arrow Table
+    may be destroyed after conversion if the resulting Numpy array(s) is not a
+    view on the Arrow data.
+
+    See https://arrow.apache.org/docs/python/numpy.html for details.
+    """
+    container = {}
+    for fname in schema:
+        container[fname] = arrow_table[fname].to_numpy()
+    return container
+
+
+def find_numpy_all(collection, query, *, schema, writable=False, **kwargs):
+    """Method that returns the results of a find query as a
+    :class:`dict` instance whose keys are field names and values are
+    :class:`~numpy.ndarray` instances bearing the appropriate dtype.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``find`` operation.
+      - `query`: A mapping containing the query to use for the find operation.
+      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+
+    Additional keyword-arguments passed to this method will be passed
+    directly to the underlying ``find`` operation.
+
+    This method attempts to create each NumPy array as a view on the Arrow
+    data corresponding to each field in the result set. When this is not
+    possible, the underlying data is copied into a new NumPy array. See
+    :meth:`pyarrow.Array.to_numpy` for more information.
+
+    NumPy arrays returned by this method that are views on Arrow data
+    are not writable. Users seeking to modify such arrays must first
+    create an editable copy using :meth:`numpy.copy`.
+
+    :Returns:
+      An instance of :class:`dict`.
+    """
+    return _arrow_to_numpy(
+        find_arrow_all(collection, query, schema=schema, **kwargs), schema)
+
+
+def aggregate_numpy_all(collection, pipeline, *, schema, **kwargs):
+    """Method that returns the results of an aggregation pipeline as a
+    :class:`dict` instance whose keys are field names and values are
+    :class:`~numpy.ndarray` instances bearing the appropriate dtype.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``find`` operation.
+      - `query`: A mapping containing the query to use for the find operation.
+      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+
+    Additional keyword-arguments passed to this method will be passed
+    directly to the underlying ``aggregate`` operation.
+
+    This method attempts to create each NumPy array as a view on the Arrow
+    data corresponding to each field in the result set. When this is not
+    possible, the underlying data is copied into a new NumPy array. See
+    :meth:`pyarrow.Array.to_numpy` for more information.
+
+    NumPy arrays returned by this method that are views on Arrow data
+    are not writable. Users seeking to modify such arrays must first
+    create an editable copy using :meth:`numpy.copy`.
+
+    :Returns:
+      An instance of :class:`dict`.
+    """
+    return _arrow_to_numpy(
+        aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs), schema)
