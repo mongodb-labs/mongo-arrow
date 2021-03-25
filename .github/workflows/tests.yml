@@ -37,10 +37,9 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install -U pip wheel
-          pip install 'cython>=0.29' 'pyarrow>=3' 'numpy>=1.16.6'
+          pip install 'cython>=0.29' 'pyarrow>=3' 'numpy>=1.16.6' 'pymongo>=3.11,<4'
           python -c 'import pyarrow as pa; pa.create_library_symlinks()'
-          CFLAGS=$(pkg-config --cflags libbson-1.0) pip install .
         working-directory: ./bindings/python
       - name: Run test suite
-        run: python setup.py test
+        run: CFLAGS=$(pkg-config --cflags libbson-1.0) python setup.py test
         working-directory: ./bindings/python
