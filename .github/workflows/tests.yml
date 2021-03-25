@@ -41,5 +41,8 @@ jobs:
           python -c 'import pyarrow as pa; pa.create_library_symlinks()'
         working-directory: ./bindings/python
       - name: Run test suite
-        run: CFLAGS=$(pkg-config --cflags libbson-1.0) python setup.py test
+        run: |
+          CFLAGS=$(pkg-config --cflags libbson-1.0) \
+           LDFLAGS=$(pkg-config --libs libbson-1.0) \
+           python setup.py test
         working-directory: ./bindings/python
