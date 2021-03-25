@@ -42,10 +42,13 @@ jobs:
           pip install 'cython>=0.29' 'pyarrow>=3' 'numpy>=1.16.6' 'pymongo>=3.11,<4'
           python -c 'import pyarrow as pa; pa.create_library_symlinks()'
         working-directory: ./bindings/python
-      - name: Run test suite
+      - name: Install pymongoarrow
         run: |
           CFLAGS=$(pkg-config --cflags libbson-1.0) \
           CXXFLAGS=$(pkg-config --cflags libbson-1.0) \
            LDFLAGS=$(pkg-config --libs libbson-1.0) \
-           python setup.py test
+           python setup.py build_ext --inplace --force
+        working-directory: ./bindings/python
+      - name: Test
+        run: python -m unittest discover test
         working-directory: ./bindings/python
