@@ -26,7 +26,14 @@ jobs:
       - name: Install libbson
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-              sudo apt-get install libbson-1.0-0 libbson-dev
+              wget https://github.com/mongodb/mongo-c-driver/releases/download/1.17.4/mongo-c-driver-1.17.4.tar.gz
+              tar xzf mongo-c-driver-1.17.4.tar.gz
+              cd mongo-c-driver-1.17.4
+              mkdir cmake-build
+              cd cmake-build
+              cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DENABLE_MONGOC=OFF ..
+              cmake --build .
+              sudo cmake --build . --target install
           elif [ "$RUNNER_OS" == "macOS" ]; then
               sudo brew install mongo-c-driver
           else
