@@ -45,10 +45,9 @@ jobs:
       - name: Install pymongoarrow
         run: |
           CFLAGS=$(pkg-config --cflags libbson-1.0) \
-          CXXFLAGS=$(pkg-config --cflags libbson-1.0) \
            LDFLAGS=$(pkg-config --libs libbson-1.0) \
            python setup.py build_ext --inplace --force
         working-directory: ./bindings/python
       - name: Test
-        run: python -m unittest discover test
+        run: LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/ python -m unittest discover test
         working-directory: ./bindings/python
