@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# We must import pyarrow before attempting to load the Cython module.
+import pyarrow
+
 from pymongoarrow.lib import libbson_version
 from pymongoarrow.version import __version__, _MIN_LIBBSON_VERSION
 
