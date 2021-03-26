@@ -42,5 +42,6 @@ setup(
     version=get_pymongoarrow_version(),
     packages=find_packages(),
     ext_modules=get_extension_modules(),
-    install_requires=['pyarrow >= 3', 'pymongo >= 3.11,<4'],
+    install_requires=['pyarrow >= 3', 'pymongo >= 3.11,<4', 'pandas',
+                      'numpy >= 1.16.6'],
     setup_requires=['cython >= 0.29', 'pyarrow >= 3', 'numpy >= 1.16.6'])
