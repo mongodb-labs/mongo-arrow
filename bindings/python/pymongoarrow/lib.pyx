@@ -44,3 +44,5 @@ include "utils.pyi"
 
 # Builders
 include "builders.pyi"
+
+libbson_version = bson_get_version().decode('utf-8')

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pymongoarrow.libbson.version import __version__ as libbson_version
+from pymongoarrow.lib import libbson_version
 from pymongoarrow.version import __version__, _MIN_LIBBSON_VERSION
 
 
