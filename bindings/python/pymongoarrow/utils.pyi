@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+libbson_version = bson_get_version().decode('utf-8')
+
+
 def datetime_to_int64(dtm, data_type):
     # TODO: rewrite as a cdef which directly accesses data_type as a CTimestampType instance
     # TODO: make this function aware of datatype.timezone()
