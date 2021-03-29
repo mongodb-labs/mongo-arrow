@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pymongoarrow.libbson.version import __version__ as libbson_version
+# We must import pyarrow before attempting to load the Cython module.
+import pyarrow
+
+from pymongoarrow.lib import libbson_version
 from pymongoarrow.version import __version__, _MIN_LIBBSON_VERSION
 
 
@@ -27,5 +30,5 @@ except ImportError:
 
 if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
     raise ImportError(
-        "Expected libbson version {} or greater, found {}}".format(
-            _MIN_LIBBSON_VERSION, libbson_version))
+        f"Expected libbson version {_MIN_LIBBSON_VERSION} or greater, "
+        f"found {libbson_version}")

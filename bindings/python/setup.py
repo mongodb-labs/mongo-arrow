@@ -18,13 +18,10 @@ def get_pymongoarrow_version():
 
 
 def get_extension_modules():
-    arrow_modules = cythonize(['pymongoarrow/*.pyx'])
-    libbson_modules = cythonize(['pymongoarrow/libbson/*.pyx'])
+    modules = cythonize(['pymongoarrow/*.pyx'])
 
-    for module in libbson_modules:
+    for module in modules:
         module.libraries.append('bson-1.0')
-
-    for module in arrow_modules:
         module.include_dirs.append(np.get_include())
         module.include_dirs.append(pa.get_include())
         module.libraries.extend(pa.get_libraries())
@@ -34,7 +31,7 @@ def get_extension_modules():
         if os.name == 'posix':
             module.extra_compile_args.append('-std=c++11')
 
-    return arrow_modules + libbson_modules
+    return modules
 
 
 setup(
@@ -42,5 +39,6 @@ setup(
     version=get_pymongoarrow_version(),
     packages=find_packages(),
     ext_modules=get_extension_modules(),
-    install_requires=['pyarrow >= 3', 'pymongo >= 3.11,<4'],
+    install_requires=['pyarrow >= 3', 'pymongo >= 3.11,<4', 'pandas',
+                      'numpy >= 1.16.6'],
     setup_requires=['cython >= 0.29', 'pyarrow >= 3', 'numpy >= 1.16.6'])

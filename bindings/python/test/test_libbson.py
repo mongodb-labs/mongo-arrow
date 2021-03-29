@@ -13,7 +13,7 @@
 # limitations under the License.
 from unittest import TestCase
 
-from pymongoarrow.libbson.version import __version__ as libbson_version
+from pymongoarrow import libbson_version
 
 
 class TestLibbson(TestCase):
