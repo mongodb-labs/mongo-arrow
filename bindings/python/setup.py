@@ -17,6 +17,26 @@ def get_pymongoarrow_version():
     return version['__version__']
 
 
+INSTALL_REQUIRES = [
+    'pyarrow>=3,<3.1',
+    'pymongo>=3.11,<4',
+    'numpy>=1.16.6,<2'
+]
+
+
+SETUP_REQUIRES = [
+    'cython>=0.29<1',
+    'pyarrow>=3,<4',
+    'numpy>=1.16.6,<2',
+    'setuptools>=41'
+]
+
+
+TESTS_REQUIRE = [
+    "pandas"
+]
+
+
 def get_extension_modules():
     modules = cythonize(['pymongoarrow/*.pyx'])
 
@@ -31,19 +51,48 @@ def get_extension_modules():
         if os.name == 'posix':
             module.extra_compile_args.append('-std=c++11')
 
-        module.extra_link_args += ["-rpath", "@loader_path"]
-
     return modules
+
+
+with open('README.rst') as f:
+    LONG_DESCRIPTION = f.read()
 
 
 setup(
     name='pymongoarrow',
-    version=get_pymongoarrow_version(),
     packages=find_packages(),
+    zip_safe=False,
+    package_data={"pymongoarrow": ['*.so', '*.dylib']},
     ext_modules=get_extension_modules(),
-    # include_package_data=True,
-    package_date={
-        "pymongoarrow": ['*.so', '*.dylib']},
-    install_requires=['pyarrow >= 3', 'pymongo >= 3.11,<4', 'pandas',
-                      'numpy >= 1.16.6'],
-    setup_requires=['cython >= 0.29', 'pyarrow >= 3', 'numpy >= 1.16.6'])
+    version=get_pymongoarrow_version(),
+    python_requires=">=3.6",
+    install_requires=INSTALL_REQUIRES,
+    setup_requires=SETUP_REQUIRES,
+    tests_require=TESTS_REQUIRE,
+    description="Tools for using NumPy, Pandas and PyArrow with MongoDB",
+    long_description=LONG_DESCRIPTION,
+    long_description_content_type='text/x-rst',
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: POSIX',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3 :: Only',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: Implementation :: CPython',
+        'Topic :: Database'],
+    license='Apache License, Version 2.0',
+    author="Prashant Mital",
+    author_email="mongodb-user@googlegroups.com",
+    maintainer="MongoDB, Inc.",
+    maintainer_email="mongodb-user@googlegroups.com",
+    keywords=["mongo", "mongodb", "pymongo", "arrow", "bson",
+              "numpy", "pandas"],
+    test_suite="test"
+)
