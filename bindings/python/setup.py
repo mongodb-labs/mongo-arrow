@@ -1,4 +1,4 @@
-from setuptools import find_packages, setup
+from setuptools import setup, find_packages
 from Cython.Build import cythonize
 
 import os
@@ -31,6 +31,8 @@ def get_extension_modules():
         if os.name == 'posix':
             module.extra_compile_args.append('-std=c++11')
 
+        module.extra_link_args += ["-rpath", "@loader_path"]
+
     return modules
 
 
@@ -39,6 +41,9 @@ setup(
     version=get_pymongoarrow_version(),
     packages=find_packages(),
     ext_modules=get_extension_modules(),
+    # include_package_data=True,
+    package_date={
+        "pymongoarrow": ['*.so', '*.dylib']},
     install_requires=['pyarrow >= 3', 'pymongo >= 3.11,<4', 'pandas',
                       'numpy >= 1.16.6'],
     setup_requires=['cython >= 0.29', 'pyarrow >= 3', 'numpy >= 1.16.6'])
