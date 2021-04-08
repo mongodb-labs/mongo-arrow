@@ -15,7 +15,7 @@ fi
 WORKDIR="mongo-c-driver-${LIBBSON_REVISION}"
 if [ ! -d "$WORKDIR" ]
 then
-  git clone --depth 1 -b "$LIBBSON_REVISION" git@github.com:mongodb/mongo-c-driver.git "$WORKDIR"
+  git clone --depth 1 -b "$LIBBSON_REVISION" https://github.com/mongodb/mongo-c-driver.git "$WORKDIR"
 fi
 
 # Directory where build artifacts will be placed
