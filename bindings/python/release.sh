@@ -40,8 +40,7 @@ then
 fi
 
 # Install build dependencies
-$PYTHON -m pip install -U pip setuptools wheel
-$PYTHON -m pip install Cython>=0.29 pyarrow
+$PYTHON -m pip install -U pip
 
 # Build wheels in $(pwd)/dist/*.whl
 python setup.py clean --all

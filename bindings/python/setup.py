@@ -84,6 +84,7 @@ def vendor_libbson():
 
 def append_libbson_flags(module):
     if os.environ.get('USE_STATIC_LIBBSON') != '1':
+        # Make our cython extensions load the libbson library embedded in pymongoarrow/
         # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
         if platform == "darwin":
             module.extra_link_args += ["-rpath", "@loader_path"]
