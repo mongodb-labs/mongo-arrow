@@ -38,8 +38,8 @@ jobs:
         working-directory: ./bindings/python
       - name: Install pymongoarrow
         run: |
-          python setup.py build_ext --inplace
+          pip install .
         working-directory: ./bindings/python
       - name: Run pymongoarrow testsuite
-        run: python setup.py test
+        run: python -m unittest discover
         working-directory: ./bindings/python
