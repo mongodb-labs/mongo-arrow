@@ -7,8 +7,6 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    env:
-      working_directory: ./bindings/python
     strategy:
       matrix:
         os: [macos-latest]
@@ -18,8 +16,9 @@ jobs:
       - name: Build wheels
         run: |
           ./release.sh
+        working_directory: ./bindings/python
       - uses: actions/upload-artifact@v2
         with:
           name: pymongoarrow-osx-wheels
-          path: dist/*.whl
+          path: ./bindings/python/dist/*.whl
           if-no-files-found: error
