@@ -11,7 +11,7 @@ jobs:
       matrix:
         os: [macos-10.15]
         python-version: [3.6, 3.7, 3.8, 3.9]
-    name: Build ${{ matrix.os }} ${{ matrix.python-version }} wheels
+    name: Build ${{ matrix.os }} ${{ matrix.python-version }} wheel
     steps:
       - uses: actions/checkout@v2
       - name: Setup Python
@@ -34,7 +34,7 @@ jobs:
       matrix:
         os: [macos-10.15]
         python-version: [3.6, 3.7, 3.8, 3.9]
-    name: Build ${{ matrix.os }} ${{ matrix.python-version }} wheels
+    name: Test ${{ matrix.os }} ${{ matrix.python-version }} wheel
     steps:
       - name: Setup Python
         uses: actions/setup-python@v2

@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 from Cython.Build import cythonize
 
 import os
+from sys import platform
 
 import numpy as np
 import pyarrow as pa
@@ -41,7 +42,7 @@ def get_extension_modules():
     modules = cythonize(['pymongoarrow/*.pyx'])
 
     for module in modules:
-        module.libraries.append('bson-1.0')
+        # module.libraries.append('bson-1.0')
         module.include_dirs.append(np.get_include())
         module.include_dirs.append(pa.get_include())
         module.libraries.extend(pa.get_libraries())
@@ -50,6 +51,10 @@ def get_extension_modules():
         # https://arrow.apache.org/docs/python/extending.html#example
         if os.name == 'posix':
             module.extra_compile_args.append('-std=c++11')
+
+        # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
+        if platform == "darwin":
+            module.extra_link_args += ["-rpath", "@loader_path"]
 
     return modules
 
