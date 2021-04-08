@@ -9,7 +9,7 @@ $PYTHON --version
 
 # Version of libbson to use
 # Keep in sync with pymongoarrow.version._MIN_LIBBSON_VERSION
-LIBBSON_REVISION=${LIBBSON_VERSION:-"1.17.4"}
+LIBBSON_REVISION=${LIBBSON_VERSION:-"1.17.5"}
 echo "Using libbson $LIBBSON_REVISION"
 
 # Whether to statically or dynamically link libbson
@@ -42,6 +42,10 @@ fi
 # Install build dependencies
 $PYTHON -m pip install -U pip setuptools wheel
 $PYTHON -m pip install 'Cython>=0.29' 'pyarrow>=3,<4'
+
+# Ensure pyarrow is linkable
+# https://arrow.apache.org/docs/python/extending.html#building-extensions-against-pypi-wheels
+$PYTHON -c "import pyarrow as pa; pa.create_library_symlinks()"
 
 # Build wheels in $(pwd)/dist/*.whl
 python setup.py clean --all

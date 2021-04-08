@@ -114,7 +114,6 @@ def ensure_pyarrow_linkable():
 def get_extension_modules():
     modules = cythonize(['pymongoarrow/*.pyx'])
     vendor_libbson()
-    ensure_pyarrow_linkable()
     for module in modules:
         append_libbson_flags(module)
         append_arrow_flags(module)
