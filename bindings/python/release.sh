@@ -51,6 +51,4 @@ $PYTHON -c "import pyarrow; pyarrow.create_library_symlinks()"
 
 # Build wheels in $(pwd)/dist/*.whl
 python setup.py clean --all
-CFLAGS=$(pkg-config --cflags libbson-1.0) \
-  LDFLAGS=$(pkg-config --libs libbson-1.0) \
-  python setup.py bdist_wheel
+CFLAGS=$(pkg-config --cflags libbson-1.0) python setup.py bdist_wheel
