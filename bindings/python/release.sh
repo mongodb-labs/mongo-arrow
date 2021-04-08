@@ -13,7 +13,7 @@ LIBBSON_REVISION=${LIBBSON_VERSION:-"1.17.4"}
 echo "Using libbson $LIBBSON_REVISION"
 
 # Whether to statically or dynamically link libbson
-USE_STATIC_LIBBSON=${USE_STATIC_LIBBSON:-"0"}
+USE_STATIC_LIBBSON=${USE_STATIC_LIBBSON:-"1"}
 echo "Static libbson linking $USE_STATIC_LIBBSON"
 
 # Compute shared library filename
