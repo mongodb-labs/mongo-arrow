@@ -9,7 +9,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, 'macos-11.0']
+        os: [macos-latest]
         python-version: [3.7]
     name: Build ${{ matrix.os }} ${{ matrix.python-version }} wheels
     steps:
