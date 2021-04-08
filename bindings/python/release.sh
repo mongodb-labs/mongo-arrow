@@ -43,8 +43,8 @@ fi
 cp "$(pwd)/libbson/lib/${LIBBSON_SO}" "$(pwd)/pymongoarrow/"
 
 # Install build dependencies
-$PYTHON -m pip install -U pip setuptools
-$PYTHON -m pip install wheel Cython>=0.29 pyarrow
+$PYTHON -m pip install -U pip setuptools wheel
+$PYTHON -m pip install Cython>=0.29 pyarrow
 
 # https://arrow.apache.org/docs/python/extending.html#building-extensions-against-pypi-wheels
 $PYTHON -c "import pyarrow; pyarrow.create_library_symlinks()"
