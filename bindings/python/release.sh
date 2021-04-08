@@ -39,15 +39,9 @@ then
   exit 1
 fi
 
-# Vendor libbson shared library in PyMongoArrow wheels
-cp "$(pwd)/libbson/lib/libbson-1.0.0.${SO_EXT}" "$(pwd)/pymongoarrow/"
-
 # Install build dependencies
 $PYTHON -m pip install -U pip setuptools wheel
 $PYTHON -m pip install Cython>=0.29 pyarrow
-
-# https://arrow.apache.org/docs/python/extending.html#building-extensions-against-pypi-wheels
-$PYTHON -c "import pyarrow; pyarrow.create_library_symlinks()"
 
 # Build wheels in $(pwd)/dist/*.whl
 python setup.py clean --all

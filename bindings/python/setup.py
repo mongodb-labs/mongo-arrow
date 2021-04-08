@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 from Cython.Build import cythonize
 
 import os
+import shutil
 import subprocess
 from sys import platform
 import warnings
@@ -40,14 +41,11 @@ TESTS_REQUIRE = [
 ]
 
 
-def append_libbson_flags(module):
+def vendor_libbson():
     if os.environ.get('USE_STATIC_LIBBSON') == '1':
         pc_name = 'libbson-static-1.0'
     else:
         pc_name = 'libbson-1.0'
-        # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
-        if platform == "darwin":
-            module.extra_link_args += ["-rpath", "@loader_path"]
 
     if 'LIBBSON_INSTALL_DIR' in os.environ:
         libbson_pc_path = os.path.join(
@@ -56,26 +54,47 @@ def append_libbson_flags(module):
     else:
         libbson_pc_path = pc_name
 
-    status, output = subprocess.getstatusoutput(
-        "pkg-config --cflags {}".format(libbson_pc_path))
-    if status != 0:
-        warnings.warn(output, UserWarning)
-    for entry in output.split():
-        if entry.startswith('-I'):
-            include_dir = entry.lstrip('-I')
-            module.include_dirs.append(include_dir)
+    # Set CFLAGS and LDFLAGS for build
+    for var, cmd in [
+            ("CFLAGS", "pkg-config --cflags {}".format(libbson_pc_path)),
+            ("LDFLAGS", "pkg-config --libs {}".format(libbson_pc_path))]:
+        status, output = subprocess.getstatusoutput(cmd)
+        if status != 0:
+            warnings.warn(output, UserWarning)
+        else:
+            os.environ[var] = output
 
-    status, output = subprocess.getstatusoutput(
-        "pkg-config --libs {}".format(libbson_pc_path))
-    if status != 0:
-        warnings.warn(output, UserWarning)
-    for entry in output.split():
-        if entry.startswith('-L'):
-            library_dir = entry.lstrip('-L')
-            module.library_dirs.append(library_dir)
-        elif entry.startswith('-l'):
-            library = entry.lstrip('-l')
-            module.libraries.append(library)
+    # Copy libbson SO if not linking statically
+    if os.environ.get('USE_STATIC_LIBBSON') != '1':
+        status, output = subprocess.getstatusoutput(
+            "pkg-config --libs-only-L {}".format(libbson_pc_path))
+        if status != 0:
+            warnings.warn(
+                "unable to vendor libbson - not found", UserWarning)
+
+        basepath = output.lstrip('-L')
+        if platform == 'darwin':
+            so_ext = '.dylib'
+        elif platform == 'linux':
+            so_ext = '.so'
+        else:
+            warnings.warn(
+                "unable to vendor libbson - unsupported platform", UserWarning)
+            return
+        libpath = os.path.join(basepath, "libbson-1.0.0{}".format(so_ext))
+        target = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), 'pymongoarrow')
+        shutil.copy(libpath, target)
+
+
+def append_libbson_flags(module):
+    if os.environ.get('USE_STATIC_LIBBSON') != '1':
+        # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
+        if platform == "darwin":
+            module.extra_link_args += ["-rpath", "@loader_path"]
+        # https://nehckl0.medium.com/creating-relocatable-linux-executables-by-setting-rpath-with-origin-45de573a2e98
+        elif platform == "linux":
+            module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
 
 
 def append_arrow_flags(module):
@@ -84,17 +103,25 @@ def append_arrow_flags(module):
     module.libraries.extend(pa.get_libraries())
     module.library_dirs.extend(pa.get_library_dirs())
 
-    # https://arrow.apache.org/docs/python/extending.html#example
     if os.name == 'posix':
+        # https://arrow.apache.org/docs/python/extending.html#example
         module.extra_compile_args.append('-std=c++11')
+        # https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
+        module.extra_compile_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
+
+
+def ensure_pyarrow_linkable():
+    # https://arrow.apache.org/docs/python/extending.html#building-extensions-against-pypi-wheels
+    pa.create_library_symlinks()
 
 
 def get_extension_modules():
     modules = cythonize(['pymongoarrow/*.pyx'])
+    vendor_libbson()
+    ensure_pyarrow_linkable()
     for module in modules:
         append_libbson_flags(module)
         append_arrow_flags(module)
-
     return modules
 
 
