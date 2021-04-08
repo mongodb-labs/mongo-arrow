@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 from Cython.Build import cythonize
 
+import glob
 import os
 import shutil
 import subprocess
@@ -25,14 +26,6 @@ INSTALL_REQUIRES = [
     'pyarrow>=3,<3.1',
     'pymongo>=3.11,<4',
     'numpy>=1.16.6,<2'
-]
-
-
-SETUP_REQUIRES = [
-    'cython>=0.29<1',
-    'pyarrow>=3,<4',
-    'numpy>=1.16.6,<2',
-    'setuptools>=41'
 ]
 
 
@@ -81,10 +74,12 @@ def vendor_libbson():
             warnings.warn(
                 "unable to vendor libbson - unsupported platform", UserWarning)
             return
-        libpath = os.path.join(basepath, "libbson-1.0.0{}".format(so_ext))
+        libpath = os.path.join(basepath, "libbson-1.0.0{}*".format(so_ext))
+        libs = glob.glob(libpath)
         target = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), 'pymongoarrow')
-        shutil.copy(libpath, target)
+        for lib in libs:
+            shutil.copy(lib, target)
 
 
 def append_libbson_flags(module):
@@ -138,7 +133,6 @@ setup(
     version=get_pymongoarrow_version(),
     python_requires=">=3.6",
     install_requires=INSTALL_REQUIRES,
-    setup_requires=SETUP_REQUIRES,
     tests_require=TESTS_REQUIRE,
     description="Tools for using NumPy, Pandas and PyArrow with MongoDB",
     long_description=LONG_DESCRIPTION,
