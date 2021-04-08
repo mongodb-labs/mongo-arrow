@@ -89,8 +89,8 @@ def append_libbson_flags(module):
         if platform == "darwin":
             module.extra_link_args += ["-rpath", "@loader_path"]
         # https://nehckl0.medium.com/creating-relocatable-linux-executables-by-setting-rpath-with-origin-45de573a2e98
-        elif platform == "linux":
-            module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
+        # elif platform == "linux":
+        #     module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
 
 
 def append_arrow_flags(module):
@@ -108,9 +108,9 @@ def append_arrow_flags(module):
 
 def get_extension_modules():
     modules = cythonize(['pymongoarrow/*.pyx'])
-    vendor_libbson()
+    # vendor_libbson()
     for module in modules:
-        append_libbson_flags(module)
+        # append_libbson_flags(module)
         append_arrow_flags(module)
     return modules
 
