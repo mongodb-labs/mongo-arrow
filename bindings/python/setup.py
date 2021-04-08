@@ -104,6 +104,7 @@ def append_arrow_flags(module):
         module.extra_compile_args.append('-std=c++11')
         # https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
         module.extra_compile_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
+        module.extra_link_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
 
 
 def ensure_pyarrow_linkable():
