@@ -7,7 +7,7 @@ set -o errexit
 PYTHON=${PYTHON_BINARY:-"python"}
 
 # Keep in sync with pymongoarrow.version._MIN_LIBBSON_VERSION
-LIBBSON_REVISION="1.17.4"
+LIBBSON_REVISION=${LIBBSON_VERSION:-"1.17.4"}
 
 # Compute shared library filename
 if [ "Darwin" = "$(uname -s)" ]
@@ -16,10 +16,10 @@ then
 elif [ "Darwin" = "$(uname -s)" ]
 then
   SO_EXT='so'
+  export MACOSX_DEPLOYMENT_TARGET="10.15"
 else
   echo "Unsupported platform"
 fi
-LIBBSON_SO="libbson-1.0.0.${SO_EXT}"
 
 # Build libbson binaries in $(pwd)/libbson
 ./build-libbson.sh "$LIBBSON_REVISION"
@@ -29,8 +29,9 @@ if [ ! -d "$(pwd)/libbson/lib/pkgconfig" ]
 then
   echo "libbson install did not publish pkg-config at expected location"
   exit 1
+else
+  export PKG_CONFIG_PATH="$(pwd)/libbson/lib/pkgconfig"
 fi
-export PKG_CONFIG_PATH="$(pwd)/libbson/lib/pkgconfig"
 
 # Ensure we are in the correct working directory
 if [ ! -d "$(pwd)/pymongoarrow" ] || [ ! -e "$(pwd)/setup.py" ]
@@ -40,7 +41,7 @@ then
 fi
 
 # Vendor libbson shared library in PyMongoArrow wheels
-cp "$(pwd)/libbson/lib/${LIBBSON_SO}" "$(pwd)/pymongoarrow/"
+cp "$(pwd)/libbson/lib/libbson-1.0.0.${SO_EXT}" "$(pwd)/pymongoarrow/"
 
 # Install build dependencies
 $PYTHON -m pip install -U pip setuptools wheel
@@ -51,5 +52,4 @@ $PYTHON -c "import pyarrow; pyarrow.create_library_symlinks()"
 
 # Build wheels in $(pwd)/dist/*.whl
 python setup.py clean --all
-export MACOSX_DEPLOYMENT_TARGET="10.15"
 CFLAGS=$(pkg-config --cflags libbson-1.0) LDFLAGS=$(pkg-config --libs libbson-1.0) python setup.py bdist_wheel
