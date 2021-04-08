@@ -16,7 +16,7 @@ jobs:
       - name: Build wheels
         run: |
           ./release.sh
-        working_directory: ./bindings/python
+        working-directory: ./bindings/python
       - uses: actions/upload-artifact@v2
         with:
           name: pymongoarrow-osx-wheels
