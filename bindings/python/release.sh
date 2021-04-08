@@ -5,9 +5,16 @@ set -o errexit
 
 # Set Python runtime to use via PYTHON_BINARY envvar
 PYTHON=${PYTHON_BINARY:-"python"}
+$PYTHON --version
 
+# Version of libbson to use
 # Keep in sync with pymongoarrow.version._MIN_LIBBSON_VERSION
 LIBBSON_REVISION=${LIBBSON_VERSION:-"1.17.4"}
+echo "Using libbson $LIBBSON_REVISION"
+
+# Whether to statically or dynamically link libbson
+USE_STATIC_LIBBSON=${USE_STATIC_LIBBSON:-"0"}
+echo "Static libbson linking $USE_STATIC_LIBBSON"
 
 # Compute shared library filename
 if [ "Darwin" = "$(uname -s)" ]
@@ -22,16 +29,8 @@ else
 fi
 
 # Build libbson binaries in $(pwd)/libbson
-./build-libbson.sh "$LIBBSON_REVISION"
-
-# Export PKG_CONFIG_PATH to discover headers during build
-if [ ! -d "$(pwd)/libbson/lib/pkgconfig" ]
-then
-  echo "libbson install did not publish pkg-config at expected location"
-  exit 1
-else
-  export PKG_CONFIG_PATH="$(pwd)/libbson/lib/pkgconfig"
-fi
+LIBBSON_BUILD_DIR="$(pwd)/libbson"
+./build-libbson.sh "$LIBBSON_REVISION" "$LIBBSON_BUILD_DIR"
 
 # Ensure we are in the correct working directory
 if [ ! -d "$(pwd)/pymongoarrow" ] || [ ! -e "$(pwd)/setup.py" ]
@@ -52,4 +51,4 @@ $PYTHON -c "import pyarrow; pyarrow.create_library_symlinks()"
 
 # Build wheels in $(pwd)/dist/*.whl
 python setup.py clean --all
-CFLAGS=$(pkg-config --cflags libbson-1.0) LDFLAGS=$(pkg-config --libs libbson-1.0) python setup.py bdist_wheel
+LIBBSON_INSTALL_DIR="$LIBBSON_BUILD_DIR" USE_STATIC_LIBBSON="$USE_STATIC_LIBBSON" python setup.py bdist_wheel

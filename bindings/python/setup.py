@@ -2,7 +2,9 @@ from setuptools import setup, find_packages
 from Cython.Build import cythonize
 
 import os
+import subprocess
 from sys import platform
+import warnings
 
 import numpy as np
 import pyarrow as pa
@@ -38,23 +40,60 @@ TESTS_REQUIRE = [
 ]
 
 
-def get_extension_modules():
-    modules = cythonize(['pymongoarrow/*.pyx'])
-
-    for module in modules:
-        # module.libraries.append('bson-1.0')
-        module.include_dirs.append(np.get_include())
-        module.include_dirs.append(pa.get_include())
-        module.libraries.extend(pa.get_libraries())
-        module.library_dirs.extend(pa.get_library_dirs())
-
-        # https://arrow.apache.org/docs/python/extending.html#example
-        if os.name == 'posix':
-            module.extra_compile_args.append('-std=c++11')
-
+def append_libbson_flags(module):
+    if os.environ.get('USE_STATIC_LIBBSON') == '1':
+        pc_name = 'libbson-static-1.0'
+    else:
+        pc_name = 'libbson-1.0'
         # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
         if platform == "darwin":
             module.extra_link_args += ["-rpath", "@loader_path"]
+
+    if 'LIBBSON_INSTALL_DIR' in os.environ:
+        libbson_pc_path = os.path.join(
+            os.environ['LIBBSON_INSTALL_DIR'], 'lib', 'pkgconfig',
+            ".".join([pc_name, 'pc']))
+    else:
+        libbson_pc_path = pc_name
+
+    status, output = subprocess.getstatusoutput(
+        "pkg-config --cflags {}".format(libbson_pc_path))
+    if status != 0:
+        warnings.warn(output, UserWarning)
+    for entry in output.split():
+        if entry.startswith('-I'):
+            include_dir = entry.lstrip('-I')
+            module.include_dirs.append(include_dir)
+
+    status, output = subprocess.getstatusoutput(
+        "pkg-config --libs {}".format(libbson_pc_path))
+    if status != 0:
+        warnings.warn(output, UserWarning)
+    for entry in output.split():
+        if entry.startswith('-L'):
+            library_dir = entry.lstrip('-L')
+            module.library_dirs.append(library_dir)
+        elif entry.startswith('-l'):
+            library = entry.lstrip('-l')
+            module.libraries.append(library)
+
+
+def append_arrow_flags(module):
+    module.include_dirs.append(np.get_include())
+    module.include_dirs.append(pa.get_include())
+    module.libraries.extend(pa.get_libraries())
+    module.library_dirs.extend(pa.get_library_dirs())
+
+    # https://arrow.apache.org/docs/python/extending.html#example
+    if os.name == 'posix':
+        module.extra_compile_args.append('-std=c++11')
+
+
+def get_extension_modules():
+    modules = cythonize(['pymongoarrow/*.pyx'])
+    for module in modules:
+        append_libbson_flags(module)
+        append_arrow_flags(module)
 
     return modules
 

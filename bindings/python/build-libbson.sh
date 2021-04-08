@@ -19,7 +19,8 @@ then
 fi
 
 # Directory where build artifacts will be placed
-INSTALL_DIR="$(pwd)/libbson"
+INSTALL_DIR=${2:-"$(pwd)/libbson"}
+echo "Installing libbson in $INSTALL_DIR"
 
 # Build libbson
 pushd "$WORKDIR"
