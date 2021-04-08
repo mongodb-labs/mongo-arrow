@@ -55,10 +55,7 @@ def vendor_libbson():
         if status != 0:
             warnings.warn(output, UserWarning)
         else:
-            if var == 'CFLAGS' and platform == 'linux':
-                os.environ[var] = "-D_GLIBCXX_USE_CXX11_ABI=0 {}".format(output)
-            else:
-                os.environ[var] = output
+            os.environ[var] = output
 
     # Copy libbson SO if not linking statically
     if os.environ.get('USE_STATIC_LIBBSON') != '1':
@@ -106,12 +103,7 @@ def append_arrow_flags(module):
         # https://arrow.apache.org/docs/python/extending.html#example
         module.extra_compile_args.append('-std=c++11')
         # https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
-        module.extra_compile_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
-
-
-def ensure_pyarrow_linkable():
-    # https://arrow.apache.org/docs/python/extending.html#building-extensions-against-pypi-wheels
-    pa.create_library_symlinks()
+        # module.extra_compile_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
 
 
 def get_extension_modules():
