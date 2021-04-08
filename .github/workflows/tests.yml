@@ -21,9 +21,9 @@ jobs:
       - name: Install libbson
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-              wget https://github.com/mongodb/mongo-c-driver/releases/download/1.17.5/mongo-c-driver-1.17.5.tar.gz
-              tar xzf mongo-c-driver-1.17.5.tar.gz
-              cd mongo-c-driver-1.17.5
+              wget https://github.com/mongodb/mongo-c-driver/releases/download/1.17.4/mongo-c-driver-1.17.4.tar.gz
+              tar xzf mongo-c-driver-1.17.4.tar.gz
+              cd mongo-c-driver-1.17.4
               mkdir cmake-build
               cd cmake-build
               cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DENABLE_MONGOC=OFF ..
@@ -36,16 +36,19 @@ jobs:
               exit 1
           fi
         working-directory: ./bindings/python
-      - name: Install build dependencies
+      - name: Install Python dependencies
         run: |
           python -m pip install -U pip wheel
-          pip install 'cython>=0.29' 'pyarrow>=3' 'numpy>=1.16.6' 'pymongo>=3.11,<4' 'pandas>=1,<1.2' 'numpy >= 1.16.6'
+          pip install 'cython>=0.29' 'pyarrow>=3' 'numpy>=1.16.6' 'pymongo>=3.11,<4' 'pandas' 'numpy >= 1.16.6'
           python -c 'import pyarrow as pa; pa.create_library_symlinks()'
         working-directory: ./bindings/python
-      - name: Install PyMongoArrow
+      - name: Install pymongoarrow
         run: |
-          python setup.py build_ext --inplace --force
+          # https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
+          CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 $(pkg-config --cflags libbson-1.0)" \
+           LDFLAGS=$(pkg-config --libs libbson-1.0) \
+           python setup.py build_ext --inplace --force
         working-directory: ./bindings/python
-      - name: Run pymongoarrow testsuite
-        run: python -m unittest discover
+      - name: Test
+        run: LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/ python -m unittest discover test
         working-directory: ./bindings/python
