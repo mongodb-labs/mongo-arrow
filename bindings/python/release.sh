@@ -51,4 +51,5 @@ $PYTHON -c "import pyarrow; pyarrow.create_library_symlinks()"
 
 # Build wheels in $(pwd)/dist/*.whl
 python setup.py clean --all
+export MACOSX_DEPLOYMENT_TARGET="10.15"
 CFLAGS=$(pkg-config --cflags libbson-1.0) LDFLAGS=$(pkg-config --libs libbson-1.0) python setup.py bdist_wheel
