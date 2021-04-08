@@ -38,7 +38,8 @@ jobs:
         working-directory: ./bindings/python
       - name: Install pymongoarrow
         run: |
-          pip install .
+          python -m pip -U pip setuptools
+          python -m pip install 'Cython>=0.29' 'pyarrow>=3,<4'
         working-directory: ./bindings/python
       - name: Run pymongoarrow testsuite
         run: python -m unittest discover

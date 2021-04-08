@@ -25,7 +25,7 @@ def get_pymongoarrow_version():
 INSTALL_REQUIRES = [
     'pyarrow>=3,<3.1',
     'pymongo>=3.11,<4',
-    'numpy>=1.16.6,<2'
+    'numpy>=1.16.6,<2',
 ]
 
 
