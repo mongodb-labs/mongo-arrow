@@ -1,0 +1,23 @@
+name: Build pymongoarrow wheels on OSX
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest]
+    name: Build wheels on ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build wheels
+        run: |
+          ./release.sh
+      - uses: actions/upload-artifact@v2
+        with:
+          name: pymongoarrow-osx-wheels
+          path: dist/*.whl
+          if-no-files-found: error
