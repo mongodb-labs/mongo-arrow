@@ -5,16 +5,16 @@ on:
   pull_request:
 
 jobs:
-  build:
+  build-osx-wheels:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-11.0]
-        python-version: [3.7]
+        os: [macos-10.15]
+        python-version: [3.6, 3.7, 3.8, 3.9]
     name: Build ${{ matrix.os }} ${{ matrix.python-version }} wheels
     steps:
       - uses: actions/checkout@v2
-      - name: Setup Python # Set Python version
+      - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
@@ -27,3 +27,25 @@ jobs:
           name: pymongoarrow-osx-${{ matrix.python-version }}-wheel
           path: ./bindings/python/dist/*.whl
           if-no-files-found: error
+  test-osx-wheels:
+    needs: build-osx-wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-10.15]
+        python-version: [3.6, 3.7, 3.8, 3.9]
+    name: Build ${{ matrix.os }} ${{ matrix.python-version }} wheels
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Download a previously created wheel
+        uses: actions/download-artifact@v2
+        with:
+          name: pymongoarrow-osx-${{ matrix.python-version }}-wheel
+      - name: Test wheel
+        run: |
+          python -m pip install -U pip
+          python -m pip install *.whl
+          python -c "from pymongoarrow.lib import process_bson_stream"
