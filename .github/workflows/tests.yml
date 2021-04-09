@@ -45,8 +45,8 @@ jobs:
       - name: Install pymongoarrow
         run: |
           # https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
-          CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 $(pkg-config --cflags libbson-static-1.0)" \
-           LDFLAGS=$(pkg-config --libs libbson-static-1.0) \
+          CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0 $(pkg-config --cflags libbson-1.0)" \
+           LDFLAGS=$(pkg-config --libs libbson-1.0) \
            python setup.py build_ext --inplace --force
         working-directory: ./bindings/python
       - name: Test
