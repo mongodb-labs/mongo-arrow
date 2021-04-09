@@ -36,12 +36,14 @@ SETUP_REQUIRES = [
 
 
 TESTS_REQUIRE = [
-    "pandas"
+    "pandas>=1.0,<1.2"
 ]
 
 
 def append_libbson_flags(module):
     pc_name = 'libbson-1.0'
+    module.libraries.append('bson-1.0')
+
     # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
     if platform == "darwin":
         module.extra_link_args += ["-rpath", "@loader_path"]
@@ -83,7 +85,7 @@ def append_arrow_flags(module):
 def get_extension_modules():
     modules = cythonize(['pymongoarrow/*.pyx'])
     for module in modules:
-        # append_libbson_flags(module)
+        append_libbson_flags(module)
         append_arrow_flags(module)
 
     return modules
