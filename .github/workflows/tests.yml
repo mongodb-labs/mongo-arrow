@@ -21,9 +21,9 @@ jobs:
       - name: Install libbson
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-              wget https://github.com/mongodb/mongo-c-driver/releases/download/1.17.4/mongo-c-driver-1.17.4.tar.gz
-              tar xzf mongo-c-driver-1.17.4.tar.gz
-              cd mongo-c-driver-1.17.4
+              wget https://github.com/mongodb/mongo-c-driver/releases/download/1.17.5/mongo-c-driver-1.17.5.tar.gz
+              tar xzf mongo-c-driver-1.17.5.tar.gz
+              cd mongo-c-driver-1.17.5
               mkdir cmake-build
               cd cmake-build
               cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DENABLE_MONGOC=OFF ..
