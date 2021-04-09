@@ -25,14 +25,7 @@ jobs:
           mongodb-replica-set: test-rs
       - name: Install libbson
         run: |
-          wget https://github.com/mongodb/mongo-c-driver/releases/download/1.17.4/mongo-c-driver-1.17.4.tar.gz
-          tar xzf mongo-c-driver-1.17.4.tar.gz
-          cd mongo-c-driver-1.17.4
-          mkdir cmake-build
-          cd cmake-build
-          cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -DENABLE_MONGOC=OFF ..
-          cmake --build .
-          sudo cmake --build . --target install
+          ./build-libbson.sh
         working-directory: ./bindings/python
       - name: Install Python dependencies
         run: |
@@ -42,10 +35,9 @@ jobs:
         working-directory: ./bindings/python
       - name: Install pymongoarrow
         run: |
-          # https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
           python setup.py build_ext --inplace --force
         working-directory: ./bindings/python
       - name: Run tests
         run: |
-          LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/ python -m unittest discover test
+          python -m unittest discover test
         working-directory: ./bindings/python

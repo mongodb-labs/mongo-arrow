@@ -5,6 +5,8 @@ include release.sh
 
 graft pymongoarrow
 
+prune test
+
 global-exclude *.cpp
 global-exclude *.dylib
 global-exclude *.so

@@ -49,10 +49,10 @@ def append_libbson_flags(module):
     if platform == "darwin":
         module.extra_link_args += ["-rpath", "@loader_path"]
 
-    if 'LIBBSON_INSTALL_DIR' in os.environ:
+    libbson_install_dir = os.environ.get('LIBBSON_INSTALL_DIR')
+    if libbson_install_dir:
         libbson_pc_path = os.path.join(
-            os.environ['LIBBSON_INSTALL_DIR'], 'lib', 'pkgconfig',
-            ".".join([pc_name, 'pc']))
+            libbson_install_dir, 'lib', 'pkgconfig', ".".join([pc_name, 'pc']))
     else:
         libbson_pc_path = pc_name
 
