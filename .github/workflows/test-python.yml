@@ -1,4 +1,4 @@
-name: Test PymongoArrow
+name: Test PyMongoArrow
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install -U pip wheel
-          pip install 'cython>=0.29' 'pyarrow>=3' 'numpy>=1.16.6' 'pymongo>=3.11,<4' 'pandas>=2,<3' 'numpy >= 1.16.6'
+          pip install 'cython>=0.29' 'pyarrow>=3' 'numpy>=1.16.6' 'pymongo>=3.11,<4' 'pandas>=1.0,<1.2' 'numpy >= 1.16.6'
           python -c 'import pyarrow as pa; pa.create_library_symlinks()'
         working-directory: ./bindings/python
       - name: Install pymongoarrow
