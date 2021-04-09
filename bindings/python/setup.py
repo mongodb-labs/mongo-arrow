@@ -44,6 +44,7 @@ def append_libbson_flags(module):
     pc_name = 'libbson-1.0'
     module.libraries.append('bson-1.0')
 
+    # Ensure our Cython extension can dynamically link to libbson
     # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
     if platform == "darwin":
         module.extra_link_args += ["-rpath", "@loader_path"]
@@ -59,16 +60,17 @@ def append_libbson_flags(module):
         "pkg-config --cflags {}".format(libbson_pc_path))
     if status != 0:
         warnings.warn(output, UserWarning)
-    cflags = os.environ.get('CFLAGS', '')
-    os.environ['CFLAGS'] = \
-        "-D_GLIBCXX_USE_CXX11_ABI=0 {} ".format(output) + cflags
+    else:
+        cflags = os.environ.get('CFLAGS', '')
+        os.environ['CFLAGS'] = output + " " + cflags
 
     status, output = subprocess.getstatusoutput(
         "pkg-config --libs {}".format(libbson_pc_path))
     if status != 0:
         warnings.warn(output, UserWarning)
-    ldflags = os.environ.get('LDFLAGS', '')
-    os.environ['LDFLAGS'] = output + " " + ldflags
+    else:
+        ldflags = os.environ.get('LDFLAGS', '')
+        os.environ['LDFLAGS'] = output + " " + ldflags
 
 
 def append_arrow_flags(module):
@@ -77,7 +79,10 @@ def append_arrow_flags(module):
     module.libraries.extend(pa.get_libraries())
     module.library_dirs.extend(pa.get_library_dirs())
 
+    # Arrow's manylinux{1,2010} binaries are built with gcc < 4.8 which predates CXX11 ABI
+    # https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
     # https://arrow.apache.org/docs/python/extending.html#example
+    module.define_macros.append(("_GLIBCXX_USE_CXX11_ABI", "0"))
     if os.name == 'posix':
         module.extra_compile_args.append('-std=c++11')
 

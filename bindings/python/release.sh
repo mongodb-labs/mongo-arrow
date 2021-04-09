@@ -9,7 +9,7 @@ $PYTHON --version
 
 # Version of libbson to use
 # Keep in sync with pymongoarrow.version._MIN_LIBBSON_VERSION
-LIBBSON_REVISION=${LIBBSON_VERSION:-"1.17.4"}
+LIBBSON_REVISION=${LIBBSON_VERSION:-"1.17.5"}
 echo "Using libbson $LIBBSON_REVISION"
 
 # Compute shared library filename
@@ -40,7 +40,7 @@ cp "$(pwd)/libbson/lib/libbson-1.0.0.${SO_EXT}" "$(pwd)/pymongoarrow/"
 
 # Install build dependencies
 $PYTHON -m pip install -U pip setuptools wheel
-$PYTHON -m pip install Cython>=0.29 pyarrow
+$PYTHON -m pip install "Cython>=0.29" "pyarrow>=3,<3.1"
 
 # https://arrow.apache.org/docs/python/extending.html#building-extensions-against-pypi-wheels
 $PYTHON -c "import pyarrow; pyarrow.create_library_symlinks()"
