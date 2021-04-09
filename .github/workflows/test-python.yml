@@ -25,7 +25,7 @@ jobs:
           mongodb-replica-set: test-rs
       - name: Install libbson
         run: |
-          ./build-libbson.sh
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
         working-directory: ./bindings/python
       - name: Install Python dependencies
         run: |
@@ -35,9 +35,9 @@ jobs:
         working-directory: ./bindings/python
       - name: Install pymongoarrow
         run: |
-          python setup.py build_ext --inplace --force
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson python setup.py build_ext --inplace --force
         working-directory: ./bindings/python
       - name: Run tests
         run: |
-          python -m unittest discover test
+          LD_LIBRARY_PATH=$(pwd)/libbson/lib python -m unittest discover test
         working-directory: ./bindings/python
