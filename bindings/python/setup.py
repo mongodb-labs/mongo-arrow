@@ -21,7 +21,7 @@ def get_extension_modules():
     modules = cythonize(['pymongoarrow/*.pyx'])
 
     for module in modules:
-        module.libraries.append('bson-1.0')
+        # module.libraries.append('bson-1.0')
         module.include_dirs.append(np.get_include())
         module.include_dirs.append(pa.get_include())
         module.libraries.extend(pa.get_libraries())
