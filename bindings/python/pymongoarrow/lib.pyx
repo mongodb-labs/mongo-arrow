@@ -37,11 +37,11 @@ from pyarrow.lib cimport *
 from pymongoarrow.libbson cimport *
 
 
+# libbson version
+libbson_version = bson_get_version().decode('utf-8')
+
 # BSON tools
 include "bson.pyi"
-
-# Utilities
-include "utils.pyi"
 
 # Builders
 include "builders.pyi"

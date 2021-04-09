@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest import TestCase
 
 from pyarrow import Array, timestamp, int32, int64
@@ -54,33 +54,40 @@ class TestDate64Builder(TestCase):
         builder = DatetimeBuilder()
         self.assertEqual(builder.unit, timestamp('ms'))
 
-    def _test_simple(self, tstamp_units, kwarg_name):
-        builder = DatetimeBuilder(dtype=timestamp(tstamp_units))
-        datetimes = [datetime(1970, 1, 1) + timedelta(**{kwarg_name: k*100})
+    def _to_int(self, dt):
+        # datetime.timestamp assumes local time so we must explicitly
+        # specify tzinfo=timezone.utc to obtain POSIX time
+        return int(dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
+
+    def _millis_only(self, dt):
+        micros = (dt.microsecond // 1000) * 1000
+        return dt.replace(microsecond=micros)
+
+    def test_simple(self):
+        self.maxDiff = None
+
+        builder = DatetimeBuilder(dtype=timestamp('ms'))
+        datetimes = [datetime.utcnow() + timedelta(days=k*100)
                      for k in range(5)]
-        builder.append(datetimes[0])
-        builder.append_values(datetimes[1:])
+        builder.append(self._to_int(datetimes[0]))
+        builder.append_values([self._to_int(k) for k in datetimes[1:]])
         builder.append(None)
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
         self.assertEqual(arr.null_count, 1)
         self.assertEqual(len(arr), len(datetimes) + 1)
-        self.assertEqual(arr.to_pylist(), datetimes + [None])
-        self.assertEqual(arr.type, timestamp(tstamp_units))
-
-    def test_simple(self):
-        # milliseconds
-        self._test_simple('ms', 'milliseconds')
-        # seconds
-        self._test_simple('s', 'seconds')
+        for actual, expected in zip(arr, datetimes + [None]):
+            if actual.is_valid:
+                self.assertEqual(actual.as_py(), self._millis_only(expected))
+            else:
+                self.assertIsNone(expected)
+        self.assertEqual(arr.type, timestamp('ms'))
 
     def test_unsupported_units(self):
-        with self.assertRaises(ValueError):
-            DatetimeBuilder(dtype=timestamp('us'))
-
-        with self.assertRaises(ValueError):
-            DatetimeBuilder(dtype=timestamp('ns'))
+        for unit in ('s', 'us', 'ns'):
+            with self.assertRaises(TypeError):
+                DatetimeBuilder(dtype=timestamp(unit))
 
 
 class TestDoubleBuilder(TestCase):

@@ -29,7 +29,7 @@ def process_bson_stream(bson_stream, context):
     cdef bson_iter_t doc_iter
     cdef const char* key
     cdef bson_type_t value_t
-    cdef uint64_t count = 0
+    cdef Py_ssize_t count = 0
 
     builder_map = context.builder_map
     type_map = context.type_map

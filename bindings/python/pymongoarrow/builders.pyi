@@ -123,10 +123,10 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
     def __cinit__(self, TimestampType dtype=timestamp('ms'),
                   MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
-        if dtype in (timestamp('us'), timestamp('ns')):
-            raise ValueError("Microsecond resolution temporal type is not "
-                             "suitable for use with MongoDB's UTC datetime "
-                             "type which has resolution of milliseconds.")
+        if dtype.unit != 'ms':
+            raise TypeError("PyMongoArrow only supports millisecond "
+                            "temporal resolution compatible with MongoDB's "
+                            "UTC datetime type.")
         self.dtype = dtype
         self.builder.reset(new CTimestampBuilder(
             pyarrow_unwrap_data_type(self.dtype), pool))
@@ -140,11 +140,10 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
     def append(self, value):
         if value is None or value is np.nan:
             self.builder.get().AppendNull()
-        elif isinstance(value, datetime.datetime):
-            self.builder.get().Append(
-                datetime_to_int64(value, self.dtype))
+        elif isinstance(value, int):
+            self.builder.get().Append(value)
         else:
-            raise TypeError('TimestampBuilder only accepts datetime objects')
+            raise TypeError('TimestampBuilder only accepts 64-bit integers')
 
     def finish(self):
         cdef shared_ptr[CArray] out
