@@ -12,10 +12,6 @@ $PYTHON --version
 LIBBSON_REVISION=${LIBBSON_VERSION:-"1.17.4"}
 echo "Using libbson $LIBBSON_REVISION"
 
-# Whether to statically or dynamically link libbson
-USE_STATIC_LIBBSON=${USE_STATIC_LIBBSON:-"0"}
-echo "Static libbson linking $USE_STATIC_LIBBSON"
-
 # Compute shared library filename
 if [ "Darwin" = "$(uname -s)" ]
 then
@@ -51,4 +47,4 @@ $PYTHON -c "import pyarrow; pyarrow.create_library_symlinks()"
 
 # Build wheels in $(pwd)/dist/*.whl
 python setup.py clean --all
-LIBBSON_INSTALL_DIR="$LIBBSON_BUILD_DIR" USE_STATIC_LIBBSON="$USE_STATIC_LIBBSON" python setup.py bdist_wheel
+LIBBSON_INSTALL_DIR="$LIBBSON_BUILD_DIR" python setup.py bdist_wheel

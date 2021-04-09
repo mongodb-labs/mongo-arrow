@@ -41,13 +41,10 @@ TESTS_REQUIRE = [
 
 
 def append_libbson_flags(module):
-    if os.environ.get('USE_STATIC_LIBBSON') == '1':
-        pc_name = 'libbson-static-1.0'
-    else:
-        pc_name = 'libbson-1.0'
-        # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
-        if platform == "darwin":
-            module.extra_link_args += ["-rpath", "@loader_path"]
+    pc_name = 'libbson-1.0'
+    # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
+    if platform == "darwin":
+        module.extra_link_args += ["-rpath", "@loader_path"]
 
     if 'LIBBSON_INSTALL_DIR' in os.environ:
         libbson_pc_path = os.path.join(
@@ -60,22 +57,16 @@ def append_libbson_flags(module):
         "pkg-config --cflags {}".format(libbson_pc_path))
     if status != 0:
         warnings.warn(output, UserWarning)
-    for entry in output.split():
-        if entry.startswith('-I'):
-            include_dir = entry.lstrip('-I')
-            module.include_dirs.append(include_dir)
+    cflags = os.environ.get('CFLAGS', '')
+    os.environ['CFLAGS'] = \
+        "-D_GLIBCXX_USE_CXX11_ABI=0 {} ".format(output) + cflags
 
     status, output = subprocess.getstatusoutput(
         "pkg-config --libs {}".format(libbson_pc_path))
     if status != 0:
         warnings.warn(output, UserWarning)
-    for entry in output.split():
-        if entry.startswith('-L'):
-            library_dir = entry.lstrip('-L')
-            module.library_dirs.append(library_dir)
-        elif entry.startswith('-l'):
-            library = entry.lstrip('-l')
-            module.libraries.append(library)
+    ldflags = os.environ.get('LDFLAGS', '')
+    os.environ['LDFLAGS'] = output + " " + ldflags
 
 
 def append_arrow_flags(module):
