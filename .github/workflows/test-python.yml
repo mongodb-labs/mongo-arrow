@@ -6,12 +6,12 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    # supercharge/mongodb-github-action requires containers so we don't test other platforms
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-10.15]
         python-version: [3.6, 3.7, 3.8, 3.9]
-    name: Test on ${{ matrix.os }}
+    name: CPython ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v2
       - name: Setup Python
@@ -47,9 +47,5 @@ jobs:
         working-directory: ./bindings/python
       - name: Run tests
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-              LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/ python -m unittest discover test
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-              python -m unittest discover test
-          fi
+          LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/ python -m unittest discover test
         working-directory: ./bindings/python
