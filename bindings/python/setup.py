@@ -83,7 +83,7 @@ def append_arrow_flags(module):
 def get_extension_modules():
     modules = cythonize(['pymongoarrow/*.pyx'])
     for module in modules:
-        append_libbson_flags(module)
+        # append_libbson_flags(module)
         append_arrow_flags(module)
 
     return modules
