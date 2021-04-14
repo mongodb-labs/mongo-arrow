@@ -69,7 +69,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build wheels
         run: |
-          docker run --rm --volume `pwd`:/python --workdir /python --env PYTHON_BINARY=${{ matrix.python-version }} ${{ matrix.container }} ./release.sh
+          docker run --rm --volume `pwd`:/python --workdir /python --env PYTHON_BINARY=/opt/python/${{ matrix.python-version }}/bin/python ${{ matrix.container }} ./release.sh
         working-directory: ./bindings/python
       - uses: actions/upload-artifact@v2
         with:
