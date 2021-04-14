@@ -76,7 +76,6 @@ def append_libbson_flags(module):
         print(ldflags)
         orig_ldflags = os.environ.get('LDFLAGS', '')
         os.environ['LDFLAGS'] = ldflags + " " + orig_ldflags
-        module.extra_link_args.append(query_pkgconfig("pkg-config --libs {}".format(pc_path)))
 
     if platform == "darwin":
         # Ensure our Cython extension can dynamically link to libbson
@@ -87,9 +86,9 @@ def append_libbson_flags(module):
 
     # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
     # TODO: file a Cython bug
-    # lname = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
-    # libname = lname.lstrip('-l')
-    # module.libraries.append(libname)
+    lname = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
+    libname = lname.lstrip('-l')
+    module.libraries.append(libname)
 
 
 def append_arrow_flags(module):
