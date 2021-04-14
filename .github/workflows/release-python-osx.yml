@@ -57,19 +57,20 @@ jobs:
       matrix:
         container: ['quay.io/pypa/manylinux2010_x86_64', 'quay.io/pypa/manylinux2014_x86_64']
         python-version: ['cp36-cp36m', 'cp37-cp37m', 'cp38-cp38', 'cp39-cp39']
-    container:
-      image: ${{ matrix.container }}
-      env:
-        PYTHON_BINARY: /opt/python/${{ matrix.python-version }}/bin/python
-      volumes:
-        - /bindings/python:/python
-      options: "--workdir /python"
+#    container:
+#      image: ${{ matrix.container }}
+#      env:
+#        PYTHON_BINARY: /opt/python/${{ matrix.python-version }}/bin/python
+#      volumes:
+#        - /bindings/python:/python
+#      options: "--workdir /python"
     name: Build CPython ${{ matrix.python-version }}-${{ matrix.container }}
     steps:
       - uses: actions/checkout@v2
       - name: Build wheels
         run: |
-          ./release.sh
+          docker run --rm --volume `pwd`:/python --workdir /python ./release.sh
+        working-directory: ./bindings/python
       - uses: actions/upload-artifact@v2
         with:
           name: pymongoarrow-${{ matrix.python-version }}-${{ matrix.container }}-wheel
