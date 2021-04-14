@@ -55,21 +55,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        container: ['quay.io/pypa/manylinux2010_x86_64', 'quay.io/pypa/manylinux2014_x86_64']
+        # Cannot have '/' in artifact names, so hardcode 'quay.io/pypa/'
+        container: ['manylinux2010_x86_64', 'manylinux2014_x86_64']
         python-version: ['cp36-cp36m', 'cp37-cp37m', 'cp38-cp38', 'cp39-cp39']
-#    container:
-#      image: ${{ matrix.container }}
-#      env:
-#        PYTHON_BINARY: /opt/python/${{ matrix.python-version }}/bin/python
-#      volumes:
-#        - /bindings/python:/python
-#      options: "--workdir /python"
     name: Build CPython ${{ matrix.python-version }}-${{ matrix.container }}
     steps:
       - uses: actions/checkout@v2
       - name: Build wheels
         run: |
-          docker run --rm --volume `pwd`:/python --workdir /python --env PYTHON_BINARY=/opt/python/${{ matrix.python-version }}/bin/python ${{ matrix.container }} ./release.sh
+          docker run --rm --volume `pwd`:/python --workdir /python --env PYTHON_BINARY=/opt/python/${{ matrix.python-version }}/bin/python quay.io/pypa/${{ matrix.container }} ./release.sh
         working-directory: ./bindings/python
       - uses: actions/upload-artifact@v2
         with:
@@ -81,10 +75,10 @@ jobs:
     needs: build-manylinux-wheels
     strategy:
       matrix:
-        container: ['quay.io/pypa/manylinux2010_x86_64', 'quay.io/pypa/manylinux2014_x86_64']
+        container: ['manylinux2010_x86_64', 'manylinux2014_x86_64']
         python-version: ['cp36-cp36m', 'cp37-cp37m', 'cp38-cp38', 'cp39-cp39']
     container:
-      image: ${{ matrix.container }}
+      image: quay.io/pypa/${{ matrix.container }}
       env:
         PYTHON_BINARY: /opt/python/${{ matrix.python-version }}/bin/python
     name: Test CPython ${{ matrix.python-version }}-${{ matrix.container }}
