@@ -81,10 +81,12 @@ def append_libbson_flags(module):
         # Ensure our Cython extension can dynamically link to libbson
         # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
         module.extra_link_args += ["-rpath", "@loader_path"]
-        # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
-        lname = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
-        libname = lname.lstrip('-l')
-        module.libraries.append(libname)
+
+    # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
+    # TODO: file a Cython bug
+    lname = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
+    libname = lname.lstrip('-l')
+    module.libraries.append(libname)
 
 
 def append_arrow_flags(module):
