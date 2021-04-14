@@ -62,7 +62,7 @@ jobs:
       env:
         PYTHON_BINARY: /opt/python/${{ matrix.python-version }}/bin/python
       volumes:
-        - ./bindings/python:/python
+        - `pwd`/bindings/python:/python
       options: "--workdir /python"
     name: Build CPython ${{ matrix.python-version }}-${{ matrix.container }}
     steps:
