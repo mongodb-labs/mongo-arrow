@@ -74,7 +74,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: pymongoarrow-${{ matrix.python-version }}-${{ matrix.container }}-wheel
-          path: ./dist/*.whl
+          path: ./bindings/python/dist/*.whl
           if-no-files-found: error
   test-manylinux-wheels:
     runs-on: ubuntu-latest
