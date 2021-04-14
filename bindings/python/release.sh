@@ -10,6 +10,9 @@ then
   exit 1
 fi
 
+# Build libbson binaries in $(pwd)/libbson
+LIBBSON_INSTALL_DIR="$(pwd)/libbson"
+
 # Platform-dependent actions:
 # - Compute shared library path
 # - Set Python runtime to use
@@ -26,8 +29,7 @@ else
   echo "Unsupported platform"
 fi
 
-# Build libbson binaries in $(pwd)/libbson
-LIBBSON_INSTALL_DIR="$(pwd)/libbson"
+# Build libbson
 LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""} ./build-libbson.sh
 
 # Print Python version used
