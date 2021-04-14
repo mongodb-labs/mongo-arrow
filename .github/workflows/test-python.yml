@@ -7,9 +7,10 @@ on:
 jobs:
   build:
     # supercharge/mongodb-github-action requires containers so we don't test other platforms
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-20.04]
         python-version: [3.6, 3.7, 3.8, 3.9]
     name: CPython ${{ matrix.python-version }}-${{ matrix.os }}
     steps:
