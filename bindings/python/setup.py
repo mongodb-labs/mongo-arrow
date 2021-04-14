@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 from Cython.Build import cythonize
 
+import glob
 import os
 import subprocess
 from sys import platform
@@ -57,11 +58,12 @@ def append_libbson_flags(module):
     pc_path = 'libbson-1.0.pc'
     install_dir = os.environ.get('LIBBSON_INSTALL_DIR')
     if install_dir:
-        if platform == 'linux':
-            libdir = 'lib64'
-        else:   # darwin
-            libdir = 'lib'
-        pc_path = os.path.join(install_dir, libdir, 'pkgconfig', pc_path)
+        libdirs = glob.glob(os.path.join(install_dir, "lib*"))
+        if len(libdirs) != 1:
+            warnings.warn("Unable to locate {}".format(pc_path))
+        else:
+            libdir = libdirs[0]
+            pc_path = os.path.join(install_dir, libdir, 'pkgconfig', pc_path)
 
     cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path))
     if cflags:
