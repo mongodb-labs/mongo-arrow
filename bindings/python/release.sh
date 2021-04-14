@@ -3,10 +3,6 @@
 set -o xtrace
 set -o errexit
 
-# Build libbson binaries in $(pwd)/libbson
-LIBBSON_INSTALL_DIR="$(pwd)/libbson"
-LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""} ./build-libbson.sh
-
 # Ensure we are in the correct working directory
 if [ ! -d "$(pwd)/pymongoarrow" ] || [ ! -e "$(pwd)/setup.py" ]
 then
@@ -29,6 +25,10 @@ then
 else
   echo "Unsupported platform"
 fi
+
+# Build libbson binaries in $(pwd)/libbson
+LIBBSON_INSTALL_DIR="$(pwd)/libbson"
+LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""} ./build-libbson.sh
 
 # Print Python version used
 $PYTHON --version
