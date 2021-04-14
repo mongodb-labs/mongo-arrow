@@ -35,11 +35,11 @@ LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""
 # Print Python version used
 $PYTHON --version
 
+# Ensure a clean wheel build
+rm -rf build "$(pwd)/pymongoarrow/*.so" "$(pwd)/pymongoarrow/*.dylib"
+
 # Vendor libbson shared library in PyMongoArrow wheels
 cp "$LIBBSON_PATH" "$(pwd)/pymongoarrow/"
-
-# Ensure a clean build
-rm -rf build "$(pwd)/pymongoarrow/*.so" "$(pwd)/pymongoarrow/*.dylib"
 
 # Install build dependencies
 $PYTHON -m pip install -U pip setuptools wheel
