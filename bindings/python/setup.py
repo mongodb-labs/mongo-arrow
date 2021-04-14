@@ -81,6 +81,8 @@ def append_libbson_flags(module):
         # Ensure our Cython extension can dynamically link to libbson
         # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
         module.extra_link_args += ["-rpath", "@loader_path"]
+    elif platform == 'linux':
+        module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
 
     # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
     # TODO: file a Cython bug
