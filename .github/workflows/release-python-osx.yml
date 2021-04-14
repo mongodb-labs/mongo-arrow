@@ -77,10 +77,6 @@ jobs:
       matrix:
         container: ['manylinux2010_x86_64', 'manylinux2014_x86_64']
         python-version: ['cp36-cp36m', 'cp37-cp37m', 'cp38-cp38', 'cp39-cp39']
-    container:
-      image: quay.io/pypa/${{ matrix.container }}
-      env:
-        PYTHON_BINARY: /opt/python/${{ matrix.python-version }}/bin/python
     name: Test CPython ${{ matrix.python-version }}-${{ matrix.container }}
     steps:
       - name: Download a previously created wheel
@@ -89,6 +85,4 @@ jobs:
           name: pymongoarrow-${{ matrix.python-version }}-${{ matrix.container }}-wheel
       - name: Test wheel
         run: |
-          $PYTHON_BINARY -m pip install -U pip
-          $PYTHON_BINARY -m pip install *.whl
-          $PYTHON_BINARY -c "from pymongoarrow.lib import process_bson_stream"
+          docker run --rm --volume `pwd`:/python --workdir /python --env PYTHON_BINARY=/opt/python/${{ matrix.python-version }}/bin/python quay.io/pypa/${{ matrix.container }} "$PYTHON_BINARY -m pip install -U pip && $PYTHON_BINARY -m pip install *.whl && $PYTHON_BINARY -c 'from pymongoarrow.lib import process_bson_stream'"
