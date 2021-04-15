@@ -85,4 +85,4 @@ jobs:
           name: pymongoarrow-${{ matrix.python-version }}-${{ matrix.container }}-wheel
       - name: Test wheel
         run: |
-          docker run --rm --volume `pwd`:/python --workdir /python --env PYTHON_BINARY=/opt/python/${{ matrix.python-version }}/bin/python quay.io/pypa/${{ matrix.container }} "$PYTHON_BINARY -m pip install -U pip && $PYTHON_BINARY -m pip install *.whl && $PYTHON_BINARY -c 'from pymongoarrow.lib import process_bson_stream'"
+          docker run --rm --volume `pwd`:/python --workdir /python quay.io/pypa/${{ matrix.container }} "/opt/python/${{ matrix.python-version }}/bin/python -m pip install -U pip && /opt/python/${{ matrix.python-version }}/bin/python -m pip install *.whl && /opt/python/${{ matrix.python-version }}/bin/python -c 'from pymongoarrow.lib import process_bson_stream'"
