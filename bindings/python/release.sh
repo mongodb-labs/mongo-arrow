@@ -20,7 +20,6 @@ if [ "Darwin" = "$(uname -s)" ]
 then
   LIBBSON_PATH="$LIBBSON_INSTALL_DIR/lib/libbson-1.0.0.dylib"
   PYTHON=${PYTHON_BINARY:-"python"}
-  export MACOSX_DEPLOYMENT_TARGET="10.9"
 elif [ "Linux" = "$(uname -s)" ]
 then
   LIBBSON_PATH="$LIBBSON_INSTALL_DIR/lib64/libbson-1.0.so.0"
