@@ -86,11 +86,16 @@ def append_libbson_flags(module):
 
     # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
     # TODO: file a Cython bug
-    # lname = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
-    # libname = lname.lstrip('-l')
-    # module.libraries.append(libname)
-    libargs = query_pkgconfig("pkg-config --libs {}".format(pc_path))
-    module.libraries.append(libargs)
+    lname = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
+    libname = lname.lstrip('-l')
+    module.libraries.append(libname)
+    ldirs_raw = query_pkgconfig("pkg-config --libs-only-L {}".format(pc_path)).split()
+    ldirs = [ldir.lstrip('-L') for ldir in ldirs_raw]
+    module.library_dirs.extend(ldirs)
+
+    # libargs = query_pkgconfig("pkg-config --libs {}".format(pc_path))
+    # module.libraries.append(libargs)
+    # module.extra_link_args.append(libargs)
 
 
 def append_arrow_flags(module):

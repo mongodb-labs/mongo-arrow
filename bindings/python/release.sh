@@ -18,11 +18,11 @@ LIBBSON_INSTALL_DIR="$(pwd)/libbson"
 # - Set Python runtime to use
 if [ "Darwin" = "$(uname -s)" ]
 then
-  LIBBSON_PATH="$LIBBSON_INSTALL_DIR/lib/libbson-1.0.0.dylib"
+  LIBBSON_SO="libbson-1.0.0.dylib"
   PYTHON=${PYTHON_BINARY:-"python"}
 elif [ "Linux" = "$(uname -s)" ]
 then
-  LIBBSON_PATH="$LIBBSON_INSTALL_DIR/lib64/libbson-1.0.so.0"
+  LIBBSON_SO="libbson-1.0.so.0"
   PYTHON=${PYTHON_BINARY:-"/opt/python/cp37-cp37m/bin/python"}
 else
   echo "Unsupported platform"
@@ -35,7 +35,7 @@ LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""
 $PYTHON --version
 
 # Vendor libbson shared library in PyMongoArrow wheels
-cp "$LIBBSON_PATH" "$(pwd)/pymongoarrow/"
+cp $LIBBSON_INSTALL_DIR/lib*/$LIBBSON_SO "$(pwd)/pymongoarrow/"
 
 # Install build dependencies
 $PYTHON -m pip install -U pip setuptools wheel
