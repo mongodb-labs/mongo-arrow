@@ -46,7 +46,6 @@ if platform not in ('linux', 'darwin'):
 
 
 def query_pkgconfig(cmd):
-    print(cmd)
     status, output = subprocess.getstatusoutput(cmd)
     if status != 0:
         warnings.warn(output, UserWarning)
@@ -67,13 +66,11 @@ def append_libbson_flags(module):
 
     cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path))
     if cflags:
-        print(cflags)
         orig_cflags = os.environ.get('CFLAGS', '')
         os.environ['CFLAGS'] = cflags + " " + orig_cflags
 
     ldflags = query_pkgconfig("pkg-config --libs {}".format(pc_path))
     if ldflags:
-        print(ldflags)
         orig_ldflags = os.environ.get('LDFLAGS', '')
         os.environ['LDFLAGS'] = ldflags + " " + orig_ldflags
 
@@ -86,16 +83,9 @@ def append_libbson_flags(module):
 
     # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
     # TODO: file a Cython bug
-    lname = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
-    libname = lname.lstrip('-l')
-    module.libraries.append(libname)
-    ldirs_raw = query_pkgconfig("pkg-config --libs-only-L {}".format(pc_path)).split()
-    ldirs = [ldir.lstrip('-L') for ldir in ldirs_raw]
-    module.library_dirs.extend(ldirs)
-
-    # libargs = query_pkgconfig("pkg-config --libs {}".format(pc_path))
-    # module.libraries.append(libargs)
-    # module.extra_link_args.append(libargs)
+    lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path)).split()
+    libnames = [lname.lstrip('-l').strip() for lname in lnames]
+    module.libraries.extend(libnames)
 
 
 def append_arrow_flags(module):
