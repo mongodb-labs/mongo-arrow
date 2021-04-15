@@ -125,7 +125,7 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     package_data={
-        "pymongoarrow": ['*.pxd', '*.pyx', '*.pyi', '*.so', '*.dylib']},
+        "pymongoarrow": ['*.pxd', '*.pyx', '*.pyi', '*.so.*', '*.dylib']},
     ext_modules=get_extension_modules(),
     version=get_pymongoarrow_version(),
     python_requires=">=3.6",
