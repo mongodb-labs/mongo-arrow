@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 from Cython.Build import cythonize
 
+import glob
 import os
 import subprocess
 from sys import platform
@@ -40,37 +41,51 @@ TESTS_REQUIRE = [
 ]
 
 
+if platform not in ('linux', 'darwin'):
+    raise RuntimeError("Unsupported plaform {}".format(platform))
+
+
+def query_pkgconfig(cmd):
+    status, output = subprocess.getstatusoutput(cmd)
+    if status != 0:
+        warnings.warn(output, UserWarning)
+        return None
+    return output
+
+
 def append_libbson_flags(module):
-    pc_name = 'libbson-1.0'
-    module.libraries.append('bson-1.0')
+    pc_path = 'libbson-1.0.pc'
+    install_dir = os.environ.get('LIBBSON_INSTALL_DIR')
+    if install_dir:
+        libdirs = glob.glob(os.path.join(install_dir, "lib*"))
+        if len(libdirs) != 1:
+            warnings.warn("Unable to locate {}".format(pc_path))
+        else:
+            libdir = libdirs[0]
+            pc_path = os.path.join(install_dir, libdir, 'pkgconfig', pc_path)
 
-    # Ensure our Cython extension can dynamically link to libbson
-    # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
+    cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path))
+    if cflags:
+        orig_cflags = os.environ.get('CFLAGS', '')
+        os.environ['CFLAGS'] = cflags + " " + orig_cflags
+
+    ldflags = query_pkgconfig("pkg-config --libs {}".format(pc_path))
+    if ldflags:
+        orig_ldflags = os.environ.get('LDFLAGS', '')
+        os.environ['LDFLAGS'] = ldflags + " " + orig_ldflags
+
     if platform == "darwin":
+        # Ensure our Cython extension can dynamically link to libbson
+        # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
         module.extra_link_args += ["-rpath", "@loader_path"]
+    elif platform == 'linux':
+        module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
 
-    libbson_install_dir = os.environ.get('LIBBSON_INSTALL_DIR')
-    if libbson_install_dir:
-        libbson_pc_path = os.path.join(
-            libbson_install_dir, 'lib', 'pkgconfig', ".".join([pc_name, 'pc']))
-    else:
-        libbson_pc_path = pc_name
-
-    status, output = subprocess.getstatusoutput(
-        "pkg-config --cflags {}".format(libbson_pc_path))
-    if status != 0:
-        warnings.warn(output, UserWarning)
-    else:
-        cflags = os.environ.get('CFLAGS', '')
-        os.environ['CFLAGS'] = output + " " + cflags
-
-    status, output = subprocess.getstatusoutput(
-        "pkg-config --libs {}".format(libbson_pc_path))
-    if status != 0:
-        warnings.warn(output, UserWarning)
-    else:
-        ldflags = os.environ.get('LDFLAGS', '')
-        os.environ['LDFLAGS'] = output + " " + ldflags
+    # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
+    # TODO: file a Cython bug
+    lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path)).split()
+    libnames = [lname.lstrip('-l').strip() for lname in lnames]
+    module.libraries.extend(libnames)
 
 
 def append_arrow_flags(module):
@@ -105,7 +120,7 @@ setup(
     packages=find_packages(),
     zip_safe=False,
     package_data={
-        "pymongoarrow": ['*.pxd', '*.pyx', '*.pyi', '*.so', '*.dylib']},
+        "pymongoarrow": ['*.pxd', '*.pyx', '*.pyi', '*.so.*', '*.dylib']},
     ext_modules=get_extension_modules(),
     version=get_pymongoarrow_version(),
     python_requires=">=3.6",
