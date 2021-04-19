@@ -14,7 +14,7 @@ fi
 LIBBSON_INSTALL_DIR="$(pwd)/libbson"
 
 # Platform-dependent actions:
-# - Compute shared library path
+# - Compute shared library name
 # - Set Python runtime to use
 if [ "Darwin" = "$(uname -s)" ]
 then
@@ -23,7 +23,7 @@ then
 elif [ "Linux" = "$(uname -s)" ]
 then
   LIBBSON_SO="libbson-1.0.so.0"
-  PYTHON=${PYTHON_BINARY:-"/opt/python/cp37-cp37m/bin/python"}
+  PYTHON=${PYTHON_BINARY:-"python3"}
 else
   echo "Unsupported platform"
 fi

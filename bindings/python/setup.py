@@ -74,9 +74,10 @@ def append_libbson_flags(module):
         orig_ldflags = os.environ.get('LDFLAGS', '')
         os.environ['LDFLAGS'] = ldflags + " " + orig_ldflags
 
+    # Ensure our Cython extension can dynamically link to vendored libbson
+    # - https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
+    # - https://nehckl0.medium.com/creating-relocatable-linux-executables-by-setting-rpath-with-origin-45de573a2e98
     if platform == "darwin":
-        # Ensure our Cython extension can dynamically link to libbson
-        # https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
         module.extra_link_args += ["-rpath", "@loader_path"]
     elif platform == 'linux':
         module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
@@ -84,6 +85,7 @@ def append_libbson_flags(module):
     # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
     # TODO: file a Cython bug
     lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path)).split()
+    # Strip whitespace to avoid weird linker failures on manylinux images
     libnames = [lname.lstrip('-l').strip() for lname in lnames]
     module.libraries.extend(libnames)
 
@@ -94,9 +96,9 @@ def append_arrow_flags(module):
     module.libraries.extend(pa.get_libraries())
     module.library_dirs.extend(pa.get_library_dirs())
 
-    # Arrow's manylinux{1,2010} binaries are built with gcc < 4.8 which predates CXX11 ABI
-    # https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
-    # https://arrow.apache.org/docs/python/extending.html#example
+    # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
+    # - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
+    # - https://arrow.apache.org/docs/python/extending.html#example
     module.define_macros.append(("_GLIBCXX_USE_CXX11_ABI", "0"))
     if os.name == 'posix':
         module.extra_compile_args.append('-std=c++11')
