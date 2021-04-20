@@ -37,6 +37,7 @@ jobs:
       - name: Install pymongoarrow
         run: |
           LIBBSON_INSTALL_DIR=$(pwd)/libbson python setup.py build_ext --inplace --force
+          python -m pip install -e .
         working-directory: ./bindings/python
       - name: Run tests
         run: |
