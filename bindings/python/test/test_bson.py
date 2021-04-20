@@ -13,7 +13,7 @@
 # limitations under the License.
 from unittest import TestCase
 
-from bson import encode
+from bson import encode, InvalidBSON
 
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
@@ -88,5 +88,5 @@ class TestInvalidBsonToArrowConversion(TestBsonToArrowConversionBase):
             'data': [10, 20, 30, 40]}
 
         with self.assertRaisesRegex(
-                RuntimeError, "Could not read BSON stream"):
+                InvalidBSON, "Could not read BSON document stream"):
             self._run_test(docs, as_dict)
