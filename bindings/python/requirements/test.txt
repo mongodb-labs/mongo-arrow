@@ -1,2 +1,3 @@
+-r build.txt
 pandas
 pytz
