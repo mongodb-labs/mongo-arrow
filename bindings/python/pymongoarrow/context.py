@@ -54,7 +54,11 @@ class PyMongoArrowContext:
         for fname, ftype in str_type_map.items():
             builder_cls = _TYPE_TO_BUILDER_CLS[ftype]
             encoded_fname = fname.encode('utf-8')
-            builder_map[encoded_fname] = builder_cls()   # TODO: support passing parameterized types to Builders (e.g. datetime)
+            if builder_cls == DatetimeBuilder:
+                arrow_type = schema.typemap[fname]
+                builder_map[encoded_fname] = builder_cls(dtype=arrow_type)
+            else:
+                builder_map[encoded_fname] = builder_cls()
             type_map[encoded_fname] = ftype
         return cls(schema, builder_map, type_map)
 
