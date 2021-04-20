@@ -25,7 +25,7 @@ import enum
 import numpy as np
 from pyarrow import timestamp
 from pymongoarrow.types import _BsonArrowTypes
-from pymongoarrow.errors import *
+from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
 
 # Cython imports
 from cpython cimport PyBytes_Size, object
