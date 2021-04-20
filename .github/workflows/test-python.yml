@@ -37,7 +37,7 @@ jobs:
       - name: Install pymongoarrow
         run: |
           # Use pip install to pull in install_requires dependencies
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -e . -v
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -e .
           # Re-compile to see compiler/linker output in the logs
           LIBBSON_INSTALL_DIR=$(pwd)/libbson python setup.py build_ext --inplace --force
         working-directory: ./bindings/python
