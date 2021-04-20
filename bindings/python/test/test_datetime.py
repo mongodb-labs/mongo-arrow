@@ -27,20 +27,19 @@ from test import client_context
 
 
 class TestDateTimeType(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
         if not client_context.connected:
             raise unittest.SkipTest("cannot connect to MongoDB")
-        cls.client = client_context.get_client()
-        cls.coll = cls.client.pymongoarrow_test.get_collection(
+        self.client = client_context.get_client()
+        self.coll = self.client.pymongoarrow_test.get_collection(
             'test', write_concern=WriteConcern(w='majority'))
-        cls.coll.drop()
-        cls.coll.insert_many([
+        self.coll.drop()
+        self.coll.insert_many([
             {'_id': 1, 'data': datetime.utcnow() + timedelta(milliseconds=10)},
             {'_id': 2, 'data': datetime.utcnow() + timedelta(milliseconds=25)}])
-        cls.expected_times = []
-        for doc in cls.coll.find({}, sort=[('_id', ASCENDING)]):
-            cls.expected_times.append(doc['data'])
+        self.expected_times = []
+        for doc in self.coll.find({}, sort=[('_id', ASCENDING)]):
+            self.expected_times.append(doc['data'])
 
     def test_context_creation_fails_with_unsupported_granularity(self):
         unsupported_granularities = ['s', 'us', 'ns']
@@ -61,10 +60,27 @@ class TestDateTimeType(unittest.TestCase):
                 self.coll, {}, schema=schema, sort=[('_id', ASCENDING)])
             self.assertEqual(table, expected)
 
-    def test_timezone(self):
+    def test_timezone_round_trip(self):
+        # Timezone-aware datetimes written by PyMongo can be read back as
+        # Arrow datetimes with the appropriate timezone metadata
+        tz = pytz.timezone('US/Pacific')
+        expected_times = [k.astimezone(tz=tz) for k in self.expected_times]
+        self.coll.drop()
+        self.coll.insert_many([{"_id": idx, 'data': data}
+                               for idx, data in enumerate(expected_times)])
+        expected = Table.from_pydict(
+            {'_id': [0, 1], 'data': expected_times},
+            ArrowSchema([('_id', int32()), ('data', timestamp('ms', tz=tz))]))
+
+        schema = Schema({'_id': int32(), 'data': timestamp('ms', tz=tz)})
+        table = find_arrow_all(
+            self.coll, {}, schema=schema, sort=[('_id', ASCENDING)])
+        self.assertEqual(table, expected)
+
+    def test_timezone_specified_in_schema(self):
         # Specifying a timezone in the schema type specifier will cause
         # PyMongoArrow to interpret the corresponding timestamps in the
-        # given timezone (by default, everything is assumed to be in UTC)
+        # given timezone (everything in Mongo is in UTC)
         tz = pytz.timezone('US/Pacific')
         expected = Table.from_pydict(
             {'_id': [1, 2], 'data': self.expected_times},
@@ -75,7 +91,7 @@ class TestDateTimeType(unittest.TestCase):
             self.coll, {}, schema=schema, sort=[('_id', ASCENDING)])
         self.assertEqual(table, expected)
 
-    def test_timezone_codec_options(self):
+    def test_timezone_specified_in_codec_options(self):
         # 1. When specified, CodecOptions.tzinfo will modify timestamp
         #    type specifiers in the schema to inherit the specified timezone
         tz = pytz.timezone('US/Pacific')
