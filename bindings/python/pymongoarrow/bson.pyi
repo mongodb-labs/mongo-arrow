@@ -17,7 +17,7 @@ cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? N
     cdef cbool reached_eof = False
     cdef const bson_t* doc = bson_reader_read(stream_reader, &reached_eof)
     if doc == NULL and reached_eof == False:
-        raise RuntimeError("Could not read BSON stream")
+        raise InvalidBSON("Could not read BSON document stream")
     return doc
 
 
@@ -45,7 +45,7 @@ def process_bson_stream(bson_stream, context):
             if doc == NULL:
                 break
             if not bson_iter_init(&doc_iter, doc):
-                raise RuntimeError("Could not read BSON document")
+                raise InvalidBSON("Could not read BSON document")
             while bson_iter_next(&doc_iter):
                 key = bson_iter_key(&doc_iter)
                 if key in builder_map:
@@ -79,7 +79,7 @@ def process_bson_stream(bson_stream, context):
                         else:
                             builder.append_null()
                     else:
-                        raise TypeError('unknown ftype {}'.format(ftype))
+                        raise PyMongoArrowError('unknown ftype {}'.format(ftype))
             count += 1
             for _, builder in builder_map.items():
                 if len(builder) != count:
