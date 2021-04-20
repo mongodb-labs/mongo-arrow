@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyarrow import Table
+from bson.codec_options import DEFAULT_CODEC_OPTIONS
+
+from pyarrow import timestamp, Table
 from pymongoarrow.lib import Int32Builder, Int64Builder, DoubleBuilder, DatetimeBuilder
 from pymongoarrow.types import _get_internal_typemap, _BsonArrowTypes
 
@@ -41,12 +43,14 @@ class PyMongoArrowContext:
         self.type_map = type_map
 
     @classmethod
-    def from_schema(cls, schema):
+    def from_schema(cls, schema, codec_options=DEFAULT_CODEC_OPTIONS):
         """Initialize the context from a :class:`~pymongoarrow.schema.Schema`
         instance.
 
         :Parameters:
           - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+          - `codec_options` (optional): An instance of
+            :class:`~bson.codec_options.CodecOptions`.
         """
         builder_map = {}
         type_map = {}
@@ -54,8 +58,12 @@ class PyMongoArrowContext:
         for fname, ftype in str_type_map.items():
             builder_cls = _TYPE_TO_BUILDER_CLS[ftype]
             encoded_fname = fname.encode('utf-8')
+            # special-case initializing builders for parameterized types
             if builder_cls == DatetimeBuilder:
                 arrow_type = schema.typemap[fname]
+                if codec_options.tzinfo is not None and arrow_type.tz is None:
+                    arrow_type = timestamp(
+                        arrow_type.unit, tz=codec_options.tzinfo)
                 builder_map[encoded_fname] = builder_cls(dtype=arrow_type)
             else:
                 builder_map[encoded_fname] = builder_cls()
