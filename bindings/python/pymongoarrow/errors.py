@@ -14,7 +14,7 @@
 
 """Exceptions raised by PyMongoArrow."""
 
-from pymongo.errors import InvalidBSON
+from bson.errors import InvalidBSON
 
 
 class PyMongoArrowError(Exception):
