@@ -38,8 +38,8 @@ $PYTHON --version
 cp $LIBBSON_INSTALL_DIR/lib*/$LIBBSON_SO "$(pwd)/pymongoarrow/"
 
 # Install build dependencies
-$PYTHON -m pip install -U pip setuptools wheel
-$PYTHON -m pip install "Cython>=0.29" "pyarrow>=3,<3.1"
+$PYTHON -m pip install -U pip wheel
+$PYTHON -m pip install -r requirements/build.txt
 
 # https://arrow.apache.org/docs/python/extending.html#building-extensions-against-pypi-wheels
 $PYTHON -c "import pyarrow; pyarrow.create_library_symlinks()"
