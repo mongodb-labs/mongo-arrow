@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from datetime import datetime, timedelta, timezone
+import calendar
+from datetime import datetime, timedelta
 from unittest import TestCase
 
 from pyarrow import Array, timestamp, int32, int64
@@ -54,12 +55,16 @@ class TestDate64Builder(TestCase):
         builder = DatetimeBuilder()
         self.assertEqual(builder.unit, timestamp('ms'))
 
-    def _to_int(self, dt):
-        # datetime.timestamp assumes local time so we must explicitly
-        # specify tzinfo=timezone.utc to obtain POSIX time
-        return int(dt.replace(tzinfo=timezone.utc).timestamp() * 1000)
+    def _datetime_to_millis(self, dtm):
+        """Convert datetime to milliseconds since epoch UTC.
+        Vendored from bson."""
+        if dtm.utcoffset() is not None:
+            dtm = dtm - dtm.utcoffset()
+        return int(calendar.timegm(dtm.timetuple()) * 1000 +
+                   dtm.microsecond // 1000)
 
     def _millis_only(self, dt):
+        """Convert a datetime to millisecond resolution."""
         micros = (dt.microsecond // 1000) * 1000
         return dt.replace(microsecond=micros)
 
@@ -69,8 +74,9 @@ class TestDate64Builder(TestCase):
         builder = DatetimeBuilder(dtype=timestamp('ms'))
         datetimes = [datetime.utcnow() + timedelta(days=k*100)
                      for k in range(5)]
-        builder.append(self._to_int(datetimes[0]))
-        builder.append_values([self._to_int(k) for k in datetimes[1:]])
+        builder.append(self._datetime_to_millis(datetimes[0]))
+        builder.append_values(
+            [self._datetime_to_millis(k) for k in datetimes[1:]])
         builder.append(None)
         arr = builder.finish()
 
