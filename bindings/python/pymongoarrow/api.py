@@ -172,7 +172,7 @@ def _arrow_to_numpy(arrow_table, schema):
     return container
 
 
-def find_numpy_all(collection, query, *, schema, writable=False, **kwargs):
+def find_numpy_all(collection, query, *, schema, **kwargs):
     """Method that returns the results of a find query as a
     :class:`dict` instance whose keys are field names and values are
     :class:`~numpy.ndarray` instances bearing the appropriate dtype.

@@ -48,8 +48,8 @@ def process_bson_stream(bson_stream, context):
                 raise InvalidBSON("Could not read BSON document")
             while bson_iter_next(&doc_iter):
                 key = bson_iter_key(&doc_iter)
-                if key in builder_map:
-                    builder = builder_map[key]
+                builder = builder_map.get(key)
+                if builder is not None:
                     ftype = type_map[key]
                     value_t = bson_iter_type(&doc_iter)
                     if ftype == _BsonArrowTypes.int32:
