@@ -141,19 +141,6 @@ def to_arrow(use_large):
     find_arrow_all(c, {}, schema=schema)
 
 
-@bench('decoded-cmd-reply')
-def bson_func(use_large):
-    for _ in BSON(raw_bsons[use_large]).decode()['cursor']['firstBatch']:
-        pass
-
-
-@bench('raw-cmd-reply')
-def raw_bson_func(use_large):
-    options = CodecOptions(document_class=RawBSONDocument)
-    for _ in BSON(raw_bsons[use_large]).decode(options)['cursor']['firstBatch']:
-        pass
-
-
 parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
                                  epilog="""
 Available benchmark functions:
