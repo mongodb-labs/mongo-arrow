@@ -51,7 +51,8 @@ def find_arrow_all(collection, query, *, schema, **kwargs):
     :Returns:
       An instance of class:`pyarrow.Table`.
     """
-    context = PyMongoArrowContext.from_schema(schema)
+    context = PyMongoArrowContext.from_schema(
+        schema, codec_options=collection.codec_options)
 
     for opt in ('session', 'cursor_type', 'projection'):
         if kwargs.pop(opt, None):
@@ -84,7 +85,8 @@ def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
     :Returns:
       An instance of class:`pyarrow.Table`.
     """
-    context = PyMongoArrowContext.from_schema(schema)
+    context = PyMongoArrowContext.from_schema(
+        schema, codec_options=collection.codec_options)
 
     if pipeline and ("$out" in pipeline[-1] or "$merge" in pipeline[-1]):
         raise ValueError(
