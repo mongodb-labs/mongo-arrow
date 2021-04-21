@@ -41,15 +41,17 @@ def query_pkgconfig(cmd):
 
 
 def append_libbson_flags(module):
-    pc_path = 'libbson-1.0.pc'
     install_dir = os.environ.get('LIBBSON_INSTALL_DIR')
     if install_dir:
         libdirs = glob.glob(os.path.join(install_dir, "lib*"))
         if len(libdirs) != 1:
-            warnings.warn("Unable to locate {}".format(pc_path))
+            warnings.warn("Unable to locate {}".format('libbson-1.0.pc'))
         else:
             libdir = libdirs[0]
-            pc_path = os.path.join(install_dir, libdir, 'pkgconfig', pc_path)
+            pc_path = os.path.join(
+                install_dir, libdir, 'pkgconfig', 'libbson-1.0.pc')
+    else:
+        pc_path = 'libbson-1.0'
 
     cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path))
     if cflags:
