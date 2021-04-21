@@ -11,6 +11,17 @@ import numpy as np
 import pyarrow as pa
 
 
+if platform not in ('linux', 'darwin'):
+    raise RuntimeError("Unsupported plaform {}".format(platform))
+
+
+# Keep these dependencies synced with those in requirements/*.txt
+PYARROW_DEP = 'pyarrow>=3,<3.1'
+PYMONGO_DEP = 'pymongo>=3.11,<4'
+INSTALL_REQUIRES = [PYARROW_DEP, PYMONGO_DEP]
+SETUP_REQUIRES = ['setuptools>=47', 'cython>=0.29', PYARROW_DEP]
+
+
 def get_pymongoarrow_version():
     """Single source the version."""
     version_file = os.path.realpath(os.path.join(
@@ -19,30 +30,6 @@ def get_pymongoarrow_version():
     with open(version_file) as fp:
         exec(fp.read(), version)
     return version['__version__']
-
-
-INSTALL_REQUIRES = [
-    'pyarrow>=3,<3.1',
-    'pymongo>=3.11,<4',
-    'numpy>=1.16.6,<2'
-]
-
-
-SETUP_REQUIRES = [
-    'cython>=0.29<1',
-    'pyarrow>=3,<4',
-    'numpy>=1.16.6,<2',
-    'setuptools>=41'
-]
-
-
-TESTS_REQUIRE = [
-    "pandas>=1.0,<1.2"
-]
-
-
-if platform not in ('linux', 'darwin'):
-    raise RuntimeError("Unsupported plaform {}".format(platform))
 
 
 def query_pkgconfig(cmd):
@@ -83,7 +70,6 @@ def append_libbson_flags(module):
         module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
 
     # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
-    # TODO: file a Cython bug
     lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path)).split()
     # Strip whitespace to avoid weird linker failures on manylinux images
     libnames = [lname.lstrip('-l').strip() for lname in lnames]
@@ -128,7 +114,7 @@ setup(
     python_requires=">=3.6",
     install_requires=INSTALL_REQUIRES,
     setup_requires=SETUP_REQUIRES,
-    tests_require=TESTS_REQUIRE,
+    tests_require=["pandas", "pytz"],
     description="Tools for using NumPy, Pandas and PyArrow with MongoDB",
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/x-rst',
