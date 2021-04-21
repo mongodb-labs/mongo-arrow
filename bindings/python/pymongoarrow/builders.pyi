@@ -20,6 +20,7 @@ cdef class _ArrayBuilderBase:
 
 
 cdef class Int32Builder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.int32
     cdef:
         shared_ptr[CInt32Builder] builder
 
@@ -52,6 +53,7 @@ cdef class Int32Builder(_ArrayBuilderBase):
 
 
 cdef class Int64Builder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.int64
     cdef:
         shared_ptr[CInt64Builder] builder
 
@@ -84,6 +86,7 @@ cdef class Int64Builder(_ArrayBuilderBase):
 
 
 cdef class DoubleBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.double
     cdef:
         shared_ptr[CDoubleBuilder] builder
 
@@ -116,6 +119,7 @@ cdef class DoubleBuilder(_ArrayBuilderBase):
 
 
 cdef class DatetimeBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.datetime
     cdef:
         shared_ptr[CTimestampBuilder] builder
         TimestampType dtype

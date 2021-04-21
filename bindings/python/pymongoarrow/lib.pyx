@@ -35,6 +35,7 @@ from libcpp.map cimport map
 from libcpp.string cimport string
 from pyarrow.lib cimport *
 from pymongoarrow.libbson cimport *
+from pymongoarrow.types import _BsonArrowTypes
 
 
 # libbson version
