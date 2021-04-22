@@ -20,6 +20,7 @@ cdef class _ArrayBuilderBase:
 
 
 cdef class Int32Builder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.int32
     cdef:
         shared_ptr[CInt32Builder] builder
 
@@ -27,13 +28,13 @@ cdef class Int32Builder(_ArrayBuilderBase):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CInt32Builder(pool))
 
-    def append_null(self):
+    cpdef append_null(self):
         self.builder.get().AppendNull()
 
     def __len__(self):
         return self.builder.get().length()
 
-    def append(self, value):
+    cpdef append(self, value):
         if value is None or value is np.nan:
             self.builder.get().AppendNull()
         elif isinstance(value, int):
@@ -41,7 +42,7 @@ cdef class Int32Builder(_ArrayBuilderBase):
         else:
             raise TypeError('Int32Builder only accepts integer objects')
 
-    def finish(self):
+    cpdef finish(self):
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)
@@ -52,6 +53,7 @@ cdef class Int32Builder(_ArrayBuilderBase):
 
 
 cdef class Int64Builder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.int64
     cdef:
         shared_ptr[CInt64Builder] builder
 
@@ -59,13 +61,13 @@ cdef class Int64Builder(_ArrayBuilderBase):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CInt64Builder(pool))
 
-    def append_null(self):
+    cpdef append_null(self):
         self.builder.get().AppendNull()
 
     def __len__(self):
         return self.builder.get().length()
 
-    def append(self, value):
+    cpdef append(self, value):
         if value is None or value is np.nan:
             self.builder.get().AppendNull()
         elif isinstance(value, int):
@@ -73,7 +75,7 @@ cdef class Int64Builder(_ArrayBuilderBase):
         else:
             raise TypeError('Int64Builder only accepts integer objects')
 
-    def finish(self):
+    cpdef finish(self):
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)
@@ -84,6 +86,7 @@ cdef class Int64Builder(_ArrayBuilderBase):
 
 
 cdef class DoubleBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.double
     cdef:
         shared_ptr[CDoubleBuilder] builder
 
@@ -91,13 +94,13 @@ cdef class DoubleBuilder(_ArrayBuilderBase):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CDoubleBuilder(pool))
 
-    def append_null(self):
+    cpdef append_null(self):
         self.builder.get().AppendNull()
 
     def __len__(self):
         return self.builder.get().length()
 
-    def append(self, value):
+    cpdef append(self, value):
         if value is None or value is np.nan:
             self.builder.get().AppendNull()
         elif isinstance(value, (int, float)):
@@ -105,7 +108,7 @@ cdef class DoubleBuilder(_ArrayBuilderBase):
         else:
             raise TypeError('DoubleBuilder only accepts floats and ints')
 
-    def finish(self):
+    cpdef finish(self):
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)
@@ -116,6 +119,7 @@ cdef class DoubleBuilder(_ArrayBuilderBase):
 
 
 cdef class DatetimeBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.datetime
     cdef:
         shared_ptr[CTimestampBuilder] builder
         TimestampType dtype
@@ -131,13 +135,13 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
         self.builder.reset(new CTimestampBuilder(
             pyarrow_unwrap_data_type(self.dtype), pool))
 
-    def append_null(self):
+    cpdef append_null(self):
         self.builder.get().AppendNull()
 
     def __len__(self):
         return self.builder.get().length()
 
-    def append(self, value):
+    cpdef append(self, value):
         if value is None or value is np.nan:
             self.builder.get().AppendNull()
         elif isinstance(value, int):
@@ -145,7 +149,7 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
         else:
             raise TypeError('TimestampBuilder only accepts 64-bit integers')
 
-    def finish(self):
+    cpdef finish(self):
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)

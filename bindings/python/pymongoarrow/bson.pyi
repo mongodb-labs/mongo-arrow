@@ -31,8 +31,12 @@ def process_bson_stream(bson_stream, context):
     cdef bson_type_t value_t
     cdef Py_ssize_t count = 0
 
+    # Localize types for better performance.
+    t_int32 = _BsonArrowTypes.int32
+    t_int64 = _BsonArrowTypes.int64
+    t_double = _BsonArrowTypes.double
+    t_datetime = _BsonArrowTypes.datetime
     builder_map = context.builder_map
-    type_map = context.type_map
 
     # initialize count to current length of builders
     for _, builder in builder_map.items():
@@ -48,16 +52,16 @@ def process_bson_stream(bson_stream, context):
                 raise InvalidBSON("Could not read BSON document")
             while bson_iter_next(&doc_iter):
                 key = bson_iter_key(&doc_iter)
-                if key in builder_map:
-                    builder = builder_map[key]
-                    ftype = type_map[key]
+                builder = builder_map.get(key)
+                if builder is not None:
+                    ftype = builder.type_marker
                     value_t = bson_iter_type(&doc_iter)
-                    if ftype == _BsonArrowTypes.int32:
+                    if ftype == t_int32:
                         if value_t == BSON_TYPE_INT32:
                             builder.append(bson_iter_int32(&doc_iter))
                         else:
                             builder.append_null()
-                    elif ftype == _BsonArrowTypes.int64:
+                    elif ftype == t_int64:
                         if (value_t == BSON_TYPE_INT64 or
                                 value_t == BSON_TYPE_BOOL or
                                 value_t == BSON_TYPE_DOUBLE or
@@ -65,7 +69,7 @@ def process_bson_stream(bson_stream, context):
                             builder.append(bson_iter_as_int64(&doc_iter))
                         else:
                             builder.append_null()
-                    elif ftype == _BsonArrowTypes.double:
+                    elif ftype == t_double:
                         if (value_t == BSON_TYPE_DOUBLE or
                                 value_t == BSON_TYPE_BOOL or
                                 value_t == BSON_TYPE_INT32 or
@@ -73,7 +77,7 @@ def process_bson_stream(bson_stream, context):
                             builder.append(bson_iter_as_double(&doc_iter))
                         else:
                             builder.append_null()
-                    elif ftype == _BsonArrowTypes.datetime:
+                    elif ftype == t_datetime:
                         if value_t == BSON_TYPE_DATE_TIME:
                             builder.append(bson_iter_date_time(&doc_iter))
                         else:
