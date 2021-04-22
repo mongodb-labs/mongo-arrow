@@ -112,6 +112,8 @@ def conventional_ndarray(use_large):
         np.array([(doc['x'], doc['y']) for doc in cursor], dtype=dtype)
 
 
+# Note: this is called "to-numpy" and not "to-ndarray" because find_numpy_all
+# does not produce an ndarray.
 @bench('pymongoarrow-to-numpy')
 def to_numpy(use_large):
     c = db[collection_names[use_large]]
