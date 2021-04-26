@@ -8,30 +8,18 @@ containing tools for loading `MongoDB <http://www.mongodb.org>`_ query result
 sets as  `Apache Arrow <http://arrow.apache.org>`_ tables,
 `Pandas <https://pandas.pydata.org>`_ and `NumPy <https://numpy.org>`_ arrays.
 PyMongoArrow is the recommended way to materialize MongoDB query result sets as
-contiguous-in-memory, typed arrays suited for in-memory analytical processing.
-This documentation attempts to explain everything you need to know to use
-**PyMongoArrow**.
-
-.. todo:: a list of PyMongo's features
+contiguous-in-memory, typed arrays suited for in-memory analytical processing
+applications. This documentation attempts to explain everything you need to
+know to use **PyMongoArrow**.
 
 :doc:`installation`
   Instructions on how to get the distribution.
 
-:doc:`tutorial`
+:doc:`quickstart`
   Start here for a quick overview.
-
-:doc:`examples/index`
-  Examples of how to perform specific tasks.
-
-:doc:`atlas`
-  Using PyMongo with MongoDB Atlas.
-
-:doc:`faq`
-  Some questions that come up often.
 
 :doc:`api/index`
   The complete API documentation, organized by module.
-
 
 Getting Help
 ------------
@@ -58,10 +46,11 @@ Contributions to **PyMongoArrow** are encouraged. To contribute, fork the projec
 `GitHub <https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python>`_
 and send a pull request.
 
+See also :doc:`developer/index`.
+
 Changes
 -------
 See the :doc:`changelog` for a full list of changes to PyMongoArrow.
-
 
 About This Documentation
 ------------------------
@@ -86,9 +75,7 @@ Indices and tables
    :hidden:
 
    installation
-   tutorial
-   examples/index
-   faq
+   quickstart
    api/index
-   contributors
    changelog
+   developer/index
