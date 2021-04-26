@@ -21,9 +21,6 @@ __all__ = [
 def patch_all():
     """Patch all PyMongoArrow methods into PyMongo.
 
-    This function should be called **before** ``pymongo`` is imported for
-    the first time. Failing to do so might lead to unexpected results.
-
     Calling this method equips the :class:`pymongo.collection.Collection`
     classes returned by PyMongo with PyMongoArrow's API methods. When using a
     patched method, users can omit the first argument which is passed
