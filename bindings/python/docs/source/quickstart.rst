@@ -66,9 +66,9 @@ to type-specifiers, e.g.::
   from pymongoarrow.api import Schema
   schema = Schema({'_id': int, 'amount': float, 'last_updated': datetime})
 
-There are multiple permissible type-specifiers for each supported BSON type.
-For a full-list of supported types and associated type-specifiers see
-:doc:`supported-types`.
+There are multiple permissible type-identifiers for each supported BSON type.
+For a full-list of supported types and associated type-identifiers see
+:doc:`supported_types`.
 
 Find operations
 ---------------

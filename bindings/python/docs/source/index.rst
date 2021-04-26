@@ -18,6 +18,9 @@ know to use **PyMongoArrow**.
 :doc:`quickstart`
   Start here for a quick overview.
 
+:doc:`supported_types`
+  A list of BSON types that are supported by PyMongoArrow.
+
 :doc:`api/index`
   The complete API documentation, organized by module.
 
@@ -76,6 +79,7 @@ Indices and tables
 
    installation
    quickstart
+   supported_types
    api/index
    changelog
    developer/index
