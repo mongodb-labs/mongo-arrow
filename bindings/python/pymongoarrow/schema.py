@@ -17,26 +17,29 @@ from pymongoarrow.types import _normalize_typeid
 
 
 class Schema:
-    """A mapping of field names to data types."""
+    """A mapping of field names to data types.
+
+    To create a schema, provide its constructor a mapping or an iterable
+    containing field names and their expected types, e.g.::
+
+       schema1 = Schema({'field_1': int, 'field_2': float})
+       schema2 = Schema([('field_1', int), ('field_2', float)])
+
+    If ``schema`` is a mapping, each key must be a field name and the
+    corresponding value must be the expected data type of the named field.
+    If ``schema`` is an iterable, it must be comprised entirely of 2-member
+    sub-iterables. The first member of each sub-iterable must be a field
+    name and the second value must be the corresponding data type.
+
+    Data types can be specified as pyarrow type instances (e.g.
+    an instance of :class:`pyarrow.int64`), bson types (e.g.
+    :class:`bson.Int64`), or python type-identifiers (e.g. ``int``,
+    ``float``). To see a complete list of supported data types and their
+    corresponding type-identifiers, see :ref:`type support`.
+    """
     def __init__(self, schema):
         """Create a :class:`~pymongoarrow.schema.Schema` instance from a
         mapping or an iterable.
-
-        If ``schema`` is a mapping, each key must be a field name and the
-        corresponding value must be the expected data type of the named field.
-        If ``schema`` is an iterable, it must be comprised entirely of 2-member
-        sub-iterables. The first member of each sub-iterable must be a field
-        name and the second value must be the corresponding data type.
-
-        Data types can be specified as pyarrow type instances (e.g.
-        an instance of :class:`pyarrow.int64`), bson types (e.g.
-        :class:`bson.Int64`), or python type identifiers (e.g. ``int``,
-        ``float``). The following data types are currently supported:
-
-          - 32-bit signed integers
-          - 64-bit signed integers
-          - 64-bit floating point integers
-          - timestamps with millisecond or second resolution
 
         :Parameters:
           - `schema`: A mapping or an iterable.
