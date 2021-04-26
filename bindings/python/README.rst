@@ -13,7 +13,6 @@ for loading MongoDB query result sets as Apache Arrow tables, Pandas
 DataFrames or NumPy arrays.::
 
   .. code-block:: python
-
   >>> from pymongoarrow.monkey import patch_all
   >>> patch_all()
   >>> from pymongoarrow.api import Schema
