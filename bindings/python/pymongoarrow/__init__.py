@@ -27,6 +27,7 @@ except ImportError:
     def _parse_version(version):
         return _LooseVersion(version)
 
+# TODO: PYTHON-2659
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if not on_rtd:
     if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
