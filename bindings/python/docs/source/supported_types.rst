@@ -20,11 +20,9 @@ Support for additional types will be added in subsequent releases.
    * - 32-bit integer
      - an instance of :meth:`pyarrow.int32`
    * - 64-bit integer
-     - :class:`~py.int`, an instance of :meth:`pyarrow.int64`
+     - :class:`~py.int`, :class:`bson.int64.Int64`, an instance of :meth:`pyarrow.int64`
    * - UTC datetime
      - an instance of :class:`~pyarrow.timestamp` with ``ms`` resolution, :class:`py.datetime.datetime`
-   * - 64-bit integer
-     - :class:`~py.int`, :meth:`pyarrow.int64`
 
 Type identifiers can be used to specify that a field is of a certain type
 during :class:`pymongoarrow.api.Schema` declaration. For example, if your data
