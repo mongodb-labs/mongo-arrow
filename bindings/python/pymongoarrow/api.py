@@ -32,6 +32,10 @@ __all__ = [
 _PATCH_METHODS = [
     'aggregate_arrow_all',
     'find_arrow_all',
+    'aggregate_pandas_all',
+    'find_pandas_all',
+    'aggregate_numpy_all',
+    'find_numpy_all',
 ]
 
 
