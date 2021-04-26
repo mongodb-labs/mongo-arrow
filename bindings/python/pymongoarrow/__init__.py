@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 # We must import pyarrow before attempting to load the Cython module.
 import pyarrow
 
@@ -27,8 +27,9 @@ except ImportError:
     def _parse_version(version):
         return _LooseVersion(version)
 
-
-if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
-    raise ImportError(
-        f"Expected libbson version {_MIN_LIBBSON_VERSION} or greater, "
-        f"found {libbson_version}")
+on_rtd = os.environ.get('READTHEDOCS') == 'True'
+if not on_rtd:
+    if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
+        raise ImportError(
+            f"Expected libbson version {_MIN_LIBBSON_VERSION} or greater, "
+            f"found {libbson_version}")
