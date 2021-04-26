@@ -10,9 +10,10 @@ PyMongoArrow
 
 **PyMongoArrow** is a companion library to PyMongo that contains tools
 for loading MongoDB query result sets as Apache Arrow tables, Pandas
-DataFrames or NumPy arrays.::
+DataFrames or NumPy arrays.
 
-  .. code-block:: python
+.. code-block:: python
+
   >>> from pymongoarrow.monkey import patch_all
   >>> patch_all()
   >>> from pymongoarrow.api import Schema
