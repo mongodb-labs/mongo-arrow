@@ -11,7 +11,7 @@ PyMongoArrow is regularly built and tested on macOS and Linux
 Python Compatibility
 --------------------
 
-PyMongoArrow is currently compatible with CPython 3.6, 3.7 and 3.8.
+PyMongoArrow is currently compatible with CPython 3.6, 3.7, 3.8 and 3.9.
 
 Using Pip
 ---------
