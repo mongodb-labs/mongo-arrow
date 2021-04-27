@@ -42,3 +42,7 @@ def main(wheel_path=WHEEL_PATH, abi=TARGET_PLATFORM, wheel_dir=WHEEL_DIR):
             out_wheel = repair_wheel(wheel_path, analyzed_tag, wheel_dir)
 
         print('Fixed-up wheel written to %s' % (out_wheel,))
+
+
+if __name__ == '__main__':
+    main()
