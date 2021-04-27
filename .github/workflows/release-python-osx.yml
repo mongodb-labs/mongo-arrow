@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v2
       - name: Build wheels
         run: |
-          docker run --rm --volume `pwd`:/python --workdir /python --env PYTHON_BINARY=/opt/python/${{ matrix.python-version }}/bin/python quay.io/pypa/${{ matrix.container }} ./release.sh
+          docker run --rm --volume `pwd`:/python --workdir /python --env PLAT=${{ matrix.container }}  PYTHON_BINARY=/opt/python/${{ matrix.python-version }}/bin/python quay.io/pypa/${{ matrix.container }} ./release.sh
         working-directory: ./bindings/python
       - uses: actions/upload-artifact@v2
         with:

@@ -46,3 +46,9 @@ $PYTHON -c "import pyarrow; pyarrow.create_library_symlinks()"
 
 # Build wheels in $(pwd)/dist/*.whl
 LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" $PYTHON setup.py bdist_wheel
+
+# Run auditwheel repair to set platform tags on Linux
+if [ "Linux" = "$(uname -s)" ]
+then
+  auditwheel repair dist/*.whl --plat "$PLAT" --wheel-dir ./wheelhouse
+fi
