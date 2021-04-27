@@ -50,5 +50,5 @@ LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" $PYTHON setup.py bdist_wheel
 # Run auditwheel repair to set platform tags on Linux
 if [ "Linux" = "$(uname -s)" ]
 then
-  auditwheel repair dist/*.whl --plat "$PLAT" --wheel-dir ./wheelhouse
+  auditwheel addtag dist/*.whl --wheel-dir ./wheelhouse
 fi
