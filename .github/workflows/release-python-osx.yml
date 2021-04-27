@@ -97,4 +97,4 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: nix-wheels
-          path: "*.whl"
+          path: "*-wheel"
