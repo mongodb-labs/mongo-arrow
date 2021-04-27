@@ -86,3 +86,15 @@ jobs:
       - name: Test wheel
         run: |
           docker run --rm --volume `pwd`:/python quay.io/pypa/${{ matrix.container }} /bin/bash -c "/opt/python/${{ matrix.python-version }}/bin/python -m pip install -U pip && /opt/python/${{ matrix.python-version }}/bin/python -m pip install /python/*.whl && /opt/python/${{ matrix.python-version }}/bin/python -c 'from pymongoarrow.lib import process_bson_stream'"
+  # Collect all built wheels
+  collect-wheels:
+    runs-on: ubuntu-latest
+    needs: [build-osx-wheels, build-manylinux-wheels]
+    name: Download Wheels
+    steps:
+      - name: Download all workflow run artifacts
+        uses: actions/download-artifact@v2
+      - uses: actions/upload-artifact@v2
+        with:
+          name: nix-wheels
+          path: "*-wheel"
