@@ -4,14 +4,11 @@
 # Usage:
 # $ python addtags.py WHEEL_PATH TARGET_PLATFORM WHEEL_DIR
 import os
-from os.path import isfile, exists, basename, join as pjoin
+from os.path import abspath, isfile, exists, basename, join as pjoin
 from sys import argv
 from auditwheel.policy import get_priority_by_name, get_replace_platforms
 from auditwheel.wheel_abi import analyze_wheel_abi
 from auditwheel.wheeltools import InWheelCtx, add_platforms
-
-
-WHEEL_PATH, TARGET_PLATFORM, WHEEL_DIR = argv[1], argv[2], argv[3]
 
 
 def repair_wheel(wheel_path, abi, wheel_dir):
@@ -23,7 +20,7 @@ def repair_wheel(wheel_path, abi, wheel_dir):
     return ctx.out_wheel
 
 
-def main(wheel_path=WHEEL_PATH, abi=TARGET_PLATFORM, wheel_dir=WHEEL_DIR):
+def main(wheel_path, abi, wheel_dir):
     if not isfile(wheel_path):
         raise FileNotFoundError('cannot access wheel file %s' % (wheel_path,))
 
@@ -45,4 +42,8 @@ def main(wheel_path=WHEEL_PATH, abi=TARGET_PLATFORM, wheel_dir=WHEEL_DIR):
 
 
 if __name__ == '__main__':
-    main()
+    WHEEL_PATH, TARGET_PLATFORM, WHEEL_DIR = argv[1], argv[2], argv[3]
+    main(
+        wheel_path=abspath(WHEEL_PATH),
+        abi=TARGET_PLATFORM,
+        wheel_dir=abspath(WHEEL_DIR))
