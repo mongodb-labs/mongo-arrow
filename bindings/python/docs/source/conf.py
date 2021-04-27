@@ -11,6 +11,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import os.path as p
 import sys
 sys.path.insert(0, os.path.abspath('../..'))
 
@@ -22,8 +23,11 @@ copyright = 'MongoDB, Inc. 2021-present. MongoDB, Mongo, and the leaf logo are r
 author = 'Prashant Mital'
 html_show_sphinx = False
 
-# The full version, including alpha/beta/rc tags
-version = '0.2.0.dev0'
+version_file = p.abspath(p.join("../../", "pymongoarrow/version.py"))
+version_data = {}
+with open(version_file, 'r') as vf:
+    exec(vf.read(), {}, version_data)
+version = version_data['__version__']
 release = version
 
 # The name of the Pygments (syntax highlighting) style to use.
