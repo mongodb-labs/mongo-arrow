@@ -24,13 +24,6 @@ class TestSchema(TestCase):
     def test_initialization(self):
         dict_schema = Schema(
             {'field1': int, 'field2': datetime, 'field3': float})
-        list_schema = Schema(
-            [('field1', int), ('field2', datetime), ('field3', float)])
-        tuple_schema = Schema(
-            (('field1', int), ('field2', datetime), ('field3', float)))
-
-        self.assertEqual(dict_schema, list_schema)
-        self.assertEqual(dict_schema, tuple_schema)
         self.assertEqual(
             dict_schema.typemap,
             {'field1': int64(), 'field2': timestamp('ms'),
@@ -50,7 +43,7 @@ class TestSchema(TestCase):
 
     def test_from_arrow_units(self):
         schema = Schema(
-            [('field1', int64()), ('field2', timestamp('s'))])
+            {'field1': int64(), 'field2': timestamp('s')})
         self.assertEqual(
             schema.typemap,
             {'field1': int64(), 'field2': timestamp('s')})

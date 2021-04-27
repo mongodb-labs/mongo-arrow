@@ -19,17 +19,13 @@ from pymongoarrow.types import _normalize_typeid
 class Schema:
     """A mapping of field names to data types.
 
-    To create a schema, provide its constructor a mapping or an iterable
-    containing field names and their expected types, e.g.::
+    To create a schema, provide its constructor a mapping of field names
+    to their expected types, e.g.::
 
        schema1 = Schema({'field_1': int, 'field_2': float})
-       schema2 = Schema([('field_1', int), ('field_2', float)])
 
-    If ``schema`` is a mapping, each key must be a field name and the
-    corresponding value must be the expected data type of the named field.
-    If ``schema`` is an iterable, it must be comprised entirely of 2-member
-    sub-iterables. The first member of each sub-iterable must be a field
-    name and the second value must be the corresponding data type.
+    Each key in ``schema`` is a field name and its corresponding value
+    is the expected type of the data contained in the named field.
 
     Data types can be specified as pyarrow type instances (e.g.
     an instance of :class:`pyarrow.int64`), bson types (e.g.
@@ -42,12 +38,10 @@ class Schema:
         mapping or an iterable.
 
         :Parameters:
-          - `schema`: A mapping or an iterable.
+          - `schema`: A mapping.
         """
         if isinstance(schema, abc.Mapping):
             normed = type(self)._normalize_mapping(schema)
-        elif isinstance(schema, abc.Sequence):
-            normed = type(self)._normalize_sequence(schema)
         else:
             raise ValueError('schema must be a mapping or sequence')
         self.typemap = normed
@@ -61,18 +55,6 @@ class Schema:
         normed = {}
         for fname, ftype in mapping.items():
             normed[fname] = _normalize_typeid(ftype, fname)
-        return normed
-
-    @staticmethod
-    def _normalize_sequence(sequence):
-        normed = {}
-        for finfo in sequence:
-            try:
-                fname, ftype = finfo
-            except ValueError:
-                raise ValueError('schema must be a sequence of 2-tuples')
-            else:
-                normed[fname] = _normalize_typeid(ftype, fname)
         return normed
 
     def _get_projection(self):
