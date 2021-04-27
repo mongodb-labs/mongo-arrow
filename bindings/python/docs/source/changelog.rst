@@ -1,9 +1,11 @@
 Changelog
 =========
 
-Changes in Version 0.2.0
+Changes in Version 0.1.1
 ------------------------
 
+- Fixed a bug that caused Linux wheels to be created without the appropriate
+  ``manylinux`` platform tags.
 
 Changes in Version 0.1.0
 ------------------------
