@@ -140,6 +140,7 @@ setup(
     author_email="mongodb-user@googlegroups.com",
     maintainer="MongoDB, Inc.",
     maintainer_email="mongodb-user@googlegroups.com",
+    url="https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python",
     keywords=["mongo", "mongodb", "pymongo", "arrow", "bson",
               "numpy", "pandas"],
     test_suite="test"
