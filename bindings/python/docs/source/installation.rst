@@ -62,7 +62,7 @@ PyMongoArrow::
 
 Applications intending to use PyMongoArrow APIs that return query result sets
 as :class:`pandas.DataFrame` instances (e.g. :meth:`~pymongoarrow.api.find_pandas_all`)
-will also need to ensure ``pandas`` is installed::
+must also have ``pandas`` installed::
 
   $ python -m pip install pandas
 
