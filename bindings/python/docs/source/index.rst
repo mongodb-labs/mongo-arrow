@@ -22,7 +22,7 @@ know to use **PyMongoArrow**.
   A list of BSON types that are supported by PyMongoArrow.
 
 :doc:`faq`
-  Some questions that come up often.
+  Frequently asked questions.
 
 :doc:`api/index`
   The complete API documentation, organized by module.
