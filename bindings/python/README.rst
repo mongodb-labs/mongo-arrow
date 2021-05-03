@@ -42,11 +42,23 @@ suited for in-memory analytical processing applications.
 
 Installing PyMongoArrow
 =======================
-PyMongoArrow is available on PyPI:::
+PyMongoArrow is available on PyPI::
 
   $ python -m pip install pymongoarrow
 
-PyMongoArrow wheels are available for macOS and Linux on x86_64 architectures.
+To use PyMongoArrow with MongoDB Atlas' ``mongodb+srv://`` URIs, you will
+need to also install PyMongo with the ``srv`` extra::
+
+  $ python -m pip install 'pymongo[srv]<4' pymongoarrow
+
+To use PyMongoArrow APIs that return query result sets as pandas
+DataFrame instances, you will also need to have the ``pandas`` package
+installed::
+
+     $ python -m pip install pandas
+
+Currently, PyMongoArrow wheels are only available for macOS and Linux
+on x86_64 architectures.
 
 Documentation
 =============
