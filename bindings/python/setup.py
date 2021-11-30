@@ -16,7 +16,7 @@ if platform not in ('linux', 'darwin'):
 
 
 # Keep these dependencies synced with those in requirements/*.txt
-PYARROW_DEP = 'pyarrow>=3,<3.1'
+PYARROW_DEP = 'pyarrow>=3'
 PYMONGO_DEP = 'pymongo>=3.11,<4'
 INSTALL_REQUIRES = [PYARROW_DEP, PYMONGO_DEP]
 SETUP_REQUIRES = ['setuptools>=47', 'cython>=0.29', PYARROW_DEP]
