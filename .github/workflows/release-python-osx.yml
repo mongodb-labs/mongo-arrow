@@ -34,7 +34,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-10.15]
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
     name: Test CPython ${{ matrix.python-version }}-${{ matrix.os }}
     steps:
       - name: Setup Python
@@ -57,7 +57,8 @@ jobs:
       matrix:
         # Cannot have '/' in artifact names, so hardcode 'quay.io/pypa/'
         container: ['manylinux2010_x86_64', 'manylinux2014_x86_64']
-        python-version: ['cp36-cp36m', 'cp37-cp37m', 'cp38-cp38', 'cp39-cp39']
+        python-version: ['cp36-cp36m', 'cp37-cp37m', 'cp38-cp38',
+                         'cp39-cp39', 'cp310-cp310']
     name: Build CPython ${{ matrix.python-version }}-${{ matrix.container }}
     steps:
       - uses: actions/checkout@v2
@@ -76,7 +77,8 @@ jobs:
     strategy:
       matrix:
         container: ['manylinux2010_x86_64', 'manylinux2014_x86_64']
-        python-version: ['cp36-cp36m', 'cp37-cp37m', 'cp38-cp38', 'cp39-cp39']
+        python-version: ['cp36-cp36m', 'cp37-cp37m', 'cp38-cp38',
+                         'cp39-cp39', 'cp310-cp310']
     name: Test CPython ${{ matrix.python-version }}-${{ matrix.container }}
     steps:
       - name: Download a previously created wheel
