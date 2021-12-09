@@ -60,6 +60,11 @@ installed::
 Currently, PyMongoArrow wheels are only available for macOS and Linux
 on x86_64 architectures.
 
+Development Install
+===================
+
+See the instructions on `Read the Docs <https://mongo-arrow.readthedocs.io/en/latest/developer/installation.html>`_.
+
 Documentation
 =============
 Full documentation is available on `Read the Docs <https://mongo-arrow.readthedocs.io/en/latest/>`_.

@@ -45,10 +45,14 @@ On macOS, users can install the latest ``libbson`` via Homebrew::
 Build
 -----
 
-In the previously created virtualenv, we first install all build dependencies
+In the previously created virtualenv, we first install all build and test dependencies
 of PyMongoArrow::
 
-  (pymongoarrow) $ pip install -r requirements/build.txt
+  (pymongoarrow) $ pip install -r requirements/test.txt
+
+We also need the pyarrow library symlinks, which can be created as follows::
+ 
+  (pymongoarrow) $ python -c 'import pyarrow as pa; pa.create_library_symlinks()'
 
 We can now install ``pymongoarrow`` in **development mode** as follows::
 
