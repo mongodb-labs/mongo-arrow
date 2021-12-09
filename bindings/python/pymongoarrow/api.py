@@ -97,7 +97,7 @@ def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
             "Aggregation pipelines containing a '$out' or '$merge' stage are "
             "not supported by PyMongoArrow")
 
-    for opt in ('batchSize'):
+    for opt in ('batchSize', 'useCursor'):
         if kwargs.pop(opt, None):
             warnings.warn(
                 f'Ignoring option {opt!r} as it is not supported by '
