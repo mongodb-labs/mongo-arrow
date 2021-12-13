@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 from Cython.Build import cythonize
 
 import glob
@@ -13,23 +13,6 @@ import pyarrow as pa
 
 if platform not in ('linux', 'darwin'):
     raise RuntimeError("Unsupported plaform {}".format(platform))
-
-
-# Keep these dependencies synced with those in requirements/*.txt
-PYARROW_DEP = 'pyarrow>=6,<6.1'
-PYMONGO_DEP = 'pymongo>=3.11,<5'
-INSTALL_REQUIRES = [PYARROW_DEP, PYMONGO_DEP]
-SETUP_REQUIRES = ['setuptools>=47', 'cython>=0.29', PYARROW_DEP]
-
-
-def get_pymongoarrow_version():
-    """Single source the version."""
-    version_file = os.path.realpath(os.path.join(
-        os.path.dirname(__file__), 'pymongoarrow', 'version.py'))
-    version = {}
-    with open(version_file) as fp:
-        exec(fp.read(), version)
-    return version['__version__']
 
 
 def query_pkgconfig(cmd):
@@ -81,8 +64,16 @@ def append_libbson_flags(module):
 def append_arrow_flags(module):
     module.include_dirs.append(np.get_include())
     module.include_dirs.append(pa.get_include())
-    module.libraries.extend(pa.get_libraries())
     module.library_dirs.extend(pa.get_library_dirs())
+
+    # Add the arrow library files manually
+    # Alternative to using pyarrow.create_library_symlinks()
+    target = pa.get_library_dirs()[0]
+    if platform == "darwin":
+        target = os.path.join(target, '*.*.dylib')
+    elif platform == 'linux':
+        target = os.path.join(target, '*.so.*')
+    module.extra_link_args.extend(glob.glob(target))
 
     # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
     # - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
@@ -101,47 +92,4 @@ def get_extension_modules():
     return modules
 
 
-with open('README.rst') as f:
-    LONG_DESCRIPTION = f.read()
-
-
-setup(
-    name='pymongoarrow',
-    packages=find_packages(),
-    zip_safe=False,
-    package_data={
-        "pymongoarrow": ['*.pxd', '*.pyx', '*.pyi', '*.so.*', '*.dylib']},
-    ext_modules=get_extension_modules(),
-    version=get_pymongoarrow_version(),
-    python_requires=">=3.6",
-    install_requires=INSTALL_REQUIRES,
-    setup_requires=SETUP_REQUIRES,
-    tests_require=["pandas", "pytz"],
-    description="Tools for using NumPy, Pandas and PyArrow with MongoDB",
-    long_description=LONG_DESCRIPTION,
-    long_description_content_type='text/x-rst',
-    classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Intended Audience :: Developers',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: Apache Software License',
-        'Operating System :: MacOS :: MacOS X',
-        'Operating System :: POSIX',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: Implementation :: CPython',
-        'Topic :: Database'],
-    license='Apache License, Version 2.0',
-    author="Prashant Mital",
-    author_email="mongodb-user@googlegroups.com",
-    maintainer="MongoDB, Inc.",
-    maintainer_email="mongodb-user@googlegroups.com",
-    url="https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python",
-    keywords=["mongo", "mongodb", "pymongo", "arrow", "bson",
-              "numpy", "pandas"],
-    test_suite="test"
-)
+setup(ext_modules=get_extension_modules())
