@@ -1,11 +1,12 @@
 include README.rst
 include LICENSE
 include build-libbson.sh
-include release.sh
-include addtags.py
-include benchmark.py
-include THIRD-PARTY-NOTICES
 include pyproject.toml
+
+exclude THIRD-PARTY-NOTICES
+exclude release.sh
+exclude addtags.py
+exclude benchmark.py
 
 graft pymongoarrow
 

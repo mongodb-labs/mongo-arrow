@@ -16,8 +16,8 @@ import os
 import pyarrow
 
 from pymongoarrow.version import __version__, _MIN_LIBBSON_VERSION
-# this line must come second so setuptools can parse the __version__
-# above without having a built application
+# This line must come second so setuptools can parse the __version__
+# above without having a built application.
 from pymongoarrow.lib import libbson_version
 
 try:

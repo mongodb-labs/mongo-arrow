@@ -1,11 +1,15 @@
 [build-system]
 requires = [
     "setuptools>=47.9",
-    "wheel",
+    "wheel>=0.37",
     "cython>=0.29",
     # Must be kept in sync with the `install_requires` in `setup.cfg`
     "pyarrow>=6.0.0,<6.1.0",
 ]
 
 [tool.check-manifest]
-ignore = ["pymongoarrow/*.so*.*", "pymongoarrow/*.so*.*", "pymongoarrow/*.dylib"]
+ignore = [
+    "pymongoarrow/*.so*.*", 
+    "pymongoarrow/*.so*", 
+    "pymongoarrow/*.dylib"
+]

@@ -72,8 +72,13 @@ def append_arrow_flags(module):
     module.include_dirs.append(pa.get_include())
     module.library_dirs.extend(pa.get_library_dirs())
 
-    # Handle the arrow library files manually
-    # Alternative to using pyarrow.create_library_symlinks()
+    # Handle the arrow library files manually.
+    # Alternative to using pyarrow.create_library_symlinks().
+    # You can use MONGO_ARROW_LIBDIR to explicitly set the location of the 
+    # arrow libraries (for instance in a conda build).
+    # It is assumed that if you use MONGO_ARROW_LIBDIR there will be unmodified
+    # versions of the libraries (e.g. libarrow.dylib), whereas the libraries contained
+    # in pyarrow.get_library_dirs() have a modifier like libarrow.600.dylib.
     arrow_lib = os.environ.get('MONGO_ARROW_LIBDIR')
     if arrow_lib:
         if platform == "darwin":
@@ -90,6 +95,8 @@ def append_arrow_flags(module):
     # Handle linking and optionally copy the library files
     for name in ['libarrow', 'libarrow_python']:
         path = glob.glob(os.path.join(arrow_lib, name + pattern))[0]
+        # You can use MONGO_NO_COPY_ARROW_LIB to avoid copying the arrow library
+        # files to the build directory (for instance in a conda build).
         if not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False):
             build_dir = os.path.join(HERE, 'pymongoarrow')
             shutil.copy(path, build_dir)
@@ -104,6 +111,8 @@ def append_arrow_flags(module):
 
 
 def get_extension_modules():
+    # This change is needed in order to allow setuptools to import the
+    # library to obtain metadata information outside of a build environment.
     try:
         from Cython.Build import cythonize
     except ImportError:
