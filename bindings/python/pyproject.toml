@@ -8,4 +8,4 @@ requires = [
 ]
 
 [tool.check-manifest]
-ignore = ["pymongoarrow/*.so*.*", "pymongoarrow/*.dylib"]
+ignore = ["pymongoarrow/*.so*.*", "pymongoarrow/*.so*.*", "pymongoarrow/*.dylib"]
