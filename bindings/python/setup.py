@@ -5,7 +5,6 @@ import glob
 import os
 import subprocess
 from sys import platform
-import sys
 import warnings
 
 
@@ -36,6 +35,10 @@ def append_libbson_flags(module):
     else:
         pc_path = 'libbson-1.0'
 
+    lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
+    if not lnames:
+        raise ValueError(f'Could not find "{pc_path}" library')
+
     cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path))
     if cflags:
         orig_cflags = os.environ.get('CFLAGS', '')
@@ -55,7 +58,7 @@ def append_libbson_flags(module):
         module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
 
     # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
-    lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path)).split()
+    lnames = lnames.split()
     # Strip whitespace to avoid weird linker failures on manylinux images
     libnames = [lname.lstrip('-l').strip() for lname in lnames]
     module.libraries.extend(libnames)
@@ -71,16 +74,18 @@ def append_arrow_flags(module):
 
     # Handle the arrow library files manually
     # Alternative to using pyarrow.create_library_symlinks()
-    if 'MONGO_ARROW_LIBIDR' in os.environ:
-        arrow_lib = os.environ['MONGO_ARROW_LIBDIR']
+    arrow_lib = os.environ.get('MONGO_ARROW_LIBDIR')
+    if arrow_lib:
+        if platform == "darwin":
+            pattern = '.dylib'
+        elif platform == 'linux':
+            pattern = '.so'
     else:
         arrow_lib = pa.get_library_dirs()[0]
-
-    # Target the appropriate file type
-    if platform == "darwin":
-        pattern = '.*.dylib'
-    elif platform == 'linux':
-        pattern = '.so.*'
+        if platform == "darwin":
+            pattern = '.*.dylib'
+        elif platform == 'linux':
+            pattern = '.*.so.*'
 
     # Handle linking and optionally copy the library files
     for name in ['libarrow', 'libarrow_python']:
