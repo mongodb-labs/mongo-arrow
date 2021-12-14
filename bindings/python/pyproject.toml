@@ -3,6 +3,6 @@ requires = [
     "setuptools>=47.9",
     "wheel",
     "cython>=0.29",
-    # Must be kept in sync with the `setup_requirements` in `setup.py`
+    # Must be kept in sync with the `install_requires` in `setup.cfg`
     "pyarrow>=6.0.0,<6.1.0",
 ]
