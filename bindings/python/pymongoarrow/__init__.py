@@ -15,7 +15,11 @@ import os
 # We must import pyarrow before attempting to load the Cython module.
 import pyarrow
 
-from pymongoarrow.lib import libbson_version
+try:
+    from pymongoarrow.lib import libbson_version
+except ImportError:
+    # Import is not available during package build
+    pass
 from pymongoarrow.version import __version__, _MIN_LIBBSON_VERSION
 
 
