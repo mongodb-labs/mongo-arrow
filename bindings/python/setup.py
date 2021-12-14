@@ -100,6 +100,7 @@ def append_arrow_flags(module):
         if not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False):
             build_dir = os.path.join(HERE, 'pymongoarrow')
             shutil.copy(path, build_dir)
+            path = os.path.join(build_dir, os.path.basename(path))
         module.extra_link_args.append(path)
 
     # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
