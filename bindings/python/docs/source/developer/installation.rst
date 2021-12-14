@@ -41,23 +41,22 @@ On macOS, users can install the latest ``libbson`` via Homebrew::
 
   $ brew install mongo-c-driver
 
+Alternatively, you can use the provided `build-libbson.sh` script to build it::
+
+  $ LIBBSON_INSTALL_DIR=$(pwd)/libbson build-libbson.sh
+
 
 Build
 -----
 
-In the previously created virtualenv, we first install all build and test dependencies
-of PyMongoArrow::
+In the previously created virtualenv, install PyMongoArrow and its test dependencies in editable mode::
 
-  (pymongoarrow) $ pip install -r requirements/test.txt
+  (pymongoarrow) $ pip install -v -e ".[test]"
 
-We also need the pyarrow library symlinks, which can be created as follows::
- 
-  (pymongoarrow) $ python -c 'import pyarrow as pa; pa.create_library_symlinks()'
+If you built libbson using the `build-libbson` script then use the same `LIBBSON_INSTALL_DIR` as above:
 
-We can now install ``pymongoarrow`` in **development mode** as follows::
+  (pymongoarrow) $ LIBBSON_INSTALL_DIR=$(pwd)/libbson pip install -v -e ".[test]"
 
-  (pymongoarrow) $ python setup.py build_ext --inplace
-  (pymongoarrow) $ python setup.py develop
 
 Test
 ----
