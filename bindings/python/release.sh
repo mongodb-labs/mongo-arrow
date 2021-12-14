@@ -38,14 +38,10 @@ $PYTHON --version
 cp $LIBBSON_INSTALL_DIR/lib*/$LIBBSON_SO "$(pwd)/pymongoarrow/"
 
 # Install build dependencies
-$PYTHON -m pip install -U pip wheel
-$PYTHON -m pip install -r requirements/build.txt
-
-# https://arrow.apache.org/docs/python/extending.html#building-extensions-against-pypi-wheels
-$PYTHON -c "import pyarrow; pyarrow.create_library_symlinks()"
+$PYTHON -m pip install -U pip build
 
 # Build wheels in $(pwd)/dist/*.whl
-LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" $PYTHON setup.py bdist_wheel
+LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" $PYTHON -m build --wheel .
 
 # Run auditwheel repair to set platform tags on Linux
 if [ "Linux" = "$(uname -s)" ]
