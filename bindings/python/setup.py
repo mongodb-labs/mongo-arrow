@@ -1,15 +1,12 @@
 import shutil
 from setuptools import setup
-from Cython.Build import cythonize
 
 import glob
 import os
 import subprocess
 from sys import platform
+import sys
 import warnings
-
-import numpy as np
-import pyarrow as pa
 
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -65,6 +62,9 @@ def append_libbson_flags(module):
 
 
 def append_arrow_flags(module):
+    import numpy as np
+    import pyarrow as pa
+
     module.include_dirs.append(np.get_include())
     module.include_dirs.append(pa.get_include())
     module.library_dirs.extend(pa.get_library_dirs())
@@ -99,6 +99,10 @@ def append_arrow_flags(module):
 
 
 def get_extension_modules():
+    try:
+        from Cython.Build import cythonize
+    except ImportError:
+        return []
     modules = cythonize(['pymongoarrow/*.pyx'])
     for module in modules:
         append_libbson_flags(module)
