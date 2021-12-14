@@ -83,9 +83,9 @@ def append_arrow_flags(module):
     else:
         arrow_lib = pa.get_library_dirs()[0]
         if platform == "darwin":
-            pattern = '.*.dylib'
+            pattern = '*.dylib'
         elif platform == 'linux':
-            pattern = '.*.so.*'
+            pattern = '*.so.*'
 
     # Handle linking and optionally copy the library files
     for name in ['libarrow', 'libarrow_python']:
