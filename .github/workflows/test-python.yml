@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+defaults:  
+  run:  
+    working-directory: ./bindings/python
+
 jobs:
   build:
     # supercharge/mongodb-github-action requires containers so we don't test other platforms
@@ -27,17 +31,17 @@ jobs:
       - name: Install libbson
         run: |
           LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
-        working-directory: ./bindings/python
       - name: Install Python dependencies
         run: |
           python -m pip install -U pip
-        working-directory: ./bindings/python
       - name: Install pymongoarrow
         run: |
           # Install the library
           LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
-        working-directory: ./bindings/python
       - name: Run tests
         run: |
           LD_LIBRARY_PATH=$(pwd)/libbson/lib python -m unittest discover test -v
-        working-directory: ./bindings/python
+      - name: Check the manifest
+        run: |
+          pip install check-manifest
+          check-manifest -v

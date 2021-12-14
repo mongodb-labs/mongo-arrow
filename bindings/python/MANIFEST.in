@@ -2,10 +2,14 @@ include README.rst
 include LICENSE
 include build-libbson.sh
 include release.sh
+include addtags.py
+include benchmark.py
+include THIRD-PARTY-NOTICES
 
 graft pymongoarrow
 
-prune test
+recursive-exclude test *
+recursive-exclude docs *
 
 global-exclude *.cpp
 global-exclude *.dylib
