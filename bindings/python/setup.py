@@ -1,3 +1,4 @@
+import shutil
 from setuptools import setup
 from Cython.Build import cythonize
 
@@ -10,6 +11,8 @@ import warnings
 import numpy as np
 import pyarrow as pa
 
+
+HERE = os.path.abspath(os.path.dirname(__file__))
 
 if platform not in ('linux', 'darwin'):
     raise RuntimeError("Unsupported plaform {}".format(platform))
@@ -66,14 +69,26 @@ def append_arrow_flags(module):
     module.include_dirs.append(pa.get_include())
     module.library_dirs.extend(pa.get_library_dirs())
 
-    # Add the arrow library files manually
+    # Handle the arrow library files manually
     # Alternative to using pyarrow.create_library_symlinks()
-    target = pa.get_library_dirs()[0]
+    if 'MONGO_ARROW_LIBIDR' in os.environ:
+        arrow_lib = os.environ['MONGO_ARROW_LIBDIR']
+    else:
+        arrow_lib = pa.get_library_dirs()[0]
+
+    # Target the appropriate file type
     if platform == "darwin":
-        target = os.path.join(target, '*.*.dylib')
+        pattern = '.*.dylib'
     elif platform == 'linux':
-        target = os.path.join(target, '*.so.*')
-    module.extra_link_args.extend(glob.glob(target))
+        pattern = '.so.*'
+
+    # Handle linking and optionally copy the library files
+    for name in ['libarrow', 'libarrow_python']:
+        path = glob.glob(os.path.join(arrow_lib, name + pattern))[0]
+        if not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False):
+            build_dir = os.path.join(HERE, 'pymongoarrow')
+            shutil.copy(path, build_dir)
+        module.extra_link_args.append(path)
 
     # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
     # - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
