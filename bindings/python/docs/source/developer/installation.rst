@@ -43,7 +43,7 @@ On macOS, users can install the latest ``libbson`` via Homebrew::
 
 Alternatively, you can use the provided `build-libbson.sh` script to build it::
 
-  $ LIBBSON_INSTALL_DIR=$(pwd)/libbson build-libbson.sh
+  $ LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
 
 
 Build
