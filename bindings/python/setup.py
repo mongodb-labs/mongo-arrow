@@ -76,32 +76,29 @@ def append_arrow_flags(module):
     # Alternative to using pyarrow.create_library_symlinks().
     # You can use MONGO_ARROW_LIBDIR to explicitly set the location of the 
     # arrow libraries (for instance in a conda build).
-    # It is assumed that if you use MONGO_ARROW_LIBDIR there will be unmodified
-    # versions of the libraries (e.g. libarrow.dylib), whereas the libraries contained
-    # in pyarrow.get_library_dirs() have a modifier like libarrow.600.dylib.
-    arrow_lib = os.environ.get('MONGO_ARROW_LIBDIR')
-    if arrow_lib:
-        if platform == "darwin":
-            pattern = '.dylib'
-        elif platform == 'linux':
-            pattern = '.so'
-    else:
-        arrow_lib = pa.get_library_dirs()[0]
-        if platform == "darwin":
-            pattern = '*.dylib'
-        elif platform == 'linux':
-            pattern = '*.so.*'
+    # We first check for an unmodified path to the library,
+    # then look for a library file with a version modifier, e.g. libarrow.600.dylib.
+    arrow_lib = os.environ.get('MONGO_ARROW_LIBDIR', pa.get_library_dirs()[0])
+    if platform == "darwin":
+        patterns = ['.dylib', '.[0-9][0-9][0-9].dylib']
+    elif platform == 'linux':
+        patterns = ['.so', '.so.[0-9][0-9][0-9]']
 
     # Handle linking and optionally copy the library files
     for name in ['libarrow', 'libarrow_python']:
-        path = glob.glob(os.path.join(arrow_lib, name + pattern))[0]
-        # You can use MONGO_NO_COPY_ARROW_LIB to avoid copying the arrow library
-        # files to the build directory (for instance in a conda build).
-        if not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False):
-            build_dir = os.path.join(HERE, 'pymongoarrow')
-            shutil.copy(path, build_dir)
-            path = os.path.join(build_dir, os.path.basename(path))
-        module.extra_link_args.append(path)
+        for pattern in patterns:
+            paths = glob.glob(os.path.join(arrow_lib, name + pattern))
+            if not paths:
+                continue
+            path = paths[0]
+            # You can use MONGO_NO_COPY_ARROW_LIB to avoid copying the arrow library
+            # files to the build directory (for instance in a conda build).
+            if not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False):
+                build_dir = os.path.join(HERE, 'pymongoarrow')
+                shutil.copy(path, build_dir)
+                path = os.path.join(build_dir, os.path.basename(path))
+            module.extra_link_args.append(path)
+            break
 
     # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
     # - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
