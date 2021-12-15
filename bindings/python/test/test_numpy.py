@@ -81,14 +81,14 @@ class TestExplicitNumPyApi(unittest.TestCase):
         expected = {
             '_id': np.array([1, 2, 3, 4], dtype=np.int32),
             'data': np.array([20, 40, 60, np.nan], dtype=np.float64)}
-
+        projection = {'_id': True, 'data': {'$multiply': [2, '$data']}}
         actual = aggregate_numpy_all(
-            self.coll, [{'$project': {
-                '_id': True, 'data': {'$multiply': [2, '$data']}}}],
+            self.coll, [{'$project': projection}],
             schema=self.schema)
         self.assert_numpy_equal(actual, expected)
 
         agg_cmd = self.cmd_listener.results['started'][-1]
         self.assertEqual(agg_cmd.command_name, 'aggregate')
-        self.assertEqual(agg_cmd.command['pipeline'][1]['$project'],
-                         {'_id': True, 'data': True})
+        assert len(agg_cmd.command['pipeline']) == 1
+        self.assertEqual(agg_cmd.command['pipeline'][0]['$project'],
+                         projection)

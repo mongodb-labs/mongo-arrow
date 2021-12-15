@@ -72,6 +72,21 @@ class TestArrowApiMixin:
         self.assertEqual(find_cmd.command['projection'],
                          {'_id': True, 'data': True})
 
+    def test_find_projection(self):
+        expected = Table.from_pydict(
+            {'_id': [4, 3], 'data': [None, 60]},
+            ArrowSchema([('_id', int32()), ('data', int64())]))
+        projection = {'_id': True, 'data': {'$multiply': [2, '$data']}}
+        table = self.run_find({'_id': {'$gt': 2}},
+                              schema=self.schema,
+                              sort=[('_id', DESCENDING)],
+                              projection=projection)
+        self.assertEqual(table, expected)
+
+        find_cmd = self.cmd_listener.results['started'][-1]
+        self.assertEqual(find_cmd.command_name, 'find')
+        self.assertEqual(find_cmd.command['projection'], projection)
+
     def test_find_multiple_batches(self):
         orig_method = self.coll.find_raw_batches
 
@@ -107,15 +122,17 @@ class TestArrowApiMixin:
         expected = Table.from_pydict(
             {'_id': [1, 2, 3, 4], 'data': [20, 40, 60, None]},
             ArrowSchema([('_id', int32()), ('data', int64())]))
+        projection = {'_id': True, 'data': {'$multiply': [2, '$data']}}
         table = self.run_aggregate(
-            [{'$project': {'_id': True, 'data': {'$multiply': [2, '$data']}}}],
+            [{'$project': projection }],
             schema=self.schema)
         self.assertEqual(table, expected)
 
         agg_cmd = self.cmd_listener.results['started'][-1]
         self.assertEqual(agg_cmd.command_name, 'aggregate')
-        self.assertEqual(agg_cmd.command['pipeline'][1]['$project'],
-                         {'_id': True, 'data': True})
+        assert len(agg_cmd.command['pipeline']) == 1
+        self.assertEqual(agg_cmd.command['pipeline'][0]['$project'],
+                         projection)
 
     def test_aggregate_multiple_batches(self):
         orig_method = self.coll.aggregate_raw_batches

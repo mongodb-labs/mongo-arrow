@@ -71,13 +71,14 @@ class TestExplicitPandasApi(unittest.TestCase):
         expected = pd.DataFrame(
             data={'_id': [1, 2, 3, 4], 'data': [20, 40, 60, None]}).astype(
             {'_id': 'int32'})
+        projection = {'_id': True, 'data': {'$multiply': [2, '$data']}}
         table = aggregate_pandas_all(
-            self.coll, [{'$project': {
-                '_id': True, 'data': {'$multiply': [2, '$data']}}}],
+            self.coll, [{'$project': projection}],
             schema=self.schema)
         self.assertTrue(table.equals(expected))
 
         agg_cmd = self.cmd_listener.results['started'][-1]
         self.assertEqual(agg_cmd.command_name, 'aggregate')
-        self.assertEqual(agg_cmd.command['pipeline'][1]['$project'],
-                         {'_id': True, 'data': True})
+        assert len(agg_cmd.command['pipeline']) == 1
+        self.assertEqual(agg_cmd.command['pipeline'][0]['$project'],
+                         projection)
