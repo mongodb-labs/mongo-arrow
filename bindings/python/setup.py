@@ -81,9 +81,9 @@ def append_arrow_flags(module):
     # then look for a library file with a version modifier, e.g. libarrow.600.dylib.
     arrow_lib = os.environ.get('MONGO_ARROW_LIBDIR', pa.get_library_dirs()[0])
     if platform == "darwin":
-        exts = ['.dylib', r'.(\d+).dylib']
+        exts = ['.dylib$', r'.(\d+).dylib$']
     elif platform == 'linux':
-        exts = ['.so', r'.so.(\d+)']
+        exts = ['.so$', r'.so.(\d+)$']
 
     # Find the appropriate library file and optionally copy it locally.
     # If the library file has a version modifier, use the modifier in the library
