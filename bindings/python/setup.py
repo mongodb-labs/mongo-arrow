@@ -99,7 +99,10 @@ def append_arrow_flags(module):
                 match = re.match(pattern, fname)
                 if not match:
                     continue
-                module.libraries.append(name + '.' + match.groups()[0])
+                if match.groups():
+                    module.libraries.append(name + '.' + match.groups()[0])
+                else:
+                    module.libraries.append(name)
                 matched = True
                 # You can use MONGO_NO_COPY_ARROW_LIB to avoid copying the arrow library
                 # files to the build directory (for instance in a conda build).
