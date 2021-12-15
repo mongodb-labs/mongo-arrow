@@ -83,7 +83,7 @@ def append_arrow_flags(module):
     if platform == "darwin":
         exts = ['.dylib$', r'.(\d+).dylib$']
     elif platform == 'linux':
-        exts = ['.so$', r'(.so.\d+)$']
+        exts = ['.so$', r'.(so.\d+)$']
 
     # Find the appropriate library file and optionally copy it locally.
     # If the library file has a version modifier, use the modifier in the library
