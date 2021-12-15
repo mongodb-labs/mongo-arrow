@@ -106,11 +106,11 @@ def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
     # Add a projection stage if none is given.
     has_projection = False
     for item in pipeline:
-      if '$project' in item:
-        has_projection = True
-        break
+        if '$project' in item:
+          has_projection = True
+          break
     if not has_projection:
-      pipeline.append({"$project": schema._get_projection()})
+        pipeline.append({"$project": schema._get_projection()})
 
     raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
     for batch in raw_batch_cursor:
