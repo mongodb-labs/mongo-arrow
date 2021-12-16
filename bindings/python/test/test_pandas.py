@@ -79,6 +79,8 @@ class TestExplicitPandasApi(unittest.TestCase):
 
         agg_cmd = self.cmd_listener.results['started'][-1]
         self.assertEqual(agg_cmd.command_name, 'aggregate')
-        assert len(agg_cmd.command['pipeline']) == 1
+        assert len(agg_cmd.command['pipeline']) == 2
         self.assertEqual(agg_cmd.command['pipeline'][0]['$project'],
                          projection)
+        self.assertEqual(agg_cmd.command['pipeline'][1]['$project'],
+                         {'_id': True, 'data': True})
