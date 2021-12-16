@@ -15,9 +15,10 @@ import os
 # We must import pyarrow before attempting to load the Cython module.
 import pyarrow
 
-from pymongoarrow.lib import libbson_version
 from pymongoarrow.version import __version__, _MIN_LIBBSON_VERSION
-
+# This line must come second so setuptools can parse the __version__
+# above without having a built application.
+from pymongoarrow.lib import libbson_version
 
 try:
     from pkg_resources import parse_version as _parse_version

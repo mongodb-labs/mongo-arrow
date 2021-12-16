@@ -1,35 +1,18 @@
-from setuptools import setup, find_packages
-from Cython.Build import cythonize
+import shutil
+from setuptools import setup
 
 import glob
 import os
+import re
 import subprocess
 from sys import platform
 import warnings
 
-import numpy as np
-import pyarrow as pa
 
+HERE = os.path.abspath(os.path.dirname(__file__))
 
 if platform not in ('linux', 'darwin'):
     raise RuntimeError("Unsupported plaform {}".format(platform))
-
-
-# Keep these dependencies synced with those in requirements/*.txt
-PYARROW_DEP = 'pyarrow>=6,<6.1'
-PYMONGO_DEP = 'pymongo>=3.11,<5'
-INSTALL_REQUIRES = [PYARROW_DEP, PYMONGO_DEP]
-SETUP_REQUIRES = ['setuptools>=47', 'cython>=0.29', PYARROW_DEP]
-
-
-def get_pymongoarrow_version():
-    """Single source the version."""
-    version_file = os.path.realpath(os.path.join(
-        os.path.dirname(__file__), 'pymongoarrow', 'version.py'))
-    version = {}
-    with open(version_file) as fp:
-        exec(fp.read(), version)
-    return version['__version__']
 
 
 def query_pkgconfig(cmd):
@@ -41,6 +24,7 @@ def query_pkgconfig(cmd):
 
 
 def append_libbson_flags(module):
+    pc_path = 'libbson-1.0'
     install_dir = os.environ.get('LIBBSON_INSTALL_DIR')
     if install_dir:
         libdirs = glob.glob(os.path.join(install_dir, "lib*"))
@@ -50,8 +34,10 @@ def append_libbson_flags(module):
             libdir = libdirs[0]
             pc_path = os.path.join(
                 install_dir, libdir, 'pkgconfig', 'libbson-1.0.pc')
-    else:
-        pc_path = 'libbson-1.0'
+
+    lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
+    if not lnames:
+        raise ValueError(f'Could not find "{pc_path}" library')
 
     cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path))
     if cflags:
@@ -72,17 +58,48 @@ def append_libbson_flags(module):
         module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
 
     # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
-    lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path)).split()
+    lnames = lnames.split()
     # Strip whitespace to avoid weird linker failures on manylinux images
     libnames = [lname.lstrip('-l').strip() for lname in lnames]
     module.libraries.extend(libnames)
 
 
 def append_arrow_flags(module):
+    import numpy as np
+    import pyarrow as pa
+
     module.include_dirs.append(np.get_include())
     module.include_dirs.append(pa.get_include())
-    module.libraries.extend(pa.get_libraries())
     module.library_dirs.extend(pa.get_library_dirs())
+
+    # Handle the arrow library files manually.
+    # Alternative to using pyarrow.create_library_symlinks().
+    # You can use MONGO_ARROW_LIBDIR to explicitly set the location of the 
+    # arrow libraries (for instance in a conda build).
+    # We first check for an unmodified path to the library,
+    # then look for a library file with a version modifier, e.g. libarrow.600.dylib.
+    arrow_lib = os.environ.get('MONGO_ARROW_LIBDIR', pa.get_library_dirs()[0])
+    if platform == "darwin":
+        exts = ['.dylib', '.*.dylib']
+    elif platform == 'linux':
+        exts = ['.so', '.so.*']
+
+    # Find the appropriate library file and optionally copy it locally.
+    for name in pa.get_libraries():
+        for ext in exts:
+            files = glob.glob(os.path.join(arrow_lib, f'lib{name}{ext}'))
+            if not files:
+                continue
+            path = files[0]
+    
+            # You can use MONGO_NO_COPY_ARROW_LIB to avoid copying the arrow library
+            # files to the build directory (for instance in a conda build).
+            if not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False):
+                build_dir = os.path.join(HERE, 'pymongoarrow')
+                shutil.copy(path, build_dir)
+                path = os.path.join(build_dir, os.path.basename(path))
+            module.extra_link_args.append(path)
+            break
 
     # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
     # - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
@@ -93,6 +110,12 @@ def append_arrow_flags(module):
 
 
 def get_extension_modules():
+    # This change is needed in order to allow setuptools to import the
+    # library to obtain metadata information outside of a build environment.
+    try:
+        from Cython.Build import cythonize
+    except ImportError:
+        return []
     modules = cythonize(['pymongoarrow/*.pyx'])
     for module in modules:
         append_libbson_flags(module)
@@ -101,47 +124,4 @@ def get_extension_modules():
     return modules
 
 
-with open('README.rst') as f:
-    LONG_DESCRIPTION = f.read()
-
-
-setup(
-    name='pymongoarrow',
-    packages=find_packages(),
-    zip_safe=False,
-    package_data={
-        "pymongoarrow": ['*.pxd', '*.pyx', '*.pyi', '*.so.*', '*.dylib']},
-    ext_modules=get_extension_modules(),
-    version=get_pymongoarrow_version(),
-    python_requires=">=3.6",
-    install_requires=INSTALL_REQUIRES,
-    setup_requires=SETUP_REQUIRES,
-    tests_require=["pandas", "pytz"],
-    description="Tools for using NumPy, Pandas and PyArrow with MongoDB",
-    long_description=LONG_DESCRIPTION,
-    long_description_content_type='text/x-rst',
-    classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Intended Audience :: Developers',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: Apache Software License',
-        'Operating System :: MacOS :: MacOS X',
-        'Operating System :: POSIX',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: Implementation :: CPython',
-        'Topic :: Database'],
-    license='Apache License, Version 2.0',
-    author="Prashant Mital",
-    author_email="mongodb-user@googlegroups.com",
-    maintainer="MongoDB, Inc.",
-    maintainer_email="mongodb-user@googlegroups.com",
-    url="https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python",
-    keywords=["mongo", "mongodb", "pymongo", "arrow", "bson",
-              "numpy", "pandas"],
-    test_suite="test"
-)
+setup(ext_modules=get_extension_modules())

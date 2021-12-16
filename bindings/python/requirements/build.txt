@@ -1,3 +1,0 @@
-setuptools>=47
-cython>=0.29
-pyarrow>=6,<6.1
