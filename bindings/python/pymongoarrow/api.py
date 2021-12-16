@@ -104,7 +104,6 @@ def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
                 'PyMongoArrow', UserWarning, stacklevel=2)
 
     pipeline.append({"$project": schema._get_projection()})
-
     raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
     for batch in raw_batch_cursor:
         process_bson_stream(batch, context)
