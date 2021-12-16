@@ -58,13 +58,13 @@ def find_arrow_all(collection, query, *, schema, **kwargs):
     context = PyMongoArrowContext.from_schema(
         schema, codec_options=collection.codec_options)
 
-    for opt in ('session', 'cursor_type', 'projection'):
+    for opt in ('session', 'cursor_type'):
         if kwargs.pop(opt, None):
             warnings.warn(
                 f'Ignoring option {opt!r} as it is not supported by '
                 'PyMongoArrow', UserWarning, stacklevel=2)
 
-    kwargs['projection'] = schema._get_projection()
+    kwargs.setdefault('projection', schema._get_projection())
     raw_batch_cursor = collection.find_raw_batches(
         query, **kwargs)
     for batch in raw_batch_cursor:
