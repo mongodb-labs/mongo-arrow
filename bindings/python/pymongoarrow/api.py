@@ -58,7 +58,7 @@ def find_arrow_all(collection, query, *, schema, **kwargs):
     context = PyMongoArrowContext.from_schema(
         schema, codec_options=collection.codec_options)
 
-    for opt in ('session', 'cursor_type'):
+    for opt in ('cursor_type'):
         if kwargs.pop(opt, None):
             warnings.warn(
                 f'Ignoring option {opt!r} as it is not supported by '
