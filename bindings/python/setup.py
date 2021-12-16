@@ -24,6 +24,7 @@ def query_pkgconfig(cmd):
 
 
 def append_libbson_flags(module):
+    pc_path = 'libbson-1.0'
     install_dir = os.environ.get('LIBBSON_INSTALL_DIR')
     if install_dir:
         libdirs = glob.glob(os.path.join(install_dir, "lib*"))
@@ -33,8 +34,6 @@ def append_libbson_flags(module):
             libdir = libdirs[0]
             pc_path = os.path.join(
                 install_dir, libdir, 'pkgconfig', 'libbson-1.0.pc')
-    else:
-        pc_path = 'libbson-1.0'
 
     lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
     if not lnames:
@@ -81,21 +80,17 @@ def append_arrow_flags(module):
     # then look for a library file with a version modifier, e.g. libarrow.600.dylib.
     arrow_lib = os.environ.get('MONGO_ARROW_LIBDIR', pa.get_library_dirs()[0])
     if platform == "darwin":
-        exts = [r'\.dylib', r'\..*\.dylib']
+        exts = ['.dylib', '.*.dylib']
     elif platform == 'linux':
-        exts = [r'\.so', r'\.so\..*']
+        exts = ['.so', '.so.*']
 
     # Find the appropriate library file and optionally copy it locally.
-    files = os.listdir(arrow_lib)
     for name in pa.get_libraries():
         for ext in exts:
-            path = None
-            pattern = re.compile(f'lib{name}{ext}$')
-            for fname in files:
-                if re.match(pattern, fname):
-                    path = os.path.join(arrow_lib, fname)
-            if not path:
+            files = glob.glob(os.path.join(arrow_lib, f'lib{name}{ext}'))
+            if not files:
                 continue
+            path = files[0]
     
             # You can use MONGO_NO_COPY_ARROW_LIB to avoid copying the arrow library
             # files to the build directory (for instance in a conda build).
