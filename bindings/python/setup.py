@@ -12,9 +12,13 @@ import warnings
 HERE = os.path.abspath(os.path.dirname(__file__))
 BUILD_DIR = os.path.join(HERE, 'pymongoarrow')
 
-# Find and copy the binary file, unless
+# Find and copy the binary arrow files, unless
 # MONGO_NO_COPY_ARROW_LIB is set (for instance in a conda build).
-COPY_LIBS = not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False)
+COPY_ARROW_LIB = not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False)
+
+# Find and copy the binary libbson file, unless
+# MONGO_NO_COPY_LIBBSON is set (for instance in a conda build).
+COPY_LIBBSON = not os.environ.get("MONGO_NO_COPY_LIBBSON", False)
 
 
 def query_pkgconfig(cmd):
@@ -30,7 +34,7 @@ def append_libbson_flags(module):
     install_dir = os.environ.get('MONGO_LIBBSON_DIR')
     if install_dir:
         # Handle the copy-able library file if applicable.
-        if COPY_LIBS:
+        if COPY_LIBBSON:
             if platform == "darwin":
                 lib_file = "libbson-1.0.0.dylib"
             elif platform == "linux":
@@ -133,7 +137,7 @@ def append_arrow_flags(module):
             if not files:
                 continue
             path = files[0]
-            if COPY_LIBS:
+            if COPY_ARROW_LIB:
                 shutil.copy(path, BUILD_DIR)
                 path = os.path.join(BUILD_DIR, os.path.basename(path))
             

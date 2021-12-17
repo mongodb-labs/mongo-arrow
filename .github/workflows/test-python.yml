@@ -7,6 +7,7 @@ on:
 defaults:  
   run:  
     working-directory: ./bindings/python
+    shell: bash -l {0}
 
 jobs:
   build:
@@ -45,3 +46,30 @@ jobs:
         run: |
           pip install check-manifest
           check-manifest -v
+
+  conda-build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, windows-latest]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Base setup
+      uses: jupyterlab/maintainer-tools/.github/actions/base-setup@v1
+
+    - name: Build sdist
+      run: |
+        ./release.sh
+
+    - name: Setup conda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        environment-file: bindings/python/conda/environment.yml
+        activate-environment: pymongoarrow_build
+        python-version: "3.9"
+
+    - name: Conda Build
+      run: conda build -c conda-forge ./conda
