@@ -51,7 +51,7 @@ def append_libbson_flags(module):
                 lib_path = os.path.join(lib_dir, 'bson-1.0.lib')
                 if os.path.exists(lib_path):
                     module.extra_link_args = [lib_path]
-                    module.include_dirs.append(lib_dir)
+                    module.include_dirs.append(os.path.join(install_dir, 'include'))
                 else:
                     raise ValueError('We require a MONGO_LIBBSON_DIR with a compiled library on Windows')
             pc_path = os.path.join(
