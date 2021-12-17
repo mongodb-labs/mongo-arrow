@@ -48,7 +48,7 @@ def append_libbson_flags(module):
         else:
             lib_dir = lib_dirs[0]
             if os.name == 'nt':
-                lib_path = os.path.join(libdir, 'bson-1.0.lib')
+                lib_path = os.path.join(lib_dir, 'bson-1.0.lib')
                 if os.path.exists(lib_path):
                     module.extra_link_args = [lib_path]
                 else:
