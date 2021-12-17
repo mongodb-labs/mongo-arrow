@@ -42,10 +42,10 @@ jobs:
       - name: Run tests
         run: |
           LD_LIBRARY_PATH=$(pwd)/libbson/lib python -m unittest discover test -v
-      - name: Check the manifest
-        run: |
-          pip install check-manifest
-          check-manifest -v
+      # - name: Check the manifest
+      #   run: |
+      #     pip install check-manifest
+      #     check-manifest -v
 
   conda-build:
     runs-on: ${{ matrix.os }}

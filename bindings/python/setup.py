@@ -14,7 +14,7 @@ BUILD_DIR = os.path.join(HERE, 'pymongoarrow')
 
 # Find and copy the binary arrow files, unless
 # MONGO_NO_COPY_ARROW_LIB is set (for instance in a conda build).
-COPY_ARROW_LIB = not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False)
+COPY_LIBARROW = not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False)
 
 # Find and copy the binary libbson file, unless
 # MONGO_NO_COPY_LIBBSON is set (for instance in a conda build).
@@ -126,7 +126,7 @@ def append_arrow_flags(module):
             lib_file = os.path.join(arrow_lib, f'{name}.dll')
             if not os.path.exists(lib_file):
                 raise ValueError('Could not find compiled arrow library')
-            if COPY_LIBS:
+            if COPY_LIBARROW:
                 shutil.copy(lib_file, BUILD_DIR)
             lib_file = os.path.join(arrow_lib, f'{name}.lib')
             module.extra_link_args.append(lib_file)
@@ -137,7 +137,7 @@ def append_arrow_flags(module):
             if not files:
                 continue
             path = files[0]
-            if COPY_ARROW_LIB:
+            if COPY_LIBARROW:
                 shutil.copy(path, BUILD_DIR)
                 path = os.path.join(BUILD_DIR, os.path.basename(path))
             
