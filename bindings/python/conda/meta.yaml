@@ -7,7 +7,7 @@ package:
   version: {{ version }}
 
 source:
-  path: ../dist/pymongoarrow-{{ version }}.tar.gz
+  path: ..
 
 build:
   number: 0
