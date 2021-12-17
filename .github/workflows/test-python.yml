@@ -72,4 +72,6 @@ jobs:
         python-version: "3.9"
 
     - name: Conda Build
-      run: conda build -c conda-forge ./conda
+      run: |
+        cd conda
+        conda build -c conda-forge .
