@@ -40,8 +40,7 @@ def append_libbson_flags(module):
             lib_dir = 'bin' if os.name == 'nt' else 'lib*'
             lib_dir = glob.glob(os.path.join(install_dir, lib_dir))
             if lib_dir:
-                lib_dir = lib_dir[0]
-                lib_dir = os.path.join(lib_dir, lib_file)
+                lib_file = os.path.join(lib_dir[0], lib_file)
                 if os.path.exists(lib_file):
                     shutil.copy(lib_file, BUILD_DIR)
 
