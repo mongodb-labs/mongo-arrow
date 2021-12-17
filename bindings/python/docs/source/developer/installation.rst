@@ -43,7 +43,7 @@ On macOS, users can install the latest ``libbson`` via Homebrew::
 
 Alternatively, you can use the provided `build-libbson.sh` script to build it::
 
-  $ LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
+  $ MONGO_LIBBSON_DIR=$(pwd)/libbson ./build-libbson.sh
 
 
 Build
@@ -53,9 +53,9 @@ In the previously created virtualenv, install PyMongoArrow and its test dependen
 
   (pymongoarrow) $ pip install -v -e ".[test]"
 
-If you built libbson using the `build-libbson` script then use the same `LIBBSON_INSTALL_DIR` as above:
+If you built libbson using the `build-libbson` script then use the same `MONGO_LIBBSON_DIR` as above:
 
-  (pymongoarrow) $ LIBBSON_INSTALL_DIR=$(pwd)/libbson pip install -v -e ".[test]"
+  (pymongoarrow) $ MONGO_LIBBSON_DIR=$(pwd)/libbson pip install -v -e ".[test]"
 
 
 Test

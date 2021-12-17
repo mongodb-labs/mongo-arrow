@@ -5,12 +5,11 @@ on:
   pull_request:
 
 jobs:
-  # MacOS
-  build-osx-wheels:
+  build-non-linux-wheels:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-10.15]
+        os: [macos-10.15, windows-latest]
         python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
     name: Build CPython ${{ matrix.python-version }}-${{ matrix.os }}
     steps:
@@ -20,20 +19,20 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Build wheels
+        working-directory: ./bindings/python
         run: |
           ./release.sh
-        working-directory: ./bindings/python
       - uses: actions/upload-artifact@v2
         with:
           name: pymongoarrow-${{ matrix.python-version }}-${{ matrix.os }}-wheel
           path: ./bindings/python/dist/*.whl
           if-no-files-found: error
-  test-osx-wheels:
-    needs: build-osx-wheels
+  test-non-linux-wheels:
+    needs: build-non-linux-wheels
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-10.15]
+        os: [macos-10.15, windows-latest]
         python-version: [3.6, 3.7, 3.8, 3.9, "3.10"]
     name: Test CPython ${{ matrix.python-version }}-${{ matrix.os }}
     steps:
@@ -63,9 +62,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build wheels
+        working-directory: ./bindings/python
         run: |
           docker run --rm --volume `pwd`:/python --workdir /python --env PLAT=${{ matrix.container }} --env PYTHON_BINARY=/opt/python/${{ matrix.python-version }}/bin/python quay.io/pypa/${{ matrix.container }} ./release.sh
-        working-directory: ./bindings/python
       - uses: actions/upload-artifact@v2
         with:
           name: pymongoarrow-${{ matrix.python-version }}-${{ matrix.container }}-wheel
@@ -88,15 +87,3 @@ jobs:
       - name: Test wheel
         run: |
           docker run --rm --volume `pwd`:/python quay.io/pypa/${{ matrix.container }} /bin/bash -c "/opt/python/${{ matrix.python-version }}/bin/python -m pip install -U pip && /opt/python/${{ matrix.python-version }}/bin/python -m pip install /python/*.whl && /opt/python/${{ matrix.python-version }}/bin/python -c 'from pymongoarrow.lib import process_bson_stream'"
-  # Collect all built wheels
-  collect-wheels:
-    runs-on: ubuntu-latest
-    needs: [build-osx-wheels, build-manylinux-wheels]
-    name: Download Wheels
-    steps:
-      - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v2
-      - uses: actions/upload-artifact@v2
-        with:
-          name: nix-wheels
-          path: "*-wheel"
