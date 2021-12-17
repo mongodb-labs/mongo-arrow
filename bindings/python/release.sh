@@ -17,17 +17,17 @@ MONGO_LIBBSON_DIR="$(pwd)/libbson"
 MONGO_LIBBSON_DIR="$MONGO_LIBBSON_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""} ./build-libbson.sh
 
 # Print Python version used
-$PYTHON --version
+python --version
 
 # Install build dependencies
-$PYTHON -m pip install -U pip build
+python -m pip install -U pip build
 
 # Build wheels in $(pwd)/dist/*.whl
-MONGO_LIBBSON_DIR="$MONGO_LIBBSON_DIR" $PYTHON -m build --wheel .
+MONGO_LIBBSON_DIR="$MONGO_LIBBSON_DIR" python -m build --wheel .
 
 # Run auditwheel repair to set platform tags on Linux
 if [ "Linux" = "$(uname -s)" ]
 then
-  $PYTHON -m pip install auditwheel
-  $PYTHON addtags.py dist/*.whl "$PLAT" ./wheelhouse
+  python -m pip install auditwheel
+  python addtags.py dist/*.whl "$PLAT" ./wheelhouse
 fi
