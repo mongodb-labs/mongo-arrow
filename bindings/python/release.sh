@@ -10,6 +10,13 @@ then
   exit 1
 fi
 
+# Platform-dependent actions:
+PYTHON=${PYTHON_BINARY:-"python"}
+if [ "Linux" = "$(uname -s)" ]
+then
+  PYTHON=${PYTHON_BINARY:-"python3"}
+fi
+
 # Build libbson binaries in $(pwd)/libbson
 MONGO_LIBBSON_DIR="$(pwd)/libbson"
 
@@ -17,17 +24,17 @@ MONGO_LIBBSON_DIR="$(pwd)/libbson"
 MONGO_LIBBSON_DIR="$MONGO_LIBBSON_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""} ./build-libbson.sh
 
 # Print Python version used
-python --version
+$PYTHON --version
 
 # Install build dependencies
-python -m pip install -U pip build
+$PYTHON -m pip install -U pip build
 
 # Build wheels in $(pwd)/dist/*.whl
-MONGO_LIBBSON_DIR="$MONGO_LIBBSON_DIR" python -m build --wheel .
+MONGO_LIBBSON_DIR="$MONGO_LIBBSON_DIR" $PYTHON -m build --wheel .
 
 # Run auditwheel repair to set platform tags on Linux
 if [ "Linux" = "$(uname -s)" ]
 then
-  python -m pip install auditwheel
-  python addtags.py dist/*.whl "$PLAT" ./wheelhouse
+  $PYTHON -m pip install auditwheel
+  $PYTHON addtags.py dist/*.whl "$PLAT" ./wheelhouse
 fi
