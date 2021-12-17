@@ -12,6 +12,11 @@ import warnings
 HERE = os.path.abspath(os.path.dirname(__file__))
 BUILD_DIR = os.path.join(HERE, 'pymongoarrow')
 
+# Find and copy the binary file, unless
+# MONGO_NO_COPY_ARROW_LIB is set (for instance in a conda build).
+COPY_LIBS = not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False)
+
+
 
 def query_pkgconfig(cmd):
     status, output = subprocess.getstatusoutput(cmd)
@@ -112,34 +117,31 @@ def append_arrow_flags(module):
         exts = ['.dylib', '.*.dylib']
     elif platform == 'linux':
         exts = ['.so', '.so.*']
-    else:  # windows
-        exts = ['.dll']
 
     # Find the appropriate library file and optionally copy it locally.
     for name in pa.get_libraries():
+        if os.name == 'nt':
+            bin_file = os.path.join(arrow_lib, f'{name}.dll')
+            if not os.path.exists(bin_file):
+                raise ValueError('Could not find compiled arrow library')
+            if COPY_LIBS:
+                shutil.copy(bin_file, BUILD_DIR)
+            lib_file = os.path.join(arrow_lib, f'{name}.lib')
+            module.extra_link_args.append(lib_file)
+            continue
+
         for ext in exts:
             files = glob.glob(os.path.join(arrow_lib, f'lib{name}{ext}'))
             if not files:
                 continue
             path = files[0]
-    
-            # Find and copy the binary file, unless
-            # MONGO_NO_COPY_ARROW_LIB is set (for instance in a conda build).
-            if not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False):
+            if COPY_LIBS:
                 shutil.copy(path, BUILD_DIR)
                 path = os.path.join(BUILD_DIR, os.path.basename(path))
-
-            # Use the binary file as the library file unless we are on Windows,
-            # in which case we use the ".lib" file.
-            if os.name == 'nt':
-                files = glob.glob(os.path.join(arrow_lib, f'{name}.lib'))
-                if not files:
-                    raise ValueError('Could not find compiled arrow library')
-                path = files[0]
-
+            
             module.extra_link_args.append(path)
             break
-
+            
     # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
     # - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
     # - https://arrow.apache.org/docs/python/extending.html#example
