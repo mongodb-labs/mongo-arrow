@@ -20,6 +20,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Build wheels
         working-directory: ./bindings/python
+        shell: bash
         run: |
           ./release.sh
       - uses: actions/upload-artifact@v2
