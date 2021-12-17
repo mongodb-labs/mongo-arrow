@@ -17,7 +17,6 @@ BUILD_DIR = os.path.join(HERE, 'pymongoarrow')
 COPY_LIBS = not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False)
 
 
-
 def query_pkgconfig(cmd):
     status, output = subprocess.getstatusoutput(cmd)
     if status != 0:
@@ -30,23 +29,23 @@ def append_libbson_flags(module):
     pc_path = 'libbson-1.0'
     install_dir = os.environ.get('MONGO_LIBBSON_DIR')
     if install_dir:
-        # Find and copy the binary file, unless
-        # MONGO_NO_COPY_LIBBSON is set (for instance in a conda build).
-        if not os.environ.get("MONGO_NO_COPY_LIBBSON", False):
+        # Handle the copy-able library file if applicable.
+        if COPY_LIBS:
             if platform == "darwin":
-                bin_file = "libbson-1.0.0.dylib"
+                lib_file = "libbson-1.0.0.dylib"
             elif platform == "linux":
-                bin_file = "libbson-1.0.so.0"
-            else:    # windows
-                bin_file = 'bson-1.0.dll'
-            bin_dirs = glob.glob(os.path.join(install_dir, "bin*"))
-            if bin_dirs:
-                bin_dir = bin_dirs[0]
-                bin_file = os.path.join(bin_dir, bin_file)
-                if os.path.exists(bin_file):
-                    shutil.copy(bin_file, BUILD_DIR)
+                lib_file = "libbson-1.0.so.0"
+            else:  # windows
+                lib_file = 'bson-1.0.dll'
+            lib_dir = 'bin' if os.name == 'nt' else 'lib*'
+            lib_dir = glob.glob(os.path.join(install_dir, lib_dir))
+            if lib_dir:
+                lib_dir = lib_dir[0]
+                lib_dir = os.path.join(lib_dir, lib_file)
+                if os.path.exists(lib_file):
+                    shutil.copy(lib_file, BUILD_DIR)
 
-        # Find the library file, and explicity add it to the linker if on Windows.
+        # Find the linkable library file, and explicity add it to the linker if on Windows.
         lib_dirs = glob.glob(os.path.join(install_dir, "lib*"))
         if len(lib_dirs) != 1:
             warnings.warn(f"Unable to locate libbson in {install_dir}")
@@ -121,11 +120,11 @@ def append_arrow_flags(module):
     # Find the appropriate library file and optionally copy it locally.
     for name in pa.get_libraries():
         if os.name == 'nt':
-            bin_file = os.path.join(arrow_lib, f'{name}.dll')
-            if not os.path.exists(bin_file):
+            lib_file = os.path.join(arrow_lib, f'{name}.dll')
+            if not os.path.exists(lib_file):
                 raise ValueError('Could not find compiled arrow library')
             if COPY_LIBS:
-                shutil.copy(bin_file, BUILD_DIR)
+                shutil.copy(lib_file, BUILD_DIR)
             lib_file = os.path.join(arrow_lib, f'{name}.lib')
             module.extra_link_args.append(lib_file)
             continue

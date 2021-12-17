@@ -46,6 +46,7 @@ jobs:
         with:
           name: pymongoarrow-${{ matrix.python-version }}-${{ matrix.os }}-wheel
       - name: Test wheel
+        shell: bash
         run: |
           python -m pip install -U pip
           python -m pip install *.whl
