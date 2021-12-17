@@ -72,7 +72,7 @@ class TestArrowApiMixin:
         self.assertEqual(find_cmd.command['projection'],
                          {'_id': True, 'data': True})
 
-    def test_find_projection(self):
+    def test_find_with_projection(self):
         expected = Table.from_pydict(
             {'_id': [4, 3], 'data': [None, 60]},
             ArrowSchema([('_id', int32()), ('data', int64())]))
@@ -86,6 +86,17 @@ class TestArrowApiMixin:
         find_cmd = self.cmd_listener.results['started'][-1]
         self.assertEqual(find_cmd.command_name, 'find')
         self.assertEqual(find_cmd.command['projection'], projection)
+
+    def test_find_with_session(self):
+        with self.client.start_session() as session:
+            self.assertIsNone(session.operation_time)
+            last_use = session._server_session.last_use
+            expected = Table.from_pydict(
+            {'_id': [1, 2, 3, 4], 'data': [10, 20, 30, None]},
+            ArrowSchema([('_id', int32()), ('data', int64())]))
+            table = self.run_find({}, schema=self.schema, session=session)
+            self.assertEqual(table, expected)
+            self.assertIsNotNone(session.operation_time)
 
     def test_find_multiple_batches(self):
         orig_method = self.coll.find_raw_batches
