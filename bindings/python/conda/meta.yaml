@@ -8,16 +8,16 @@ package:
 
 source:
   #url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/pymongoarrow-{{ version }}.tar.gz
-  url: file:///d/a//mongo-arrow/mongo-arrow/bindings/python/dist/pymongoarrow-{{ version }}.tar.gz  # [unix]
+  url: file:///d/a//mongo-arrow/mongo-arrow/bindings/python/dist/pymongoarrow-{{ version }}.tar.gz
 
 build:
   number: 0
   script:
-    - export MONGO_NO_COPY_ARROW_LIB=1           # [unix]
+    - export MONGO_NO_COPY_LIBARROW=1            # [unix]
     - export MONGO_LIBARROW_DIR="${PREFIX}/lib"  # [unix]
     - export MONGO_NO_COPY_LIBBSON=1             # [unix]
     - export MONGO_LIBBSON_DIR="${PREFIX}/lib"   # [unix]
-    - set MONGO_NO_COPY_ARROW_LIB=1              # [win]
+    - set MONGO_NO_COPY_LIBARROW=1               # [win]
     - set "MONGO_LIBARROW_DIR=%LIBRARY_LIB%"     # [win]
     - set MONGO_NO_COPY_LIBBSON=1                # [win]
     - set "MONGO_LIBBSON_DIR=%LIBRARY_LIB%"      # [win]

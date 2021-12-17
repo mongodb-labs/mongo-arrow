@@ -14,7 +14,7 @@ BUILD_DIR = os.path.join(HERE, 'pymongoarrow')
 
 # Find and copy the binary arrow files, unless
 # MONGO_NO_COPY_ARROW_LIB is set (for instance in a conda build).
-COPY_LIBARROW = not os.environ.get("MONGO_NO_COPY_ARROW_LIB", False)
+COPY_LIBARROW = not os.environ.get("MONGO_NO_COPY_LIBARROW", False)
 
 # Find and copy the binary libbson file, unless
 # MONGO_NO_COPY_LIBBSON is set (for instance in a conda build).
