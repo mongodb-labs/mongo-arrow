@@ -8,7 +8,7 @@ package:
 
 source:
   #url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/pymongoarrow-{{ version }}.tar.gz
-  url: file:///d/a//mongo-arrow/mongo-arrow/bindings/python/dist/pymongoarrow-{{ version }}.tar.gz
+  url: file:///d/a/mongo-arrow/mongo-arrow/bindings/python/dist/pymongoarrow-{{ version }}.tar.gz
 
 build:
   number: 0
