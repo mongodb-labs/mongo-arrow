@@ -19,11 +19,11 @@ build:
     - set MONGO_NO_COPY_LIBARROW=1               # [win]
     - set "MONGO_LIBARROW_DIR=%LIBRARY_LIB%"     # [win]
     - set MONGO_NO_COPY_LIBBSON=1                # [win]
-    - set "MONGO_LIBBSON_DIR=%LIBRARY_LIB%"      # [win]
+    - set "MONGO_LIBBSON_DIR=%LIBRARY_BIN%"      # [win]
     - {{ PYTHON }} -m pip install . --no-deps -vvv
 
 requirements:
-  build:
+  build:b
     - python >=3.6                        
     #- cross-python_{{ target_platform }}  
     - cython >=0.29                       
