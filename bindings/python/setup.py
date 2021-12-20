@@ -35,7 +35,6 @@ def append_libbson_flags(module):
     if install_dir:
         # Handle the copy-able library file if applicable.
         if COPY_LIBBSON:
-            warnings.warn("COPYING LIBBSON")
             if platform == "darwin":
                 lib_file = "libbson-1.0.0.dylib"
             elif platform == "linux":
@@ -58,10 +57,8 @@ def append_libbson_flags(module):
             if os.name == 'nt':
                 lib_path = os.path.join(lib_dir, 'bson-1.0.lib').replace(os.sep, '/')
                 if os.path.exists(lib_path):
-                    warnings.warn(f"Using lib path {lib_path}")
                     module.extra_link_args = [lib_path]
                     include_dir = os.path.join(install_dir, 'include', 'libbson-1.0').replace(os.sep, '/')
-                    warnings.warn(f"Using include dir {include_dir}")
                     module.include_dirs.append(include_dir)
                 else:
                     raise ValueError('We require a MONGO_LIBBSON_DIR with a compiled library on Windows')
@@ -136,7 +133,6 @@ def append_arrow_flags(module):
                 shutil.copy(lib_file, BUILD_DIR)
             lib_file = os.path.join(arrow_lib, f'{name}.lib')
             module.extra_link_args.append(lib_file)
-            warnings.warn(f"Using lib path {lib_file}")
             continue
 
         for ext in exts:
@@ -147,7 +143,6 @@ def append_arrow_flags(module):
             if COPY_LIBARROW:
                 shutil.copy(path, BUILD_DIR)
                 path = os.path.join(BUILD_DIR, os.path.basename(path))
-                warnings.warn("COPYING LIBARROW")
             module.extra_link_args.append(path)
             break
 
@@ -162,9 +157,7 @@ def get_extension_modules():
         return []
     modules = cythonize(['pymongoarrow/*.pyx'])
     for module in modules:
-        warnings.warn(f"Adding libbson flags")
         append_libbson_flags(module)
-        warnings.warn(f"Adding arrow flags")
         append_arrow_flags(module)
         # Ensure our Cython extension can dynamically link to libraries
         # - https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
@@ -173,9 +166,6 @@ def get_extension_modules():
             module.extra_link_args += ["-rpath", "@loader_path"]
         elif platform == 'linux':
             module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
-    warnings.warn(f'Using extra compile args {module.extra_compile_args}')
-    warnings.warn(f'Using extra link args {module.extra_link_args}')
-    warnings.warn(f"Finished gathering metadata")
     return modules
 
 
