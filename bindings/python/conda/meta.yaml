@@ -7,7 +7,7 @@ package:
   version: {{ version }}
 
 source:
-  path: ..
+  url: file:///home/runner/work/mongo-arrow/mongo-arrow/bindings/python/dist/pymongoarrow-{{ version }}.tar.gz
 
 build:
   number: 0

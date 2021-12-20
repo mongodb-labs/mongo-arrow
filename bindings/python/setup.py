@@ -35,6 +35,7 @@ def append_libbson_flags(module):
     if install_dir:
         # Handle the copy-able library file if applicable.
         if COPY_LIBBSON:
+            warnings.warn("COPYING LIBBSON")
             if platform == "darwin":
                 lib_file = "libbson-1.0.0.dylib"
             elif platform == "linux":
@@ -146,6 +147,7 @@ def append_arrow_flags(module):
             if COPY_LIBARROW:
                 shutil.copy(path, BUILD_DIR)
                 path = os.path.join(BUILD_DIR, os.path.basename(path))
+                warnings.warn("COPYING LIBARROW")
             module.extra_link_args.append(path)
             break
 

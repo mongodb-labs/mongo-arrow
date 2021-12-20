@@ -74,5 +74,5 @@ jobs:
     - name: Conda Build
       shell: bash -l {0}
       run: |
-        cd conda
+        cd conda      
         conda build -c conda-forge .
