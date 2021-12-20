@@ -24,12 +24,13 @@ build:
 
 requirements:
   build:
-    - python >=3.6                        
-    #- cross-python_{{ target_platform }}  
-    - cython >=0.29                       
+    - python >=3.6                           # [build_platform != target_platform]
+    - cross-python_{{ target_platform }}     # [build_platform != target_platform]
+    - cython  >=0.29                         # [build_platform != target_platform]
+    - arrow-cpp                              # [build_platform != target_platform]
+    - pyarrow >=6,<6.1                       # [build_platform != target_platform]      
+    - libbson  >=1,<2                        # [build_platform != target_platform] 
     - setuptools >=47                     
-    - libbson  >=1,<2                          
-    - arrow-cpp  # constrained
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
    
