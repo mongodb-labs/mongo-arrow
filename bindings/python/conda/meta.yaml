@@ -15,11 +15,11 @@ build:
     - export MONGO_NO_COPY_LIBARROW=1            # [unix]
     - export MONGO_LIBARROW_DIR="${PREFIX}/lib"  # [unix]
     - export MONGO_NO_COPY_LIBBSON=1             # [unix]
-    - export MONGO_LIBBSON_DIR="${PREFIX}/lib"   # [unix]
+    - export MONGO_LIBBSON_DIR="${PREFIX}"       # [unix]
     - set MONGO_NO_COPY_LIBARROW=1               # [win]
     - set "MONGO_LIBARROW_DIR=%LIBRARY_LIB%"     # [win]
     - set MONGO_NO_COPY_LIBBSON=1                # [win]
-    - set "MONGO_LIBBSON_DIR=%LIBRARY_PREFIX%"      # [win]
+    - set "MONGO_LIBBSON_DIR=%LIBRARY_PREFIX%"   # [win]
     - {{ PYTHON }} -m pip install . --no-deps -vvv
 
 requirements:

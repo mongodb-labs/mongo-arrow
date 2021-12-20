@@ -146,7 +146,6 @@ def append_arrow_flags(module):
             if COPY_LIBARROW:
                 shutil.copy(path, BUILD_DIR)
                 path = os.path.join(BUILD_DIR, os.path.basename(path))
-            
             module.extra_link_args.append(path)
             break
 
@@ -172,6 +171,8 @@ def get_extension_modules():
             module.extra_link_args += ["-rpath", "@loader_path"]
         elif platform == 'linux':
             module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
+    warnings.warn(f'Using extra compile args {module.extra_compile_args}')
+    warnings.warn(f'Using extra link args {module.extra_link_args}')
     warnings.warn(f"Finished gathering metadata")
     return modules
 
