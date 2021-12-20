@@ -57,8 +57,10 @@ def append_libbson_flags(module):
             if os.name == 'nt':
                 lib_path = os.path.join(lib_dir, 'bson-1.0.lib').replace(os.sep, '/')
                 if os.path.exists(lib_path):
+                    warnings.warn(f"Using lib path {lib_path}")
                     module.extra_link_args = [lib_path]
                     include_dir = os.path.join(install_dir, 'include', 'libbson-1.0').replace(os.sep, '/')
+                    warnings.warn(f"Using include dir {include_dir}")
                     module.include_dirs.append(include_dir)
                 else:
                     raise ValueError('We require a MONGO_LIBBSON_DIR with a compiled library on Windows')
@@ -130,6 +132,7 @@ def append_arrow_flags(module):
                 shutil.copy(lib_file, BUILD_DIR)
             lib_file = os.path.join(arrow_lib, f'{name}.lib')
             module.extra_link_args.append(lib_file)
+            warnings.warn(f"Using lib path {lib_file}")
             continue
 
         for ext in exts:
@@ -163,9 +166,11 @@ def get_extension_modules():
         return []
     modules = cythonize(['pymongoarrow/*.pyx'])
     for module in modules:
+        warnings.warn(f"Adding libbson flags")
         append_libbson_flags(module)
+        warnings.warn(f"Adding arrow flags")
         append_arrow_flags(module)
-
+    warnings.warn(f"Finished gathering metadata")
     return modules
 
 
