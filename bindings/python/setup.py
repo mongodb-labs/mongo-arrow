@@ -109,8 +109,6 @@ def append_arrow_flags(module):
             module.extra_compile_args.append("-std=c++11")
             module.extra_compile_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
 
-    module.library_dirs.extend(pa.get_library_dirs())
-
     # Handle the arrow library files manually.
     # Alternative to using pyarrow.create_library_symlinks().
     # You can use MONGO_LIBARROW_DIR to explicitly set the location of the 
