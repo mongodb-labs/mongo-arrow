@@ -41,38 +41,7 @@ jobs:
       - name: Run tests
         run: |
           LD_LIBRARY_PATH=$(pwd)/libbson/lib python -m unittest discover test -v
-      # - name: Check the manifest
-      #   run: |
-      #     pip install check-manifest
-      #     check-manifest -v
-
-  conda-build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-20.04]
-      fail-fast: false
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-
-    - name: Base setup
-      uses: jupyterlab/maintainer-tools/.github/actions/base-setup@v1
-
-    - name: Build sdist
-      run: |
-        ./release.sh
-
-    - name: Setup conda
-      uses: conda-incubator/setup-miniconda@v2
-      with:
-        auto-update-conda: true
-        environment-file: bindings/python/conda/environment.yml
-        activate-environment: pymongoarrow_build
-        python-version: "3.9"
-
-    - name: Conda Build
-      shell: bash -l {0}
-      run: |
-        cd conda      
-        conda build -c conda-forge .
+      - name: Check the manifest
+        run: |
+          pip install check-manifest
+          check-manifest -v

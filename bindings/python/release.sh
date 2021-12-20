@@ -32,9 +32,9 @@ $PYTHON -m pip install -U pip build
 # Build wheels in $(pwd)/dist/*.whl
 MONGO_LIBBSON_DIR="$MONGO_LIBBSON_DIR" $PYTHON -m build .
 
-# # Run auditwheel repair to set platform tags on Linux
-# if [ "Linux" = "$(uname -s)" ]
-# then
-#   $PYTHON -m pip install auditwheel
-#   $PYTHON addtags.py dist/*.whl "$PLAT" ./wheelhouse
-# fi
+# Run auditwheel repair to set platform tags on Linux
+if [ "Linux" = "$(uname -s)" ]
+then
+  $PYTHON -m pip install auditwheel
+  $PYTHON addtags.py dist/*.whl "$PLAT" ./wheelhouse
+fi
