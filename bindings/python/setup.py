@@ -117,8 +117,6 @@ def append_arrow_flags(module):
     # We first check for an unmodified path to the library,
     # then look for a library file with a version modifier, e.g. libarrow.600.dylib.
     arrow_lib = os.environ.get('MONGO_LIBARROW_DIR', pa.get_library_dirs()[0])
-    warnings.warn(f'Using arrow lib dir {arrow_lib}')
-    warnings.warn(f'{sorted(os.listdir(arrow_lib))}')
     if platform == "darwin":
         exts = ['.dylib', '.*.dylib']
     elif platform == 'linux':
@@ -127,10 +125,10 @@ def append_arrow_flags(module):
     # Find the appropriate library file and optionally copy it locally.
     for name in pa.get_libraries():
         if os.name == 'nt':
-            lib_file = os.path.join(arrow_lib, f'{name}.dll')
-            if not os.path.exists(lib_file):
-                raise ValueError('Could not find compiled arrow library')
             if COPY_LIBARROW:
+                lib_file = os.path.join(arrow_lib, f'{name}.dll')
+                if not os.path.exists(lib_file):
+                    raise ValueError('Could not find compiled arrow library')
                 shutil.copy(lib_file, BUILD_DIR)
             lib_file = os.path.join(arrow_lib, f'{name}.lib')
             module.extra_link_args.append(lib_file)
