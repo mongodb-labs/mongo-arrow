@@ -7,7 +7,6 @@ on:
 defaults:  
   run:  
     working-directory: ./bindings/python
-    shell: bash -l {0}
 
 jobs:
   build:
@@ -72,6 +71,7 @@ jobs:
         python-version: "3.9"
 
     - name: Conda Build
+      shell: bash -l {0}
       run: |
         cd conda
         conda build -c conda-forge .
