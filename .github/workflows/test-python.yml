@@ -39,7 +39,7 @@ jobs:
           yes 2>/dev/null | m 4.4 || true
           export PATH=$HOME/.local/bin:$PATH
           mkdir data
-          pip install mtools[pymongo]
+          pip install mtools[mlaunch]
           export MONGODB_BIN=$(m bin 4.4)
           mlaunch init --replicaset --name repl0 --nodes 3 --binarypath \
             $MONGODB_BIN --priority --hostname localhost --setParameter \
