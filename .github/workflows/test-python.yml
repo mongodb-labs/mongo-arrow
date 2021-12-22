@@ -40,6 +40,7 @@ jobs:
           export PATH=$HOME/.local/bin:$PATH
           mkdir data
           pip install mtools[mlaunch]
+          pip install "pymongo<4"  # TODO: remove when mtools supports pymongo 4+
           export MONGODB_BIN=$(m bin 4.4.0)
           mlaunch init --replicaset --name repl0 --nodes 3 --binarypath \
             $MONGODB_BIN --priority --hostname localhost --setParameter \
