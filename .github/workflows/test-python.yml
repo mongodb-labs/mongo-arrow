@@ -25,7 +25,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Setup NodeJS
         uses: actions/setup-node@v2
-      - name: Install Mongod
+      - name: Install libbson
+        run: |
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
+      - name: Install Python dependencies
+        run: |
+          python -m pip install -U pip
+      - name: Install Mongo Tools
         shell: bash
         run: |
           set -x
@@ -33,21 +39,21 @@ jobs:
           yes 2>/dev/null | m 4.4 || true
           export PATH=$HOME/.local/bin:$PATH
           mkdir data
-      - name: Install libbson
-        run: |
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
-      - name: Install Python dependencies
-        run: |
-          python -m pip install -U pip
+          pip install mtools
+          export MONGODB_BIN=`m bin 4.4`
+          mlaunch init --replicaset --name repl0 --nodes 3 --binarypath \
+            $MONGODB_BIN --priority --hostname localhost --setParameter \
+            enableTestCommands=1"
+          mlaunch kill
       - name: Install pymongoarrow
         run: |
           # Install the library 
           LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
       - name: Run tests
         run: |
-          mongod --fork --dbpath=$(pwd)/data --logpath=$PWD/mongo.log --pidfilepath=$PWD/mongo.pid
+          mlaunch start
           LD_LIBRARY_PATH=$(pwd)/libbson/lib python -m unittest discover test -v
-          cat mongo.pid | kill
+          mlaunch kill
       - name: Check the manifest
         run: |
           pip install check-manifest
