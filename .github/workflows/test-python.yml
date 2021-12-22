@@ -28,8 +28,9 @@ jobs:
       - name: Install Mongod
         shell: bash
         run: |
+          set -x
           npm install -g m
-          yes 2>/dev/null | m 4.4; true
+          yes 2>/dev/null | m 4.4 || true
           export PATH=$HOME/.local/bin:$PATH
           mkdir data
       - name: Install libbson
