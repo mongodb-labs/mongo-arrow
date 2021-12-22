@@ -18,10 +18,10 @@ then
 fi
 
 # Build libbson binaries in $(pwd)/libbson
-MONGO_LIBBSON_DIR="$(pwd)/libbson"
+LIBBSON_INSTALL_DIR="$(pwd)/libbson"
 
 # Build libbson
-MONGO_LIBBSON_DIR="$MONGO_LIBBSON_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""} ./build-libbson.sh
+LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""} ./build-libbson.sh
 
 # Print Python version used
 $PYTHON --version
@@ -30,7 +30,7 @@ $PYTHON --version
 $PYTHON -m pip install -U pip build
 
 # Build wheels in $(pwd)/dist/*.whl
-MONGO_LIBBSON_DIR="$MONGO_LIBBSON_DIR" $PYTHON -m build --wheel .
+LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" $PYTHON -m build --wheel .
 
 # Run auditwheel repair to set platform tags on Linux
 if [ "Linux" = "$(uname -s)" ]

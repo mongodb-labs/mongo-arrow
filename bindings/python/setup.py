@@ -11,9 +11,15 @@ import warnings
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 BUILD_DIR = os.path.join(HERE, 'pymongoarrow')
+IS_WIN = platform == 'win32'
 
 # Find and copy the binary arrow files, unless
 # MONGO_NO_COPY_ARROW_LIB is set (for instance in a conda build).
+# Wheels are meant to be self-contained, per PEP 513.
+# https://www.python.org/dev/peps/pep-0513/#id40
+# Conda has the opposite philosphy, where libraries are meant to be
+# shared.  For instance, there is an arrow-cpp library available on conda-forge
+# that provides the libarrow files.
 COPY_LIBARROW = not os.environ.get("MONGO_NO_COPY_LIBARROW", False)
 
 # Find and copy the binary libbson file, unless
@@ -31,7 +37,7 @@ def query_pkgconfig(cmd):
 
 def append_libbson_flags(module):
     pc_path = 'libbson-1.0'
-    install_dir = os.environ.get('MONGO_LIBBSON_DIR')
+    install_dir = os.environ.get('LIBBSON_INSTALL_DIR')
     if install_dir:
         # Handle the copy-able library file if applicable.
         if COPY_LIBBSON:
@@ -54,22 +60,24 @@ def append_libbson_flags(module):
             warnings.warn(f"Unable to locate libbson in {install_dir}")
         else:
             lib_dir = lib_dirs[0]
-            if os.name == 'nt':
+            if IS_WIN:
+                # Note: we replace any forward slashes with backslashes so the path
+                # can be parsed by bash.
                 lib_path = os.path.join(lib_dir, 'bson-1.0.lib').replace(os.sep, '/')
                 if os.path.exists(lib_path):
                     module.extra_link_args = [lib_path]
                     include_dir = os.path.join(install_dir, 'include', 'libbson-1.0').replace(os.sep, '/')
                     module.include_dirs.append(include_dir)
                 else:
-                    raise ValueError('We require a MONGO_LIBBSON_DIR with a compiled library on Windows')
+                    raise ValueError(f'Could not find the compiled libbson in {install_dir}')
             pc_path = os.path.join(
                 install_dir, lib_dir, 'pkgconfig', 'libbson-1.0.pc')
 
-    elif os.name == 'nt':
-        raise ValueError('We require a MONGO_LIBBSON_DIR with a compiled library on Windows')
+    elif IS_WIN:
+        raise ValueError('We require a LIBBSON_INSTALL_DIR with a compiled library on Windows')
 
-    if os.name == 'nt':
-        # We have either added the library file or raised an error, so return.
+    if IS_WIN:
+        # We have added the library file without raising an error, so return.
         return
 
     lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
@@ -96,7 +104,7 @@ def append_arrow_flags(module):
     import numpy as np
     import pyarrow as pa
 
-    if os.name == 'nt':
+    if IS_WIN:
         module.include_dirs.append(np.get_include())
         module.include_dirs.append(pa.get_include())
     else:
@@ -120,10 +128,13 @@ def append_arrow_flags(module):
         exts = ['.dylib', '.*.dylib']
     elif platform == 'linux':
         exts = ['.so', '.so.*']
+    else:
+        # Windows is handled differently (see below)
+        pass
 
     # Find the appropriate library file and optionally copy it locally.
     for name in pa.get_libraries():
-        if os.name == 'nt':
+        if IS_WIN:
             if COPY_LIBARROW:
                 lib_file = os.path.join(arrow_lib, f'{name}.dll')
                 if not os.path.exists(lib_file):

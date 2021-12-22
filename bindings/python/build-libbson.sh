@@ -20,20 +20,20 @@ then
 fi
 
 # Directory where build artifacts will be placed
-MONGO_LIBBSON_DIR=${MONGO_LIBBSON_DIR:-""}
+LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR:-""}
 
 # Build libbson
 pushd "$WORKDIR"
   git checkout "$LIBBSON_VERSION"
   mkdir -p cmake-build
   pushd cmake-build
-    if [ -n "$MONGO_LIBBSON_DIR" ]
+    if [ -n "$LIBBSON_INSTALL_DIR" ]
     then
-      echo "Installing libbson in $MONGO_LIBBSON_DIR"
+      echo "Installing libbson in $LIBBSON_INSTALL_DIR"
       cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
             -DENABLE_MONGOC=OFF \
             -DCMAKE_OSX_DEPLOYMENT_TARGET="10.9" \
-            -DCMAKE_INSTALL_PREFIX:PATH="$MONGO_LIBBSON_DIR" \
+            -DCMAKE_INSTALL_PREFIX:PATH="$LIBBSON_INSTALL_DIR" \
             ..
     else
       cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
