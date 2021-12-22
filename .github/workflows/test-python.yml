@@ -36,7 +36,7 @@ jobs:
         run: |
           set -x
           npm install -g m
-          pip install scons psutil # needed on Windows
+          pip install scons psutil pyyaml # needed on Windows
           yes 2>/dev/null | m 4.4.0 || true
           export PATH=$HOME/.local/bin:$PATH
           mkdir data
