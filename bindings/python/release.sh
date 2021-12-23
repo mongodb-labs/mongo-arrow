@@ -10,32 +10,21 @@ then
   exit 1
 fi
 
+# Platform-dependent actions:
+PYTHON=${PYTHON_BINARY:-"python"}
+if [ "Linux" = "$(uname -s)" ]
+then
+  PYTHON=${PYTHON_BINARY:-"python3"}
+fi
+
 # Build libbson binaries in $(pwd)/libbson
 LIBBSON_INSTALL_DIR="$(pwd)/libbson"
-
-# Platform-dependent actions:
-# - Compute shared library name
-# - Set Python runtime to use
-if [ "Darwin" = "$(uname -s)" ]
-then
-  LIBBSON_SO="libbson-1.0.0.dylib"
-  PYTHON=${PYTHON_BINARY:-"python"}
-elif [ "Linux" = "$(uname -s)" ]
-then
-  LIBBSON_SO="libbson-1.0.so.0"
-  PYTHON=${PYTHON_BINARY:-"python3"}
-else
-  echo "Unsupported platform"
-fi
 
 # Build libbson
 LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""} ./build-libbson.sh
 
 # Print Python version used
 $PYTHON --version
-
-# Vendor libbson shared library in PyMongoArrow wheels
-cp $LIBBSON_INSTALL_DIR/lib*/$LIBBSON_SO "$(pwd)/pymongoarrow/"
 
 # Install build dependencies
 $PYTHON -m pip install -U pip build

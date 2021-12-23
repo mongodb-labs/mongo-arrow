@@ -88,6 +88,9 @@ class TestArrowApiMixin:
         self.assertEqual(find_cmd.command['projection'], projection)
 
     def test_find_with_session(self):
+        if self.client.topology_description.topology_type_name == 'Single':
+            raise unittest.SkipTest('Unsupported topology')
+
         with self.client.start_session() as session:
             self.assertIsNone(session.operation_time)
             last_use = session._server_session.last_use

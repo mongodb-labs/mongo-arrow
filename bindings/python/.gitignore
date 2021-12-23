@@ -37,3 +37,7 @@ MANIFEST
 
 # Sphinx documentation
 docs/_build/
+
+# libbson files
+libbson
+mongo-c-driver-*

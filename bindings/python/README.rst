@@ -49,7 +49,7 @@ PyMongoArrow is available on PyPI::
 To use PyMongoArrow with MongoDB Atlas' ``mongodb+srv://`` URIs, you will
 need to also install PyMongo with the ``srv`` extra::
 
-  $ python -m pip install 'pymongo[srv]<4' pymongoarrow
+  $ python -m pip install 'pymongo[srv]' pymongoarrow
 
 To use PyMongoArrow APIs that return query result sets as pandas
 DataFrame instances, you will also need to have the ``pandas`` package
@@ -57,14 +57,14 @@ installed::
 
      $ python -m pip install pandas
 
-Currently, PyMongoArrow wheels are only available for macOS and Linux
-on x86_64 architectures.
-
 Development Install
 ===================
 
-See the instructions on `Read the Docs <https://mongo-arrow.readthedocs.io/en/latest/developer/installation.html>`_.
+See the instructions on `Read the Docs`_.
 
 Documentation
 =============
-Full documentation is available on `Read the Docs <https://mongo-arrow.readthedocs.io/en/latest/>`_.
+Full documentation is available on `Read the Docs`_.
+
+
+.. _Read the Docs: https://mongo-arrow.readthedocs.io/en/latest
