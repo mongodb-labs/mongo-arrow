@@ -40,6 +40,7 @@ jobs:
             enableTestCommands=1
       - name: Launch Manually
         if: ${{ startsWith(runner.os, 'Windows') }}
+        shell: powershell
         run: |
           mkdir data
           mongod --install --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
