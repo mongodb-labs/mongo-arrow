@@ -42,7 +42,7 @@ jobs:
         if: ${{ startsWith(runner.os, 'Windows') }}
         run: |
           mkdir data
-          mongod --fork --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
+          mongod --install --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
       - name: Install pymongoarrow
         run: |
           # Install the library 
