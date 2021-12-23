@@ -43,6 +43,7 @@ jobs:
         shell: powershell
         run: |
           mkdir data
+          mongod --remove
           mongod --install --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
       - name: Install pymongoarrow
         run: |
