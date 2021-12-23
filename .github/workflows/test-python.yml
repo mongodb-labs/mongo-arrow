@@ -35,9 +35,7 @@ jobs:
           set -x
           pip install mtools[mlaunch]
           pip install "pymongo<4"  # TODO: remove when mtools supports pymongo 4+
-          export MONGODB_BIN=$(which mongo)
-          mlaunch init --replicaset --name repl0 --nodes 3 --binarypath \
-            $MONGODB_BIN --priority --hostname localhost --setParameter \
+          mlaunch init --replicaset --name repl0 --nodes 3 --priority --hostname localhost --setParameter \
             enableTestCommands=1
           mlaunch kill
       - name: Install pymongoarrow
