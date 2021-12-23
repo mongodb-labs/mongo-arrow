@@ -49,6 +49,7 @@ jobs:
           mkdir data
           mongod --remove
           mongod --install --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
+          net start MongoDB
       - name: Install pymongoarrow
         run: |
           # Install the library 
