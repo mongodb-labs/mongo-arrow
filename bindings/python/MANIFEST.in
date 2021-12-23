@@ -16,8 +16,6 @@ recursive-exclude docs *
 global-exclude *.cpp
 global-exclude *.dylib
 global-exclude *.so.*
-global-exclude *.dll
-global-exclude *.pyd
 global-exclude *.so
 global-exclude *.pyc
 global-exclude .git*

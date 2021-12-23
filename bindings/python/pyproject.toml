@@ -11,5 +11,7 @@ requires = [
 ignore = [
     "pymongoarrow/*.so*.*", 
     "pymongoarrow/*.so*", 
-    "pymongoarrow/*.dylib"
+    "pymongoarrow/*.dylib",
+    "pymongoarrow/*.lib",
+    "pymongoarrow/*.dll"
 ]
