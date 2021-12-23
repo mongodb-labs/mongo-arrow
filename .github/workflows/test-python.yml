@@ -30,23 +30,26 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install -U pip
-      - name: Install Mtools
+      - name: Use MLaunch
+        if: ${{ !startsWith(runner.os, 'Windows') }}
         run: |
           set -x
           pip install mtools[mlaunch]
           pip install "pymongo<4"  # TODO: remove when mtools supports pymongo 4+
           mlaunch init --replicaset --name repl0 --nodes 3 --priority --hostname localhost --setParameter \
             enableTestCommands=1
-          mlaunch kill
+      - name: Launch Manually
+        if: ${{ startsWith(runner.os, 'Windows') }}
+        run: |
+          mkdir data
+          mongod --fork --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
       - name: Install pymongoarrow
         run: |
           # Install the library 
           LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
       - name: Run tests
         run: |
-          mlaunch start
           LD_LIBRARY_PATH=$(pwd)/libbson/lib python -m unittest discover test -v
-          mlaunch kill
       - name: Check the manifest
         run: |
           pip install check-manifest
