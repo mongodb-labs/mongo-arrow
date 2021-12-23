@@ -26,37 +26,39 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Setup NodeJS
         uses: actions/setup-node@v2
-      - name: Install libbson
-        run: |
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
-      - name: Install Python dependencies
-        run: |
-          python -m pip install -U pip
-      - name: Install Mongo Tools
-        run: |
-          set -x
-          npm install -g m
-          pip install scons psutil pyyaml # needed on Windows
-          yes 2>/dev/null | m 4.4.0 || true
-          export PATH=$HOME/.local/bin:$PATH
-          mkdir data
-          pip install mtools[mlaunch]
-          pip install "pymongo<4"  # TODO: remove when mtools supports pymongo 4+
-          export MONGODB_BIN=$(m bin 4.4.0)
-          mlaunch init --replicaset --name repl0 --nodes 3 --binarypath \
-            $MONGODB_BIN --priority --hostname localhost --setParameter \
-            enableTestCommands=1
-          mlaunch kill
-      - name: Install pymongoarrow
-        run: |
-          # Install the library 
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
-      - name: Run tests
-        run: |
-          mlaunch start
-          LD_LIBRARY_PATH=$(pwd)/libbson/lib python -m unittest discover test -v
-          mlaunch kill
-      - name: Check the manifest
-        run: |
-          pip install check-manifest
-          check-manifest -v
+      - name: See if Mongo is installed
+        run: mongod --version
+      # - name: Install libbson
+      #   run: |
+      #     LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
+      # - name: Install Python dependencies
+      #   run: |
+      #     python -m pip install -U pip
+      # - name: Install Mongo Tools
+      #   run: |
+      #     set -x
+      #     npm install -g m
+      #     pip install scons psutil pyyaml # needed on Windows
+      #     yes 2>/dev/null | m 4.4.0 || true
+      #     export PATH=$HOME/.local/bin:$PATH
+      #     mkdir data
+      #     pip install mtools[mlaunch]
+      #     pip install "pymongo<4"  # TODO: remove when mtools supports pymongo 4+
+      #     export MONGODB_BIN=$(m bin 4.4.0)
+      #     mlaunch init --replicaset --name repl0 --nodes 3 --binarypath \
+      #       $MONGODB_BIN --priority --hostname localhost --setParameter \
+      #       enableTestCommands=1
+      #     mlaunch kill
+      # - name: Install pymongoarrow
+      #   run: |
+      #     # Install the library 
+      #     LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
+      # - name: Run tests
+      #   run: |
+      #     mlaunch start
+      #     LD_LIBRARY_PATH=$(pwd)/libbson/lib python -m unittest discover test -v
+      #     mlaunch kill
+      # - name: Check the manifest
+      #   run: |
+      #     pip install check-manifest
+      #     check-manifest -v
