@@ -12,6 +12,6 @@ ignore = [
     "pymongoarrow/*.so*.*", 
     "pymongoarrow/*.so*", 
     "pymongoarrow/*.dylib",
-    "pymongoarrow/*.lib",
+    "pymongoarrow/*.pyd",
     "pymongoarrow/*.dll"
 ]
