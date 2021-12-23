@@ -47,7 +47,7 @@ def append_libbson_flags(module):
                 lib_file = "libbson-1.0.so.0"
             else:  # windows
                 lib_file = 'bson-1.0.dll'
-            lib_dir = 'bin' if os.name == 'nt' else 'lib*'
+            lib_dir = 'bin' if IS_WIN else 'lib*'
             lib_dir = glob.glob(os.path.join(install_dir, lib_dir))
             if lib_dir:
                 lib_file = os.path.join(lib_dir[0], lib_file)
