@@ -4,6 +4,12 @@ Changelog
 Changes in Version 0.2.0
 ------------------------
 
+- Support for PyMongo 4.0.
+- Support for Python 3.10.
+- Support for Windows.
+- ``find_arrow_all`` now accepts a user-provided ``projection``.
+- ``find_raw_batches`` now accepts a ``session`` object.
+- Note: The supported version of ``pyarrow`` is now ``>=6,<6.1``.
 
 Changes in Version 0.1.1
 ------------------------
