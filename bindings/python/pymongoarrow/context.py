@@ -12,19 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from bson.codec_options import DEFAULT_CODEC_OPTIONS
+from bson.objectid import ObjectId
 
 from pyarrow import timestamp, Table
 from pymongoarrow.lib import Int32Builder, Int64Builder, DoubleBuilder, DatetimeBuilder
 from pymongoarrow.types import _get_internal_typemap, _BsonArrowTypes
 
 
+class ObjectIdBuilder(Int32Builder):
+
+    def append(self, value):
+        import pdb; pdb.set_trace()
+        pass
+
+
 _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.int32: Int32Builder,
     _BsonArrowTypes.int64: Int64Builder,
     _BsonArrowTypes.double: DoubleBuilder,
-    _BsonArrowTypes.datetime: DatetimeBuilder
+    _BsonArrowTypes.datetime: DatetimeBuilder,
+    _BsonArrowTypes.objectid: ObjectIdBuilder
 }
 
+
+# Notes:  we want to store the object ids as int32 in the arrow, but convert
+# them to/from ObjectId in pyarrow
 
 class PyMongoArrowContext:
     """A context for converting BSON-formatted data to an Arrow Table."""

@@ -28,6 +28,7 @@ def process_bson_stream(bson_stream, context):
     cdef const bson_t * doc = NULL
     cdef bson_iter_t doc_iter
     cdef const char* key
+    cdef char[25] oid_str
     cdef bson_type_t value_t
     cdef Py_ssize_t count = 0
 
@@ -59,6 +60,9 @@ def process_bson_stream(bson_stream, context):
                     if ftype == t_int32:
                         if value_t == BSON_TYPE_INT32:
                             builder.append(bson_iter_int32(&doc_iter))
+                        elif value_t == BSON_TYPE_OID:
+                            bson_oid_to_string(bson_iter_oid(&doc_iter), oid_str)
+                            builder.append(oid_str)
                         else:
                             builder.append_null()
                     elif ftype == t_int64:

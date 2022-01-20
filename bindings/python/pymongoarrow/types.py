@@ -14,7 +14,7 @@
 from datetime import datetime
 import enum
 
-from bson import Int64
+from bson import Int64, ObjectId
 
 from pyarrow import timestamp, float64, int64, int32
 from pyarrow import DataType as _ArrowDataType
@@ -26,21 +26,28 @@ class _BsonArrowTypes(enum.Enum):
     double = 2
     int32 = 3
     int64 = 4
+    objectid = 5
 
 
 _TYPE_NORMALIZER_FACTORY = {
     Int64: lambda _: int64(),
     float: lambda _: float64(),
     int: lambda _: int64(),
-    datetime: lambda _: timestamp('ms')     # TODO: add tzinfo support
+    datetime: lambda _: timestamp('ms'),     # TODO: add tzinfo support
+    ObjectId: lambda _: ObjectId
 }
+
+
+def _is_objectid(obj):
+    return obj == ObjectId or isinstance(obj, ObjectId)
 
 
 _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_int32: _BsonArrowTypes.int32,
     _atypes.is_int64: _BsonArrowTypes.int64,
     _atypes.is_float64: _BsonArrowTypes.double,
-    _atypes.is_timestamp: _BsonArrowTypes.datetime
+    _atypes.is_timestamp: _BsonArrowTypes.datetime,
+    _is_objectid: _BsonArrowTypes.objectid
 }
 
 
@@ -64,8 +71,10 @@ def _get_internal_typemap(typemap):
     internal_typemap = {}
     for fname, ftype in typemap.items():
         for checker, internal_id in _TYPE_CHECKER_TO_INTERNAL_TYPE.items():
-            if checker(ftype):
-                internal_typemap[fname] = internal_id
-                continue
+            try:
+                if checker(ftype):
+                    internal_typemap[fname] = internal_id
+            except AttributeError:
+                pass
     assert len(internal_typemap) == len(typemap)
     return internal_typemap

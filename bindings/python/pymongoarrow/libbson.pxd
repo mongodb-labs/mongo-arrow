@@ -92,6 +92,11 @@ cdef extern from "<bson/bson.h>":
     char * bson_as_json(const bson_t *bson, size_t *length)
 
 
+# bson_oid_t API
+cdef extern from "<bson/bson.h>":
+    void bson_oid_to_string (const bson_oid_t *oid, char str[25])
+
+
 # bson_iter_t API
 cdef extern from "<bson/bson.h>":
     bint bson_iter_init(bson_iter_t *iter, const bson_t *bson)
@@ -107,6 +112,8 @@ cdef extern from "<bson/bson.h>":
     bint bson_iter_bool(const bson_iter_t *iter)
 
     int64_t bson_iter_date_time(const bson_iter_t *iter)
+
+    const bson_oid_t * bson_iter_oid (const bson_iter_t *iter)
 
     # TODO: add decimal128
 
