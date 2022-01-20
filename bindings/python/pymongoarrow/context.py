@@ -16,14 +16,16 @@ from bson.objectid import ObjectId
 
 from pyarrow import timestamp, Table
 from pyarrow.lib import StringArray
-from pymongoarrow.lib import Int32Builder, Int64Builder, DoubleBuilder, DatetimeBuilder, ObjectIdBuilderBase
+from pymongoarrow.lib import Int32Builder, Int64Builder, DoubleBuilder, DatetimeBuilder, ObjectIdBuilder
 from pymongoarrow.types import _get_internal_typemap, _BsonArrowTypes
 
 
 
-# We need a custom extension type for the builder
-# Then we get back an extension array
-# We might need a custom array type as well
+class ObjectIdBuilder2(ObjectIdBuilder):
+
+    def finish(self):
+        value = super().finish()
+        return value
 
 
 _TYPE_TO_BUILDER_CLS = {
@@ -31,7 +33,7 @@ _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.int64: Int64Builder,
     _BsonArrowTypes.double: DoubleBuilder,
     _BsonArrowTypes.datetime: DatetimeBuilder,
-    _BsonArrowTypes.objectid: ObjectIdBuilderBase
+    _BsonArrowTypes.objectid: ObjectIdBuilder2
 }
 
 

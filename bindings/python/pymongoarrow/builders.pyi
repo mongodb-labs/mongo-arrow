@@ -19,14 +19,13 @@ cdef class _ArrayBuilderBase:
             self.append(value)
 
 
-cdef class ObjectIdBuilderBase(_ArrayBuilderBase):
+cdef class ObjectIdBuilder(_ArrayBuilderBase):
     type_marker = _BsonArrowTypes.objectid
     cdef:
-        shared_ptr[CStringBuilder] builder
+        shared_ptr[CBinaryBuilder] builder
 
     def __cinit__(self, MemoryPool memory_pool=None):
-        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
-        self.builder.reset(new CStringBuilder(pool))
+        self.builder.reset(new CBinaryBuilder())
 
     cpdef append_null(self):
         self.builder.get().AppendNull()
@@ -38,7 +37,7 @@ cdef class ObjectIdBuilderBase(_ArrayBuilderBase):
         if value is None or value is np.nan:
             self.builder.get().AppendNull()
         elif isinstance(value, bytes):
-            self.builder.get().Append(value)
+            self.builder.get().Append(value, 24)
         else:
             raise TypeError('ObjectIdBuilder only accepts bytes objects')
 
@@ -48,7 +47,7 @@ cdef class ObjectIdBuilderBase(_ArrayBuilderBase):
             self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
-    cdef shared_ptr[CStringBuilder] unwrap(self):
+    cdef shared_ptr[CBinaryBuilder] unwrap(self):
         return self.builder
 
 

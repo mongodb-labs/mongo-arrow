@@ -21,6 +21,8 @@ from pymongoarrow.schema import Schema
 from pymongoarrow.types import int32, int64, ObjectId
 
 
+# TODO: override Scalar and provide a new as_py
+
 class TestBsonToArrowConversionBase(TestCase):
     def setUp(self):
         self.schema = Schema({'_id': ObjectId,
@@ -53,7 +55,7 @@ class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
                 {'_id': ids[2], 'data': 30},
                 {'_id': ids[3], 'data': 40}]
         as_dict = {
-            '_id': [str(oid) for oid in ids] ,
+            '_id': [str(oid).encode('utf-8') for oid in ids] ,
             'data': [10, 20, 30, 40]}
 
         self._run_test(docs, as_dict)
@@ -67,7 +69,7 @@ class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
                 {'foo': 1},
                 {}]
         as_dict = {
-            '_id': [str(oid) for oid in ids] + [None, None],
+            '_id': [str(oid).encode('utf-8') for oid in ids] + [None, None],
             'data': [10, 20, None, 40, None, None]}
 
         self._run_test(docs, as_dict)
@@ -86,7 +88,7 @@ class TestInvalidBsonToArrowConversion(TestBsonToArrowConversionBase):
                 {'_id': ids[2], 'data': 30},
                 {'_id': ids[3], 'data': 40}]
         as_dict = {
-            '_id': [str(oid) for oid in ids],
+            '_id': [str(oid).encode('utf-8') for oid in ids],
             'data': [10, 20, 30, 40]}
 
         with self.assertRaisesRegex(
