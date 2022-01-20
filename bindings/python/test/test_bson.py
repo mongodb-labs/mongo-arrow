@@ -47,25 +47,27 @@ class TestBsonToArrowConversionBase(TestCase):
 
 class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
     def test_simple(self):
-        docs = [{'_id': ObjectId(), 'data': 10},
-                {'_id': ObjectId(), 'data': 20},
-                {'_id': ObjectId(), 'data': 30},
-                {'_id': ObjectId(), 'data': 40}]
+        ids = [ObjectId() for i in range(4)]
+        docs = [{'_id': ids[0], 'data': 10},
+                {'_id': ids[1], 'data': 20},
+                {'_id': ids[2], 'data': 30},
+                {'_id': ids[3], 'data': 40}]
         as_dict = {
-            '_id': [ObjectId() for i in [1, 2, 3, 4]],
+            '_id': [str(oid) for oid in ids] ,
             'data': [10, 20, 30, 40]}
 
         self._run_test(docs, as_dict)
 
     def test_with_nulls(self):
-        docs = [{'_id': ObjectId(), 'data': 10},
-                {'_id': ObjectId(), 'data': 20},
-                {'_id': ObjectId()},
-                {'_id': ObjectId(), 'data': 40},
+        ids = [ObjectId() for i in range(4)]
+        docs = [{'_id': ids[0], 'data': 10},
+                {'_id': ids[1], 'data': 20},
+                {'_id': ids[2]},
+                {'_id': ids[3], 'data': 40},
                 {'foo': 1},
                 {}]
         as_dict = {
-            '_id': [ObjectId(), ObjectId(), ObjectId(), ObjectId(), None, None],
+            '_id': [str(oid) for oid in ids] + [None, None],
             'data': [10, 20, None, 40, None, None]}
 
         self._run_test(docs, as_dict)
@@ -78,12 +80,13 @@ class TestInvalidBsonToArrowConversion(TestBsonToArrowConversionBase):
             doclist)[:-2]
 
     def test_simple(self):
-        docs = [{'_id': ObjectId(), 'data': 10},
-                {'_id': ObjectId(), 'data': 20},
-                {'_id': ObjectId(), 'data': 30},
-                {'_id': ObjectId(), 'data': 40}]
+        ids = [ObjectId() for i in range(4)]
+        docs = [{'_id': ids[0], 'data': 10},
+                {'_id': ids[1], 'data': 20},
+                {'_id': ids[2], 'data': 30},
+                {'_id': ids[3], 'data': 40}]
         as_dict = {
-            '_id': [ObjectId() for i in [1, 2, 3, 4]],
+            '_id': [str(oid) for oid in ids],
             'data': [10, 20, 30, 40]}
 
         with self.assertRaisesRegex(
