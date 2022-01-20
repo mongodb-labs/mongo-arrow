@@ -12,6 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+cdef extern from "arrow/builder.h" namespace "arrow" nogil:
+    cdef cppclass CFixedSizeBinaryBuilder" arrow::FixedSizeBinaryBuilder"(CArrayBuilder):
+        CFixedSizeBinaryBuilder(shared_ptr[CDataType], CMemoryPool* pool)
+        CStatus Append(const char* value)
+
+
+cdef extern from "arrow/type_fwd.h" namespace "arrow" nogil:
+    shared_ptr[CDataType] fixed_size_binary(int32_t byte_width);
+
 
 cdef class _ArrayBuilderBase:
     def append_values(self, values):
@@ -22,10 +31,12 @@ cdef class _ArrayBuilderBase:
 cdef class ObjectIdBuilder(_ArrayBuilderBase):
     type_marker = _BsonArrowTypes.objectid
     cdef:
-        shared_ptr[CBinaryBuilder] builder
+        shared_ptr[CFixedSizeBinaryBuilder] builder
 
     def __cinit__(self, MemoryPool memory_pool=None):
-        self.builder.reset(new CBinaryBuilder())
+        cdef shared_ptr[CDataType] dtype = fixed_size_binary(24)
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CFixedSizeBinaryBuilder(dtype, pool))
 
     cpdef append_null(self):
         self.builder.get().AppendNull()
@@ -37,7 +48,7 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
         if value is None or value is np.nan:
             self.builder.get().AppendNull()
         elif isinstance(value, bytes):
-            self.builder.get().Append(value, 24)
+            self.builder.get().Append(value)
         else:
             raise TypeError('ObjectIdBuilder only accepts bytes objects')
 
@@ -47,7 +58,7 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
             self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
-    cdef shared_ptr[CBinaryBuilder] unwrap(self):
+    cdef shared_ptr[CFixedSizeBinaryBuilder] unwrap(self):
         return self.builder
 
 

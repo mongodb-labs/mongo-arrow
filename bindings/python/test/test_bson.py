@@ -21,8 +21,6 @@ from pymongoarrow.schema import Schema
 from pymongoarrow.types import int32, int64, ObjectId
 
 
-# TODO: override Scalar and provide a new as_py
-
 class TestBsonToArrowConversionBase(TestCase):
     def setUp(self):
         self.schema = Schema({'_id': ObjectId,
