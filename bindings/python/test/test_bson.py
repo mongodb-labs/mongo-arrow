@@ -18,7 +18,7 @@ from bson import encode, InvalidBSON
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import int32, int64, ObjectId
+from pymongoarrow.types import int64, ObjectId
 
 
 class TestBsonToArrowConversionBase(TestCase):
@@ -46,6 +46,7 @@ class TestBsonToArrowConversionBase(TestCase):
 
 
 class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
+
     def test_simple(self):
         ids = [ObjectId() for i in range(4)]
         docs = [{'_id': ids[0], 'data': 10},
@@ -53,7 +54,7 @@ class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
                 {'_id': ids[2], 'data': 30},
                 {'_id': ids[3], 'data': 40}]
         as_dict = {
-            '_id': [str(oid).encode('utf-8') for oid in ids] ,
+            '_id': [oid.binary for oid in ids] ,
             'data': [10, 20, 30, 40]}
 
         self._run_test(docs, as_dict)
@@ -67,7 +68,7 @@ class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
                 {'foo': 1},
                 {}]
         as_dict = {
-            '_id': [str(oid).encode('utf-8') for oid in ids] + [None, None],
+            '_id': [oid.binary for oid in ids] + [None, None],
             'data': [10, 20, None, 40, None, None]}
 
         self._run_test(docs, as_dict)
@@ -86,7 +87,7 @@ class TestInvalidBsonToArrowConversion(TestBsonToArrowConversionBase):
                 {'_id': ids[2], 'data': 30},
                 {'_id': ids[3], 'data': 40}]
         as_dict = {
-            '_id': [str(oid).encode('utf-8') for oid in ids],
+            '_id': [oid.binary for oid in ids],
             'data': [10, 20, 30, 40]}
 
         with self.assertRaisesRegex(

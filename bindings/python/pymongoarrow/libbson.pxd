@@ -92,11 +92,6 @@ cdef extern from "<bson/bson.h>":
     char * bson_as_json(const bson_t *bson, size_t *length)
 
 
-# bson_oid_t API
-cdef extern from "<bson/bson.h>":
-    void bson_oid_to_string (const bson_oid_t *oid, char str[25])
-
-
 # bson_iter_t API
 cdef extern from "<bson/bson.h>":
     bint bson_iter_init(bson_iter_t *iter, const bson_t *bson)

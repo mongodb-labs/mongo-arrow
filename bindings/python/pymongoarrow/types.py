@@ -39,7 +39,7 @@ _TYPE_NORMALIZER_FACTORY = {
 
 
 def _is_objectid(obj):
-    return obj == ObjectId or isinstance(obj, ObjectId)
+    return obj == ObjectId
 
 
 _TYPE_CHECKER_TO_INTERNAL_TYPE = {

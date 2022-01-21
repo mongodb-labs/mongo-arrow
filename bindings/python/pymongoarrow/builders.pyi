@@ -34,7 +34,7 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
         shared_ptr[CFixedSizeBinaryBuilder] builder
 
     def __cinit__(self, MemoryPool memory_pool=None):
-        cdef shared_ptr[CDataType] dtype = fixed_size_binary(24)
+        cdef shared_ptr[CDataType] dtype = fixed_size_binary(12)
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CFixedSizeBinaryBuilder(dtype, pool))
 
