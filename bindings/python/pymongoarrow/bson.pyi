@@ -72,7 +72,7 @@ def process_bson_stream(bson_stream, context):
                             builder.append_null()
                     elif ftype == t_oid:
                         if value_t == BSON_TYPE_OID:
-                            builder.append(<char*>bson_iter_oid(&doc_iter))
+                            builder.append(<bytes>(<uint8_t*>bson_iter_oid(&doc_iter))[:12])
                         else:
                             builder.append_null()
                     elif ftype == t_double:
