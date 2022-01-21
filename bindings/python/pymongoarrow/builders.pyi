@@ -12,15 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cdef extern from "arrow/builder.h" namespace "arrow" nogil:
-    cdef cppclass CFixedSizeBinaryBuilder" arrow::FixedSizeBinaryBuilder"(CArrayBuilder):
-        CFixedSizeBinaryBuilder(shared_ptr[CDataType], CMemoryPool* pool)
-        CStatus Append(const char* value)
-
-
-cdef extern from "arrow/type_fwd.h" namespace "arrow" nogil:
-    shared_ptr[CDataType] fixed_size_binary(int32_t byte_width);
-
 
 cdef class _ArrayBuilderBase:
     def append_values(self, values):
