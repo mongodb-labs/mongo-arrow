@@ -71,6 +71,8 @@ def _get_internal_typemap(typemap):
     internal_typemap = {}
     for fname, ftype in typemap.items():
         for checker, internal_id in _TYPE_CHECKER_TO_INTERNAL_TYPE.items():
+            # Catch error where the pyarrow checkers are looking for an `id`
+            # attribute that might not exist on non-arrow types.
             try:
                 if checker(ftype):
                     internal_typemap[fname] = internal_id

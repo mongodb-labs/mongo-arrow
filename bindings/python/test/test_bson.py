@@ -37,6 +37,7 @@ class TestBsonToArrowConversionBase(TestCase):
 
     def _run_test(self, doclist, as_dict):
         payload = type(self)._generate_payload(doclist)
+
         process_bson_stream(payload, self.context)
         table = self.context.finish()
         table_dict = table.to_pydict()
@@ -46,7 +47,6 @@ class TestBsonToArrowConversionBase(TestCase):
 
 
 class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
-    maxDiff = None
 
     def test_simple(self):
         ids = [ObjectId() for i in range(4)]
