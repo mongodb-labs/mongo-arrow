@@ -14,7 +14,6 @@
 from unittest import TestCase
 
 from bson import encode, InvalidBSON
-from pandas.core.base import NoNewAttributesMixin
 
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
