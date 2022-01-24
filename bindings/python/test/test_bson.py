@@ -18,7 +18,7 @@ from bson import encode, InvalidBSON
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import int64, ObjectId
+from pymongoarrow.types import int32, int64, ObjectId
 
 
 class TestBsonToArrowConversionBase(TestCase):

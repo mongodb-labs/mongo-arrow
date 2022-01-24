@@ -14,11 +14,13 @@
 import calendar
 from datetime import datetime, timedelta
 from unittest import TestCase
+from bson.objectid import ObjectId
 
 from pyarrow import Array, timestamp, int32, int64
 
 from pymongoarrow.lib import (
-    DatetimeBuilder, DoubleBuilder, Int32Builder, Int64Builder)
+    DatetimeBuilder, DoubleBuilder, Int32Builder, Int64Builder,
+    ObjectIdBuilder)
 
 
 class TestIntBuildersMixin:
@@ -109,3 +111,19 @@ class TestDoubleBuilder(TestCase):
         self.assertEqual(len(arr), 6)
         self.assertEqual(
             arr.to_pylist(), [0.123, 1.234, 2.345, 3.456, 4.567, None])
+
+
+class TestObjectIdBuilder(TestCase):
+    def test_simple(self):
+        ids = [ObjectId() for i in range(5)]
+        builder = ObjectIdBuilder()
+        builder.append(ids[0].binary)
+        builder.append_values([oid.binary for oid in ids[1:]])
+        builder.append(None)
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 6)
+        self.assertEqual(
+            arr.to_pylist(), [oid.binary for oid in ids] + [None])
