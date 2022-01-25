@@ -36,6 +36,7 @@ def process_bson_stream(bson_stream, context):
     t_int64 = _BsonArrowTypes.int64
     t_double = _BsonArrowTypes.double
     t_datetime = _BsonArrowTypes.datetime
+    t_oid = _BsonArrowTypes.objectid
     builder_map = context.builder_map
 
     # initialize count to current length of builders
@@ -67,6 +68,11 @@ def process_bson_stream(bson_stream, context):
                                 value_t == BSON_TYPE_DOUBLE or
                                 value_t == BSON_TYPE_INT32):
                             builder.append(bson_iter_as_int64(&doc_iter))
+                        else:
+                            builder.append_null()
+                    elif ftype == t_oid:
+                        if value_t == BSON_TYPE_OID:
+                            builder.append(<bytes>(<uint8_t*>bson_iter_oid(&doc_iter))[:12])
                         else:
                             builder.append_null()
                     elif ftype == t_double:

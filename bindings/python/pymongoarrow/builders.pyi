@@ -19,6 +19,40 @@ cdef class _ArrayBuilderBase:
             self.append(value)
 
 
+cdef class ObjectIdBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.objectid
+    cdef:
+        shared_ptr[CFixedSizeBinaryBuilder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef shared_ptr[CDataType] dtype = fixed_size_binary(12)
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CFixedSizeBinaryBuilder(dtype, pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        if value is None or value is np.nan:
+            self.builder.get().AppendNull()
+        elif isinstance(value, bytes):
+            self.builder.get().Append(value)
+        else:
+            raise TypeError('ObjectIdBuilder only accepts bytes objects')
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CFixedSizeBinaryBuilder] unwrap(self):
+        return self.builder
+
+
 cdef class Int32Builder(_ArrayBuilderBase):
     type_marker = _BsonArrowTypes.int32
     cdef:

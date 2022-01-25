@@ -18,12 +18,12 @@ from bson import encode, InvalidBSON
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import int32, int64
+from pymongoarrow.types import int32, int64, ObjectId
 
 
 class TestBsonToArrowConversionBase(TestCase):
     def setUp(self):
-        self.schema = Schema({'_id': int32(),
+        self.schema = Schema({'_id': ObjectId,
                               'data': int64()})
         self.context = PyMongoArrowContext.from_schema(
             self.schema)
@@ -47,26 +47,29 @@ class TestBsonToArrowConversionBase(TestCase):
 
 
 class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
+
     def test_simple(self):
-        docs = [{'_id': 1, 'data': 10},
-                {'_id': 2, 'data': 20},
-                {'_id': 3, 'data': 30},
-                {'_id': 4, 'data': 40}]
+        ids = [ObjectId() for i in range(4)]
+        docs = [{'_id': ids[0], 'data': 10},
+                {'_id': ids[1], 'data': 20},
+                {'_id': ids[2], 'data': 30},
+                {'_id': ids[3], 'data': 40}]
         as_dict = {
-            '_id': [1, 2, 3, 4],
+            '_id': [oid.binary for oid in ids] ,
             'data': [10, 20, 30, 40]}
 
         self._run_test(docs, as_dict)
 
     def test_with_nulls(self):
-        docs = [{'_id': 1, 'data': 10},
-                {'_id': 2, 'data': 20},
-                {'_id': 3},
-                {'_id': 4, 'data': 40},
+        ids = [ObjectId() for i in range(4)]
+        docs = [{'_id': ids[0], 'data': 10},
+                {'_id': ids[1], 'data': 20},
+                {'_id': ids[2]},
+                {'_id': ids[3], 'data': 40},
                 {'foo': 1},
                 {}]
         as_dict = {
-            '_id': [1, 2, 3, 4, None, None],
+            '_id': [oid.binary for oid in ids] + [None, None],
             'data': [10, 20, None, 40, None, None]}
 
         self._run_test(docs, as_dict)
@@ -79,12 +82,13 @@ class TestInvalidBsonToArrowConversion(TestBsonToArrowConversionBase):
             doclist)[:-2]
 
     def test_simple(self):
-        docs = [{'_id': 1, 'data': 10},
-                {'_id': 2, 'data': 20},
-                {'_id': 3, 'data': 30},
-                {'_id': 4, 'data': 40}]
+        ids = [ObjectId() for i in range(4)]
+        docs = [{'_id': ids[0], 'data': 10},
+                {'_id': ids[1], 'data': 20},
+                {'_id': ids[2], 'data': 30},
+                {'_id': ids[3], 'data': 40}]
         as_dict = {
-            '_id': [1, 2, 3, 4],
+            '_id': [oid.binary for oid in ids],
             'data': [10, 20, 30, 40]}
 
         with self.assertRaisesRegex(

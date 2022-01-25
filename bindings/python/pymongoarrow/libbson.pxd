@@ -108,6 +108,8 @@ cdef extern from "<bson/bson.h>":
 
     int64_t bson_iter_date_time(const bson_iter_t *iter)
 
+    const bson_oid_t * bson_iter_oid (const bson_iter_t *iter)
+
     # TODO: add decimal128
 
     double bson_iter_double(const bson_iter_t *iter)
