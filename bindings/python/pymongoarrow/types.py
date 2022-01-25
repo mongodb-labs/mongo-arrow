@@ -81,7 +81,7 @@ def _get_internal_typemap(typemap):
             except AttributeError:
                 pass
         if fname not in internal_typemap:
-            raise ValueError('Unsupported data type for ' +
+            raise ValueError('Unsupported data type in schema for ' +
                 f'field "{fname}" of type "{ftype}"')
 
     return internal_typemap

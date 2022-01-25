@@ -105,7 +105,7 @@ class TestUnsupportedDataType(TestBsonToArrowConversionBase):
         schema = Schema({'_id': ObjectId,
                          'data': int64(),
                          'title': pyarrow.string() })
-        msg =  ("Unsupported data type for field " +
+        msg =  ("Unsupported data type in schema for field " +
                 '"title" of type "string"')
         with self.assertRaisesRegex(ValueError, msg):
             PyMongoArrowContext.from_schema(schema)
