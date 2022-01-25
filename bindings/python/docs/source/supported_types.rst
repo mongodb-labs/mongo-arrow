@@ -15,6 +15,8 @@ Support for additional types will be added in subsequent releases.
 
    * - BSON Type
      - Type Identifiers
+   * - ObjectId
+     - :class:`py.bytes`, :class:`bson.ObjectId`, an instance of :class:`pyarrow.FixedSizeBinaryScalar`
    * - 64-bit binary floating point
      - :class:`py.float`, an instance of :meth:`pyarrow.float64`
    * - 32-bit integer
@@ -27,6 +29,10 @@ Support for additional types will be added in subsequent releases.
 Type identifiers can be used to specify that a field is of a certain type
 during :class:`pymongoarrow.api.Schema` declaration. For example, if your data
 has fields 'f1' and 'f2' bearing types 32-bit integer and UTC datetime
-respectively, your schema can be defined as::
+respectively, and '_id' that is an `ObjectId`, your schema can be defined as::
 
-  schema = Schema({'f1': pyarrow.int32(), 'f2': pyarrow.timestamp('ms')})
+  schema = Schema({
+    '_id': ObjectId,
+    'f1': pyarrow.int32(),
+    'f2': pyarrow.timestamp('ms')
+})
