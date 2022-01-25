@@ -80,5 +80,8 @@ def _get_internal_typemap(typemap):
                     internal_typemap[fname] = internal_id
             except AttributeError:
                 pass
-    assert len(internal_typemap) == len(typemap)
+        if fname not in internal_typemap:
+            raise ValueError('Unsupported data type for ' +
+                f'field "{fname}" of type "{ftype}"')
+
     return internal_typemap
