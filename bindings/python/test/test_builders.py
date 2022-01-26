@@ -28,7 +28,7 @@ class TestIntBuildersMixin:
         builder = self.builder_cls()
         builder.append(0)
         builder.append_values([1, 2, 3, 4])
-        builder.append(None)
+        builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
@@ -79,7 +79,7 @@ class TestDate64Builder(TestCase):
         builder.append(self._datetime_to_millis(datetimes[0]))
         builder.append_values(
             [self._datetime_to_millis(k) for k in datetimes[1:]])
-        builder.append(None)
+        builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
@@ -103,7 +103,7 @@ class TestDoubleBuilder(TestCase):
         builder = DoubleBuilder()
         builder.append(0.123)
         builder.append_values([1.234, 2.345, 3.456, 4.567])
-        builder.append(None)
+        builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
@@ -119,7 +119,7 @@ class TestObjectIdBuilder(TestCase):
         builder = ObjectIdBuilder()
         builder.append(ids[0].binary)
         builder.append_values([oid.binary for oid in ids[1:]])
-        builder.append(None)
+        builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
@@ -137,7 +137,7 @@ class TestStringBuilder(TestCase):
         builder = StringBuilder()
         builder.append(values[0].encode('utf8'))
         builder.append_values(values[1:])
-        builder.append(None)
+        builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
