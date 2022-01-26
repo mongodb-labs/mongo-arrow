@@ -106,8 +106,8 @@ class TestUnsupportedDataType(TestBsonToArrowConversionBase):
 
         schema = Schema({'_id': ObjectId,
                          'data': int64(),
-                         'valid': pyarrow.bool_() })
+                         'fake':  pyarrow.float16() })
         msg =  ("Unsupported data type in schema for field " +
-                '"valid" of type "bool"')
+                '"fake" of type "halffloat"')
         with self.assertRaisesRegex(ValueError, msg):
             PyMongoArrowContext.from_schema(schema)

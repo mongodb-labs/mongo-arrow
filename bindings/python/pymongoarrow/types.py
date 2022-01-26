@@ -36,7 +36,7 @@ _TYPE_NORMALIZER_FACTORY = {
     int: lambda _: int64(),
     datetime: lambda _: timestamp('ms'),     # TODO: add tzinfo support
     ObjectId: lambda _: ObjectId,
-    str: lambda: string()
+    str: lambda: string(),
 }
 
 
@@ -50,7 +50,7 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_float64: _BsonArrowTypes.double,
     _atypes.is_timestamp: _BsonArrowTypes.datetime,
     _is_objectid: _BsonArrowTypes.objectid,
-    _atypes.is_string: _BsonArrowTypes.string
+    _atypes.is_string: _BsonArrowTypes.string,
 }
 
 
