@@ -19,6 +19,39 @@ cdef class _ArrayBuilderBase:
             self.append(value)
 
 
+cdef class StringBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.string
+    cdef:
+        shared_ptr[CStringBuilder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CStringBuilder(pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        if value is None or value is np.nan:
+            self.builder.get().AppendNull()
+        elif isinstance(value, (bytes, str)):
+            self.builder.get().Append(tobytes(value))
+        else:
+            raise TypeError('StringBuilder only accepts string objects')
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CStringBuilder] unwrap(self):
+        return self.builder
+
+
 cdef class ObjectIdBuilder(_ArrayBuilderBase):
     type_marker = _BsonArrowTypes.objectid
     cdef:

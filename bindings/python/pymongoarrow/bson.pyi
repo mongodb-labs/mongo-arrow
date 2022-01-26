@@ -30,6 +30,7 @@ def process_bson_stream(bson_stream, context):
     cdef const char* key
     cdef bson_type_t value_t
     cdef Py_ssize_t count = 0
+    cdef uint32_t str_len
 
     # Localize types for better performance.
     t_int32 = _BsonArrowTypes.int32
@@ -37,6 +38,7 @@ def process_bson_stream(bson_stream, context):
     t_double = _BsonArrowTypes.double
     t_datetime = _BsonArrowTypes.datetime
     t_oid = _BsonArrowTypes.objectid
+    t_string = _BsonArrowTypes.string
     builder_map = context.builder_map
 
     # initialize count to current length of builders
@@ -73,6 +75,11 @@ def process_bson_stream(bson_stream, context):
                     elif ftype == t_oid:
                         if value_t == BSON_TYPE_OID:
                             builder.append(<bytes>(<uint8_t*>bson_iter_oid(&doc_iter))[:12])
+                        else:
+                            builder.append_null()
+                    elif ftype == t_string:
+                        if value_t == BSON_TYPE_UTF8:
+                            builder.append(bson_iter_utf8 (&doc_iter, &str_len))
                         else:
                             builder.append_null()
                     elif ftype == t_double:

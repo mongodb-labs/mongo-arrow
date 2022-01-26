@@ -20,7 +20,7 @@ from pyarrow import Array, timestamp, int32, int64
 
 from pymongoarrow.lib import (
     DatetimeBuilder, DoubleBuilder, Int32Builder, Int64Builder,
-    ObjectIdBuilder)
+    ObjectIdBuilder, StringBuilder)
 
 
 class TestIntBuildersMixin:
@@ -127,3 +127,19 @@ class TestObjectIdBuilder(TestCase):
         self.assertEqual(len(arr), 6)
         self.assertEqual(
             arr.to_pylist(), [oid.binary for oid in ids] + [None])
+
+
+class TestStringBuilder(TestCase):
+    def test_simple(self):
+        values = ["Hello world", "Καλημέρα κόσμε", "コンニチハ"]
+        builder = StringBuilder()
+        builder.append(values[0].encode('utf8'))
+        builder.append_values(values[1:])
+        builder.append(None)
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 4)
+        self.assertEqual(
+            arr.to_pylist(), values + [None])
