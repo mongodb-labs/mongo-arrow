@@ -30,6 +30,7 @@ def process_bson_stream(bson_stream, context):
     cdef const char* key
     cdef bson_type_t value_t
     cdef Py_ssize_t count = 0
+    cdef const char * bson_str
     cdef uint32_t str_len
 
     # Localize types for better performance.
@@ -79,7 +80,8 @@ def process_bson_stream(bson_stream, context):
                             builder.append_null()
                     elif ftype == t_string:
                         if value_t == BSON_TYPE_UTF8:
-                            builder.append(bson_iter_utf8 (&doc_iter, &str_len))
+                            bson_str = bson_iter_utf8 (&doc_iter, &str_len)
+                            builder.append(<bytes>(bson_str)[:str_len])
                         else:
                             builder.append_null()
                     elif ftype == t_double:

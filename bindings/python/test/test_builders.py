@@ -134,6 +134,7 @@ class TestStringBuilder(TestCase):
         # Greetings in various languages, from
         # https://www.w3.org/2001/06/utf-8-test/UTF-8-demo.html
         values = ["Hello world", "Καλημέρα κόσμε", "コンニチハ"]
+        values += ["hello\u0000world"]
         builder = StringBuilder()
         builder.append(values[0].encode('utf8'))
         builder.append_values(values[1:])
@@ -142,6 +143,6 @@ class TestStringBuilder(TestCase):
 
         self.assertIsInstance(arr, Array)
         self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 4)
+        self.assertEqual(len(arr), 5)
         self.assertEqual(
             arr.to_pylist(), values + [None])
