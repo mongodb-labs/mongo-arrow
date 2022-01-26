@@ -15,6 +15,7 @@ from unittest import TestCase
 
 from bson import encode, InvalidBSON
 
+import pyarrow
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
@@ -94,3 +95,16 @@ class TestInvalidBsonToArrowConversion(TestBsonToArrowConversionBase):
         with self.assertRaisesRegex(
                 InvalidBSON, "Could not read BSON document stream"):
             self._run_test(docs, as_dict)
+
+
+class TestUnsupportedDataType(TestBsonToArrowConversionBase):
+
+    def test_simple(self):
+
+        schema = Schema({'_id': ObjectId,
+                         'data': int64(),
+                         'title': pyarrow.string() })
+        msg =  ("Unsupported data type in schema for field " +
+                '"title" of type "string"')
+        with self.assertRaisesRegex(ValueError, msg):
+            PyMongoArrowContext.from_schema(schema)
