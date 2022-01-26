@@ -44,7 +44,289 @@ from pymongoarrow.types import _BsonArrowTypes
 libbson_version = bson_get_version().decode('utf-8')
 
 # BSON tools
-include "bson.pyi"
+
+cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? NULL:
+    cdef cbool reached_eof = False
+    cdef const bson_t* doc = bson_reader_read(stream_reader, &reached_eof)
+    if doc == NULL and reached_eof == False:
+        raise InvalidBSON("Could not read BSON document stream")
+    return doc
+
+
+def process_bson_stream(bson_stream, context):
+    cdef const uint8_t* docstream = <const uint8_t *>bson_stream
+    cdef size_t length = <size_t>PyBytes_Size(bson_stream)
+    cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
+    cdef const bson_t * doc = NULL
+    cdef bson_iter_t doc_iter
+    cdef const char* key
+    cdef bson_type_t value_t
+    cdef Py_ssize_t count = 0
+    cdef const char * bson_str
+    cdef uint32_t str_len
+
+    # Localize types for better performance.
+    t_int32 = _BsonArrowTypes.int32
+    t_int64 = _BsonArrowTypes.int64
+    t_double = _BsonArrowTypes.double
+    t_datetime = _BsonArrowTypes.datetime
+    t_oid = _BsonArrowTypes.objectid
+    t_string = _BsonArrowTypes.string
+    builder_map = context.builder_map
+
+    # initialize count to current length of builders
+    for _, builder in builder_map.items():
+        count = len(builder)
+        break
+
+    try:
+        while True:
+            doc = bson_reader_read_safe(stream_reader)
+            if doc == NULL:
+                break
+            if not bson_iter_init(&doc_iter, doc):
+                raise InvalidBSON("Could not read BSON document")
+            while bson_iter_next(&doc_iter):
+                key = bson_iter_key(&doc_iter)
+                builder = builder_map.get(key)
+                if builder is not None:
+                    ftype = builder.type_marker
+                    value_t = bson_iter_type(&doc_iter)
+                    if ftype == t_int32:
+                        if value_t == BSON_TYPE_INT32:
+                            builder.append(bson_iter_int32(&doc_iter))
+                        else:
+                            builder.append_null()
+                    elif ftype == t_int64:
+                        if (value_t == BSON_TYPE_INT64 or
+                                value_t == BSON_TYPE_BOOL or
+                                value_t == BSON_TYPE_DOUBLE or
+                                value_t == BSON_TYPE_INT32):
+                            builder.append(bson_iter_as_int64(&doc_iter))
+                        else:
+                            builder.append_null()
+                    elif ftype == t_oid:
+                        if value_t == BSON_TYPE_OID:
+                            builder.append(<bytes>(<uint8_t*>bson_iter_oid(&doc_iter))[:12])
+                        else:
+                            builder.append_null()
+                    elif ftype == t_string:
+                        if value_t == BSON_TYPE_UTF8:
+                            bson_str = bson_iter_utf8 (&doc_iter, &str_len)
+                            builder.append(<bytes>(bson_str)[:str_len])
+                        else:
+                            builder.append_null()
+                    elif ftype == t_double:
+                        if (value_t == BSON_TYPE_DOUBLE or
+                                value_t == BSON_TYPE_BOOL or
+                                value_t == BSON_TYPE_INT32 or
+                                value_t == BSON_TYPE_INT64):
+                            builder.append(bson_iter_as_double(&doc_iter))
+                        else:
+                            builder.append_null()
+                    elif ftype == t_datetime:
+                        if value_t == BSON_TYPE_DATE_TIME:
+                            builder.append(bson_iter_date_time(&doc_iter))
+                        else:
+                            builder.append_null()
+                    else:
+                        raise PyMongoArrowError('unknown ftype {}'.format(ftype))
+            count += 1
+            for _, builder in builder_map.items():
+                if len(builder) != count:
+                    # Append null to account for any missing field(s)
+                    builder.append_null()
+    finally:
+        bson_reader_destroy(stream_reader)
+
 
 # Builders
-include "builders.pyi"
+
+cdef class _ArrayBuilderBase:
+    def append_values(self, values):
+        for value in values:
+            if value is None or value is np.nan:
+                self.append_null()
+            else:
+                self.append(value)
+
+
+cdef class StringBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.string
+    cdef:
+        shared_ptr[CStringBuilder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CStringBuilder(pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(tobytes(value))
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CStringBuilder] unwrap(self):
+        return self.builder
+
+
+cdef class ObjectIdBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.objectid
+    cdef:
+        shared_ptr[CFixedSizeBinaryBuilder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef shared_ptr[CDataType] dtype = fixed_size_binary(12)
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CFixedSizeBinaryBuilder(dtype, pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(value)
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CFixedSizeBinaryBuilder] unwrap(self):
+        return self.builder
+
+
+cdef class Int32Builder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.int32
+    cdef:
+        shared_ptr[CInt32Builder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CInt32Builder(pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(value)
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CInt32Builder] unwrap(self):
+        return self.builder
+
+
+cdef class Int64Builder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.int64
+    cdef:
+        shared_ptr[CInt64Builder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CInt64Builder(pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(value)
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CInt64Builder] unwrap(self):
+        return self.builder
+
+
+cdef class DoubleBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.double
+    cdef:
+        shared_ptr[CDoubleBuilder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CDoubleBuilder(pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(value)
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CDoubleBuilder] unwrap(self):
+        return self.builder
+
+
+cdef class DatetimeBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.datetime
+    cdef:
+        shared_ptr[CTimestampBuilder] builder
+        TimestampType dtype
+
+    def __cinit__(self, TimestampType dtype=timestamp('ms'),
+                  MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        if dtype.unit != 'ms':
+            raise TypeError("PyMongoArrow only supports millisecond "
+                            "temporal resolution compatible with MongoDB's "
+                            "UTC datetime type.")
+        self.dtype = dtype
+        self.builder.reset(new CTimestampBuilder(
+            pyarrow_unwrap_data_type(self.dtype), pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(value)
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    @property
+    def unit(self):
+        return self.dtype
+
+    cdef shared_ptr[CTimestampBuilder] unwrap(self):
+        return self.builder
