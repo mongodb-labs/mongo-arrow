@@ -15,6 +15,8 @@ Support for additional types will be added in subsequent releases.
 
    * - BSON Type
      - Type Identifiers
+   * - String
+     - :class:`py.str`, an instance of :class:`pyarrow.string`
    * - ObjectId
      - :class:`py.bytes`, :class:`bson.ObjectId`, an instance of :class:`pyarrow.FixedSizeBinaryScalar`
    * - 64-bit binary floating point
