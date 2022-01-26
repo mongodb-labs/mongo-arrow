@@ -22,7 +22,6 @@ from pymongoarrow.schema import Schema
 from pymongoarrow.types import int32, int64, ObjectId
 
 
-
 class TestBsonToArrowConversionBase(TestCase):
     def setUp(self):
         self.schema = Schema({'_id': ObjectId,
