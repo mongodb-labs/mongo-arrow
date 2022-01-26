@@ -131,6 +131,8 @@ class TestObjectIdBuilder(TestCase):
 
 class TestStringBuilder(TestCase):
     def test_simple(self):
+        # Greetings in various languages, from
+        # https://www.w3.org/2001/06/utf-8-test/UTF-8-demo.html
         values = ["Hello world", "Καλημέρα κόσμε", "コンニチハ"]
         builder = StringBuilder()
         builder.append(values[0].encode('utf8'))
