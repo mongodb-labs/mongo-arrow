@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: wheels-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-non-linux-wheels:
     runs-on: ${{ matrix.os }}

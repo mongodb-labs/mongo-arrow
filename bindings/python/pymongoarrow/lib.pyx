@@ -34,6 +34,7 @@ from libcpp cimport bool as cbool
 from libcpp.map cimport map
 from libcpp.string cimport string
 from pyarrow.lib cimport *
+from pyarrow.lib import tobytes
 from pymongoarrow.libarrow cimport *
 from pymongoarrow.libbson cimport *
 from pymongoarrow.types import _BsonArrowTypes

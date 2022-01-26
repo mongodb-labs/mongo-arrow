@@ -16,7 +16,38 @@
 cdef class _ArrayBuilderBase:
     def append_values(self, values):
         for value in values:
-            self.append(value)
+            if value is None or value is np.nan:
+                self.append_null()
+            else:
+                self.append(value)
+
+
+cdef class StringBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.string
+    cdef:
+        shared_ptr[CStringBuilder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CStringBuilder(pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(tobytes(value))
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CStringBuilder] unwrap(self):
+        return self.builder
 
 
 cdef class ObjectIdBuilder(_ArrayBuilderBase):
@@ -36,12 +67,7 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
         return self.builder.get().length()
 
     cpdef append(self, value):
-        if value is None or value is np.nan:
-            self.builder.get().AppendNull()
-        elif isinstance(value, bytes):
-            self.builder.get().Append(value)
-        else:
-            raise TypeError('ObjectIdBuilder only accepts bytes objects')
+        self.builder.get().Append(value)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
@@ -69,12 +95,7 @@ cdef class Int32Builder(_ArrayBuilderBase):
         return self.builder.get().length()
 
     cpdef append(self, value):
-        if value is None or value is np.nan:
-            self.builder.get().AppendNull()
-        elif isinstance(value, int):
-            self.builder.get().Append(value)
-        else:
-            raise TypeError('Int32Builder only accepts integer objects')
+        self.builder.get().Append(value)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
@@ -102,12 +123,7 @@ cdef class Int64Builder(_ArrayBuilderBase):
         return self.builder.get().length()
 
     cpdef append(self, value):
-        if value is None or value is np.nan:
-            self.builder.get().AppendNull()
-        elif isinstance(value, int):
-            self.builder.get().Append(value)
-        else:
-            raise TypeError('Int64Builder only accepts integer objects')
+        self.builder.get().Append(value)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
@@ -135,12 +151,7 @@ cdef class DoubleBuilder(_ArrayBuilderBase):
         return self.builder.get().length()
 
     cpdef append(self, value):
-        if value is None or value is np.nan:
-            self.builder.get().AppendNull()
-        elif isinstance(value, (int, float)):
-            self.builder.get().Append(value)
-        else:
-            raise TypeError('DoubleBuilder only accepts floats and ints')
+        self.builder.get().Append(value)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
@@ -176,12 +187,7 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
         return self.builder.get().length()
 
     cpdef append(self, value):
-        if value is None or value is np.nan:
-            self.builder.get().AppendNull()
-        elif isinstance(value, int):
-            self.builder.get().Append(value)
-        else:
-            raise TypeError('TimestampBuilder only accepts 64-bit integers')
+        self.builder.get().Append(value)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out

@@ -19,13 +19,14 @@ import pyarrow
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import int32, int64, ObjectId
+from pymongoarrow.types import int32, int64, string, ObjectId
 
 
 class TestBsonToArrowConversionBase(TestCase):
     def setUp(self):
         self.schema = Schema({'_id': ObjectId,
-                              'data': int64()})
+                              'data': int64(),
+                              'title': string() })
         self.context = PyMongoArrowContext.from_schema(
             self.schema)
 
@@ -51,19 +52,20 @@ class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
 
     def test_simple(self):
         ids = [ObjectId() for i in range(4)]
-        docs = [{'_id': ids[0], 'data': 10},
-                {'_id': ids[1], 'data': 20},
-                {'_id': ids[2], 'data': 30},
-                {'_id': ids[3], 'data': 40}]
+        docs = [{'_id': ids[0], 'data': 10, 'title': 'ä'},
+                {'_id': ids[1], 'data': 20, 'title': 'b'},
+                {'_id': ids[2], 'data': 30, 'title': 'č'},
+                {'_id': ids[3], 'data': 40, 'title': 'ê'}]
         as_dict = {
             '_id': [oid.binary for oid in ids] ,
-            'data': [10, 20, 30, 40]}
+            'data': [10, 20, 30, 40],
+            'title': ['ä', 'b', 'č', 'ê']}
 
         self._run_test(docs, as_dict)
 
     def test_with_nulls(self):
         ids = [ObjectId() for i in range(4)]
-        docs = [{'_id': ids[0], 'data': 10},
+        docs = [{'_id': ids[0], 'data': 10, 'title': 'a'},
                 {'_id': ids[1], 'data': 20},
                 {'_id': ids[2]},
                 {'_id': ids[3], 'data': 40},
@@ -71,7 +73,8 @@ class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
                 {}]
         as_dict = {
             '_id': [oid.binary for oid in ids] + [None, None],
-            'data': [10, 20, None, 40, None, None]}
+            'data': [10, 20, None, 40, None, None],
+            'title': ['a', None, None, None, None, None] }
 
         self._run_test(docs, as_dict)
 
@@ -103,8 +106,8 @@ class TestUnsupportedDataType(TestBsonToArrowConversionBase):
 
         schema = Schema({'_id': ObjectId,
                          'data': int64(),
-                         'title': pyarrow.string() })
+                         'fake':  pyarrow.float16() })
         msg =  ("Unsupported data type in schema for field " +
-                '"title" of type "string"')
+                '"fake" of type "halffloat"')
         with self.assertRaisesRegex(ValueError, msg):
             PyMongoArrowContext.from_schema(schema)
