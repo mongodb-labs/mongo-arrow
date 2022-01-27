@@ -103,7 +103,6 @@ class TestInvalidBsonToArrowConversion(TestBsonToArrowConversionBase):
 class TestUnsupportedDataType(TestBsonToArrowConversionBase):
 
     def test_simple(self):
-
         schema = Schema({'_id': ObjectId,
                          'data': int64(),
                          'fake':  pyarrow.float16() })
@@ -111,3 +110,25 @@ class TestUnsupportedDataType(TestBsonToArrowConversionBase):
                 '"fake" of type "halffloat"')
         with self.assertRaisesRegex(ValueError, msg):
             PyMongoArrowContext.from_schema(schema)
+
+
+class TestNonAsciiFieldName(TestBsonToArrowConversionBase):
+
+    def setUp(self):
+        self.schema = Schema({'_id': ObjectId,
+                              'dätá': int64()})
+        self.context = PyMongoArrowContext.from_schema(
+            self.schema)
+
+    def test_simple(self):
+        ids = [ObjectId() for i in range(4)]
+        docs = [{'_id': ids[0], 'dätá': 10 },
+                {'_id': ids[1], 'dätá': 20 },
+                {'_id': ids[2], 'dätá': 30 },
+                {'_id': ids[3], 'dätá': 40 }]
+        as_dict = {
+            '_id': [oid.binary for oid in ids] ,
+            'dätá': [10, 20, 30, 40]
+        }
+
+        self._run_test(docs, as_dict)
