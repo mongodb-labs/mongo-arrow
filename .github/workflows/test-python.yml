@@ -66,7 +66,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.9]
-      fail-fast: false
+    name: Documentation
     steps:
       - uses: actions/checkout@v2
       - name: Base Setup
@@ -75,14 +75,14 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
+          activate-environment: mongo_arrow_documentation
+          miniforge-variant: Mambaforge
+          environment-file: bindings/python/docs/environment.yml
           python-version: ${{ matrix.python-version }}
       - name: Build docs
+        shell: bash -l {0}
+        working-directory: ./bindings/python/docs
         run: |
           set -eux
-          pushd docs
-          conda env create -f environment.yml
-          conda activate mongo_arrow_documentation
           pip install ..
           make html SPHINXOPTS="-W"
-          conda deactivate
-          popd
