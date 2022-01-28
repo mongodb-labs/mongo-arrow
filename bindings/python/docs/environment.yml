@@ -5,3 +5,5 @@ dependencies:
 - python=3.9
 - sphinx
 - libbson
+variables:
+  LIBBSON_INSTALL_DIR: %LIBRARY_PREFIX%
