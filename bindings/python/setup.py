@@ -38,13 +38,18 @@ def query_pkgconfig(cmd):
 def append_libbson_flags(module):
     pc_path = 'libbson-1.0'
     install_dir = os.environ.get('LIBBSON_INSTALL_DIR')
-    lib_dir = 'bin' if IS_WIN else 'lib*'
+    dynamic_lib_dir = 'bin' if IS_WIN else 'lib*'
+    static_lib_dir = 'lib*'
 
     # If no install dir is given, try looking for an installed python
     # package (e.g. libbson from conda-forge).
     if not install_dir:
-        install_dir = os.path.join(sys.base_prefix, 'lib')
-        lib_dir = ''
+        if not IS_WIN:
+            install_dir = os.path.join(sys.base_prefix, 'lib')
+            dynamic_lib_dir = ''
+            static_lib_dir = ''
+        else:
+            install_dir = os.path.join(sys.base_prefix, 'Library')
 
     # Handle the copy-able library file if applicable.
     if COPY_LIBBSON:
@@ -55,14 +60,14 @@ def append_libbson_flags(module):
         else:  # windows
             lib_file = 'bson-1.0.dll'
 
-        lib_glob = glob.glob(os.path.join(install_dir, lib_dir))
+        lib_glob = glob.glob(os.path.join(install_dir, dynamic_lib_dir))
         if lib_glob:
             lib_file = os.path.join(lib_glob[0], lib_file)
             if os.path.exists(lib_file):
                 shutil.copy(lib_file, BUILD_DIR)
 
     # Find the linkable library file, and explicity add it to the linker if on Windows.
-    lib_glob = glob.glob(os.path.join(install_dir, lib_dir))
+    lib_glob = glob.glob(os.path.join(install_dir, static_lib_dir))
     if len(lib_glob) != 1:
         warnings.warn(f"Unable to locate libbson in {install_dir}")
     else:
