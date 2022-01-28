@@ -84,4 +84,5 @@ jobs:
         working-directory: ./bindings/python/docs
         run: |
           set -eux
+          pip install ..
           make html SPHINXOPTS="-W"
