@@ -6,4 +6,4 @@ dependencies:
 - sphinx
 - libbson
 variables:
-  LIBBSON_INSTALL_DIR: %LIBRARY_PREFIX%
+  LIBBSON_INSTALL_DIR: ${LIBRARY_PREFIX}
