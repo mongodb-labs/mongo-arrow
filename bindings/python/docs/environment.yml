@@ -1,0 +1,7 @@
+name: mongo_arrow_documentation
+channels:
+  - conda-forge
+dependencies:
+- python=3.9
+- sphinx
+- libbson

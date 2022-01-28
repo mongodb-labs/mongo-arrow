@@ -37,7 +37,7 @@ respectively, and '_id' that is an `ObjectId`, your schema can be defined as::
     '_id': ObjectId,
     'f1': pyarrow.int32(),
     'f2': pyarrow.timestamp('ms')
-})
+  })
 
 Unsupported data types in a schema cause a ``ValueError`` identifying the
 field and its data type.
