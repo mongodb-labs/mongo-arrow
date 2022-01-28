@@ -3,7 +3,7 @@ from setuptools import setup
 
 import glob
 import os
-import re
+import sys
 import subprocess
 from sys import platform
 import warnings
@@ -38,43 +38,47 @@ def query_pkgconfig(cmd):
 def append_libbson_flags(module):
     pc_path = 'libbson-1.0'
     install_dir = os.environ.get('LIBBSON_INSTALL_DIR')
-    if install_dir:
-        # Handle the copy-able library file if applicable.
-        if COPY_LIBBSON:
-            if platform == "darwin":
-                lib_file = "libbson-1.0.0.dylib"
-            elif platform == "linux":
-                lib_file = "libbson-1.0.so.0"
-            else:  # windows
-                lib_file = 'bson-1.0.dll'
-            lib_dir = 'bin' if IS_WIN else 'lib*'
-            lib_dir = glob.glob(os.path.join(install_dir, lib_dir))
-            if lib_dir:
-                lib_file = os.path.join(lib_dir[0], lib_file)
-                if os.path.exists(lib_file):
-                    shutil.copy(lib_file, BUILD_DIR)
+    lib_dir = 'bin' if IS_WIN else 'lib*'
 
-        # Find the linkable library file, and explicity add it to the linker if on Windows.
-        lib_dirs = glob.glob(os.path.join(install_dir, "lib*"))
-        if len(lib_dirs) != 1:
-            warnings.warn(f"Unable to locate libbson in {install_dir}")
-        else:
-            lib_dir = lib_dirs[0]
-            if IS_WIN:
-                # Note: we replace any forward slashes with backslashes so the path
-                # can be parsed by bash.
-                lib_path = os.path.join(lib_dir, 'bson-1.0.lib').replace(os.sep, '/')
-                if os.path.exists(lib_path):
-                    module.extra_link_args = [lib_path]
-                    include_dir = os.path.join(install_dir, 'include', 'libbson-1.0').replace(os.sep, '/')
-                    module.include_dirs.append(include_dir)
-                else:
-                    raise ValueError(f'Could not find the compiled libbson in {install_dir}')
-            pc_path = os.path.join(
-                install_dir, lib_dir, 'pkgconfig', 'libbson-1.0.pc')
+    # If no install dir is given, try looking for an installed python
+    # package (e.g. libbson from conda-forge).
+    if not install_dir:
+        install_dir = os.path.join(sys.base_prefix, 'lib')
+        lib_dir = ''
 
-    elif IS_WIN:
-        raise ValueError('We require a LIBBSON_INSTALL_DIR with a compiled library on Windows')
+    # Handle the copy-able library file if applicable.
+    if COPY_LIBBSON:
+        if platform == "darwin":
+            lib_file = "libbson-1.0.0.dylib"
+        elif platform == "linux":
+            lib_file = "libbson-1.0.so.0"
+        else:  # windows
+            lib_file = 'bson-1.0.dll'
+
+        lib_glob = glob.glob(os.path.join(install_dir, lib_dir))
+        if lib_glob:
+            lib_file = os.path.join(lib_glob[0], lib_file)
+            if os.path.exists(lib_file):
+                shutil.copy(lib_file, BUILD_DIR)
+
+    # Find the linkable library file, and explicity add it to the linker if on Windows.
+    lib_glob = glob.glob(os.path.join(install_dir, lib_dir))
+    if len(lib_glob) != 1:
+        warnings.warn(f"Unable to locate libbson in {install_dir}")
+    else:
+        lib_dir = lib_glob[0]
+        if IS_WIN:
+            # Note: we replace any forward slashes with backslashes so the path
+            # can be parsed by bash.
+            lib_path = os.path.join(lib_dir, 'bson-1.0.lib').replace(os.sep, '/')
+            if os.path.exists(lib_path):
+                module.extra_link_args = [lib_path]
+                include_dir = os.path.join(install_dir, 'include', 'libbson-1.0').replace(os.sep, '/')
+                module.include_dirs.append(include_dir)
+            else:
+                raise ValueError(f'Could not find the compiled libbson in {install_dir}')
+        pc_path = os.path.join(
+            install_dir, lib_dir, 'pkgconfig', 'libbson-1.0.pc')
 
     if IS_WIN:
         # We have added the library file without raising an error, so return.
