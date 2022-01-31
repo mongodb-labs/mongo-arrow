@@ -90,11 +90,10 @@ def append_libbson_flags(module):
         # Prefer system-installed libbson, falling back to the python
         # local version.
         version = query_pkgconfig(f"pkg-config --version {LIBBSON_NAME}")
-        if version:
+        if not version:
             install_dir = PurePosixPath(sys.base_prefix)
-            version = None
 
-    if not version:
+    if install_dir and not version:
         pc_path = install_dir / lib_dir / 'pkgconfig' / f'{LIBBSON_NAME}.pc'
         version = query_pkgconfig(f"pkg-config --version {pc_path}")
 
