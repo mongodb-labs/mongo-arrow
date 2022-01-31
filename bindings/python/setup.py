@@ -52,8 +52,6 @@ def get_bson_install_dir():
 
 def append_libbson_flags_win(module):
     install_dir = get_bson_install_dir()
-    dynamic_lib_dir = 'bin'
-    static_lib_dir = 'lib*'
     err_msg = f'Could not find the compiled libbson in {install_dir}'
 
     # If no install dir is given, try looking for
@@ -63,17 +61,14 @@ def append_libbson_flags_win(module):
 
     # Handle copying the dynamic library if applicable.
     if COPY_LIBBSON:
-        lib_file = 'bson-1.0.dll'
-        lib_glob = glob.glob(str(install_dir / dynamic_lib_dir))
-        if not lib_glob:
+        dll_file = install_dir / 'bin' / 'bson-1.0.dll'
+        if not os.path.exists(dll_file):
             raise Value(err_msg)
-        lib_file = PurePosixPath(lib_glob[0], lib_file)
-        if os.path.exists(lib_file):
-            shutil.copy(lib_file, BUILD_DIR)
+        shutil.copy(dll_file, BUILD_DIR)
 
 
-    # Find the linkable library file, and explicity add it to the linker.
-    lib_glob = glob.glob(str(install_dir / static_lib_dir / 'bson-1.0.lib'))
+    # Find the static library, and explicity add it to the linker.
+    lib_glob = glob.glob(str(install_dir / 'lib*' / 'bson-1.0.lib'))
     if len(lib_glob) != 1:
         raise ValueError(err_msg)
 
@@ -97,8 +92,9 @@ def append_libbson_flags(module):
         version = query_pkgconfig(f"pkg-config --version {LIBBSON_NAME}")
         if version:
             install_dir = PurePosixPath(sys.base_prefix)
+            version = None
 
-    if install_dir:
+    if not version:
         pc_path = install_dir / lib_dir / 'pkgconfig' / f'{LIBBSON_NAME}.pc'
         version = query_pkgconfig(f"pkg-config --version {pc_path}")
 
