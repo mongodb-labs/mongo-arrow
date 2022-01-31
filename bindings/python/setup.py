@@ -93,7 +93,10 @@ def append_libbson_flags(module):
             install_dir = PurePosixPath(sys.base_prefix)
 
     if install_dir and not version:
-        pc_path = install_dir / 'lib' / 'pkgconfig' / f'{LIBBSON_NAME}.pc'
+        pc_glob = glob.glob(str(install_dir / 'lib*' / 'pkgconfig'))
+        if not pc_glob:
+            raise ValueError(err_msg)
+        pc_path = PurePosixPath(pc_glob[0]) / f'{LIBBSON_NAME}.pc'
         version = query_pkgconfig(f"pkg-config --version {pc_path}")
 
     if not version:
@@ -108,7 +111,7 @@ def append_libbson_flags(module):
         else:
             raise RuntimeError(f'Unsupported Platform {platform}')
 
-        lib_glob = glob.glob(str(install_dir / 'lib' / lib_file))
+        lib_glob = glob.glob(str(install_dir / 'lib*' / lib_file))
         if len(lib_glob) != 1:
             raise ValueError(err_msg)
         shutil.copy(lib_glob[0], BUILD_DIR)
