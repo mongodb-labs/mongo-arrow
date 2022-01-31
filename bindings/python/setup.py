@@ -86,7 +86,7 @@ def append_libbson_flags(module):
     pc_path = LIBBSON_NAME
     install_dir = get_bson_install_dir()
     lib_dir = 'lib*'
-    exists = False
+    version = None
     err_msg = f'Could not find "{LIBBSON_NAME}" library in {install_dir}'
 
     # If no install dir is given, try looking for a system package or
@@ -94,15 +94,15 @@ def append_libbson_flags(module):
     if not install_dir:
         # Prefer system-installed libbson, falling back to the python
         # local version.
-        exists = query_pkgconfig(f"pkg-config --exists {LIBBSON_NAME}")
-        if not exists:
+        version = query_pkgconfig(f"pkg-config --version {LIBBSON_NAME}")
+        if version:
             install_dir = PurePosixPath(sys.base_prefix)
 
     if install_dir:
         pc_path = install_dir / lib_dir / 'pkgconfig' / f'{LIBBSON_NAME}.pc'
-        exists = query_pkgconfig(f"pkg-config --exists {pc_path}")
+        version = query_pkgconfig(f"pkg-config --version {pc_path}")
 
-    if not exists:
+    if not version:
         raise ValueError(err_msg)
 
     # Handle copying the dynamic libary if applicable.
