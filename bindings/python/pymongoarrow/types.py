@@ -43,11 +43,9 @@ class _BsonArrowTypes(enum.Enum):
     string = 6
 
 
-_oid_type = ObjectIdType().id
-
 
 def _is_objectid(obj):
-    return obj.id == _oid_type
+    return isinstance(obj, ObjectIdType)
 
 
 _TYPE_NORMALIZER_FACTORY = {
