@@ -49,8 +49,8 @@ class _BsonArrowTypes(enum.Enum):
 
 
 def _is_objectid(obj):
-    return (hasattr(obj, 'type_marker') and
-        obj.type_marker == _BsonArrowTypes.objectid)
+    return (hasattr(obj, '_type_marker') and
+        obj._type_marker == _BsonArrowTypes.objectid)
 
 
 _TYPE_NORMALIZER_FACTORY = {
