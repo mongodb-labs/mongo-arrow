@@ -31,6 +31,10 @@ class ObjectIdType(PyExtensionType):
     def __reduce__(self):
         return ObjectIdType, ()
 
+    @property
+    def _type_marker(self):
+        return _BsonArrowTypes.objectid
+
 
 # Internal Type Handling.
 
@@ -45,7 +49,8 @@ class _BsonArrowTypes(enum.Enum):
 
 
 def _is_objectid(obj):
-    return isinstance(obj, ObjectIdType)
+    return (hasattr(obj, 'type_marker') and
+        obj.type_marker == _BsonArrowTypes.objectid)
 
 
 _TYPE_NORMALIZER_FACTORY = {
