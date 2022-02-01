@@ -16,10 +16,23 @@ import enum
 
 from bson import Int64, ObjectId
 
-from pyarrow import timestamp, float64, int64, int32, string
+from pyarrow import timestamp, binary, float64, int64, int32, string
+from pyarrow import PyExtensionType
 from pyarrow import DataType as _ArrowDataType
 import pyarrow.types as _atypes
 
+
+# Custom Extension Types.
+
+class ObjectIdType(PyExtensionType):
+    def __init__(self):
+        PyExtensionType.__init__(self, binary(12))
+
+    def __reduce__(self):
+        return ObjectIdType, ()
+
+
+# Internal Type Handling.
 
 class _BsonArrowTypes(enum.Enum):
     datetime = 1
@@ -30,18 +43,21 @@ class _BsonArrowTypes(enum.Enum):
     string = 6
 
 
+_oid_type = ObjectIdType().id
+
+
+def _is_objectid(obj):
+    return obj.id == _oid_type
+
+
 _TYPE_NORMALIZER_FACTORY = {
     Int64: lambda _: int64(),
     float: lambda _: float64(),
     int: lambda _: int64(),
     datetime: lambda _: timestamp('ms'),     # TODO: add tzinfo support
-    ObjectId: lambda _: ObjectId,
+    ObjectId: lambda _: ObjectIdType(),
     str: lambda: string(),
 }
-
-
-def _is_objectid(obj):
-    return obj == ObjectId
 
 
 _TYPE_CHECKER_TO_INTERNAL_TYPE = {
@@ -74,15 +90,9 @@ def _get_internal_typemap(typemap):
     internal_typemap = {}
     for fname, ftype in typemap.items():
         for checker, internal_id in _TYPE_CHECKER_TO_INTERNAL_TYPE.items():
-            # Catch error where the pyarrow checkers are looking for an `id`
-            # attribute that might not exist on non-pyarrow types
-            # (like ObjectId).  For example, `is_int32()` checks for
-            # `t.id == lib.Type_INT32`.
-            try:
-                if checker(ftype):
-                    internal_typemap[fname] = internal_id
-            except AttributeError:
-                pass
+            if checker(ftype):
+                internal_typemap[fname] = internal_id
+
         if fname not in internal_typemap:
             raise ValueError('Unsupported data type in schema for ' +
                 f'field "{fname}" of type "{ftype}"')

@@ -19,7 +19,7 @@ import pyarrow
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import int32, int64, string, ObjectId
+from pymongoarrow.types import int32, int64, string, ObjectId, ObjectIdType
 
 
 class TestBsonToArrowConversionBase(TestCase):
@@ -115,7 +115,7 @@ class TestUnsupportedDataType(TestBsonToArrowConversionBase):
 class TestNonAsciiFieldName(TestBsonToArrowConversionBase):
 
     def setUp(self):
-        self.schema = Schema({'_id': ObjectId,
+        self.schema = Schema({'_id': ObjectIdType(),
                               'dätá': int64()})
         self.context = PyMongoArrowContext.from_schema(
             self.schema)
