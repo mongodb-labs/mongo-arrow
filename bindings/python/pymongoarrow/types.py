@@ -22,22 +22,6 @@ from pyarrow import DataType as _ArrowDataType
 import pyarrow.types as _atypes
 
 
-# Custom Extension Types.
-
-class ObjectIdType(PyExtensionType):
-    def __init__(self):
-        PyExtensionType.__init__(self, binary(12))
-
-    def __reduce__(self):
-        return ObjectIdType, ()
-
-    @property
-    def _type_marker(self):
-        return _BsonArrowTypes.objectid
-
-
-# Internal Type Handling.
-
 class _BsonArrowTypes(enum.Enum):
     datetime = 1
     double = 2
@@ -47,6 +31,19 @@ class _BsonArrowTypes(enum.Enum):
     string = 6
 
 
+# Custom Extension Types.
+
+class ObjectIdType(PyExtensionType):
+    _type_marker = _BsonArrowTypes.objectid
+
+    def __init__(self):
+        PyExtensionType.__init__(self, binary(12))
+
+    def __reduce__(self):
+        return ObjectIdType, ()
+
+
+# Internal Type Handling.
 
 def _is_objectid(obj):
     return (hasattr(obj, '_type_marker') and
