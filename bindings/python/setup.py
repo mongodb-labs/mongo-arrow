@@ -119,7 +119,7 @@ def append_arrow_flags(module):
 
     # Handle the arrow library files manually.
     # Alternative to using pyarrow.create_library_symlinks().
-    # You can use MONGO_LIBARROW_DIR to explicitly set the location of the 
+    # You can use MONGO_LIBARROW_DIR to explicitly set the location of the
     # arrow libraries (for instance in a conda build).
     # We first check for an unmodified path to the library,
     # then look for a library file with a version modifier, e.g. libarrow.600.dylib.

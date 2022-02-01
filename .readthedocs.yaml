@@ -1,0 +1,10 @@
+version: 2
+sphinx:
+  configuration: ./bindings/python/docs/source/conf.py
+conda:
+  environment: ./bindings/python/docs/environment.yml
+python:
+  install:
+    # install the package itself
+    - method: pip
+      path: ./bindings/python

@@ -12,8 +12,6 @@
 #
 import os
 import os.path as p
-import sys
-sys.path.insert(0, os.path.abspath('../..'))
 
 
 # -- Project information -----------------------------------------------------
@@ -43,11 +41,6 @@ extensions = [
     'sphinx.ext.intersphinx'
 ]
 
-# https://docs.readthedocs.io/en/stable/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-autodoc_mock_imports = ['pyarrow',
-                        'pymongoarrow.lib',
-                        'bson']
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -72,7 +65,7 @@ html_theme_options = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
 
 # These paths are either relative to html_static_path
 # or fully qualified paths (eg. https://...)

@@ -83,6 +83,7 @@ Indices and tables
    installation
    quickstart
    supported_types
+   faq
    api/index
    changelog
    developer/index
