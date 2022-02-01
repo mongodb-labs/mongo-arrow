@@ -5,4 +5,4 @@ dependencies:
 - python=3.9
 - sphinx
 - libbson
-- pip
+- pkg-config

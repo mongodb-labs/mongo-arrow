@@ -1,23 +1,17 @@
-from multiprocessing import Value
 import shutil
 from setuptools import setup
 
 import glob
 import os
-import sys
+import re
 import subprocess
-import warnings
-
-# We use posix paths everywhere so bash can parse the paths
-# on Windows.
-from pathlib import PurePosixPath
 from sys import platform
+import warnings
 
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-BUILD_DIR = PurePosixPath(HERE) / 'pymongoarrow'
+BUILD_DIR = os.path.join(HERE, 'pymongoarrow')
 IS_WIN = platform == 'win32'
-LIBBSON_NAME = 'libbson-1.0'
 
 # Find and copy the binary arrow files, unless
 # MONGO_NO_COPY_ARROW_LIB is set (for instance in a conda build).
@@ -41,175 +35,125 @@ def query_pkgconfig(cmd):
     return output
 
 
-def get_bson_install_dir():
-    install_dir_env = os.environ.get('LIBBSON_INSTALL_DIR')
-    if install_dir_env:
-        install_dir = PurePosixPath(install_dir_env)
-    else:
-        install_dir = None
-    return install_dir
-
-
-def append_libbson_flags_win(module):
-    install_dir = get_bson_install_dir()
-    err_msg = f'Could not find the compiled libbson in {install_dir}'
-
-    # If no install dir is given, try looking for
-    # an installed python package (e.g. libbson from conda-forge).
-    if not install_dir:
-        install_dir = PurePosixPath(sys.base_prefix) / 'Library'
-
-    # Handle copying the dynamic library if applicable.
-    if COPY_LIBBSON:
-        dll_file = install_dir / 'bin' / 'bson-1.0.dll'
-        if not os.path.exists(dll_file):
-            raise Value(err_msg)
-        shutil.copy(dll_file, BUILD_DIR)
-
-
-    # Find the static library, and explicity add it to the linker.
-    lib_glob = glob.glob(str(install_dir / 'lib*' / 'bson-1.0.lib'))
-    if len(lib_glob) != 1:
-        raise ValueError(err_msg)
-
-    module.extra_link_args = [lib_glob[0]]
-    include_dir = install_dir / 'include' / LIBBSON_NAME
-    module.include_dirs.append(str(include_dir))
-
-
 def append_libbson_flags(module):
-    pc_path = LIBBSON_NAME
-    install_dir = get_bson_install_dir()
-    exists = None
-    err_msg = f'Could not find "{LIBBSON_NAME}" library in {install_dir}'
+    pc_path = 'libbson-1.0'
+    install_dir = os.environ.get('LIBBSON_INSTALL_DIR')
+    if install_dir:
+        # Handle the copy-able library file if applicable.
+        if COPY_LIBBSON:
+            if platform == "darwin":
+                lib_file = "libbson-1.0.0.dylib"
+            elif platform == "linux":
+                lib_file = "libbson-1.0.so.0"
+            else:  # windows
+                lib_file = 'bson-1.0.dll'
+            lib_dir = 'bin' if IS_WIN else 'lib*'
+            lib_dir = glob.glob(os.path.join(install_dir, lib_dir))
+            if lib_dir:
+                lib_file = os.path.join(lib_dir[0], lib_file)
+                if os.path.exists(lib_file):
+                    shutil.copy(lib_file, BUILD_DIR)
 
-    # If no install dir is given, try looking for a system package or
-    # an installed python package (e.g. libbson from conda-forge).
-    if not install_dir:
-        # Prefer system-installed libbson, falling back to the python
-        # local version.
-        exists = query_pkgconfig(f"pkg-config --exists {LIBBSON_NAME}")
-        if exists is None:
-            install_dir = PurePosixPath(sys.base_prefix)
-
-    if exists is None:
-        assert install_dir is not None
-        pc_glob = glob.glob(str(install_dir / 'lib*' / 'pkgconfig'))
-        if not pc_glob:
-            raise ValueError(err_msg)
-        pc_path = PurePosixPath(pc_glob[0]) / f'{LIBBSON_NAME}.pc'
-        exists = query_pkgconfig(f"pkg-config --exists {pc_path}")
-
-    if exists is None:
-        raise ValueError(err_msg)
-
-    # Handle copying the dynamic libary if applicable.
-    if install_dir and COPY_LIBBSON:
-        if platform == "darwin":
-            lib_file = "libbson-1.0.0.dylib"
-        elif platform == "linux":
-            lib_file = "libbson-1.0.so.0"
+        # Find the linkable library file, and explicity add it to the linker if on Windows.
+        lib_dirs = glob.glob(os.path.join(install_dir, "lib*"))
+        if len(lib_dirs) != 1:
+            warnings.warn(f"Unable to locate libbson in {install_dir}")
         else:
-            raise RuntimeError(f'Unsupported Platform {platform}')
+            lib_dir = lib_dirs[0]
+            if IS_WIN:
+                # Note: we replace any forward slashes with backslashes so the path
+                # can be parsed by bash.
+                lib_path = os.path.join(lib_dir, 'bson-1.0.lib').replace(os.sep, '/')
+                if os.path.exists(lib_path):
+                    module.extra_link_args = [lib_path]
+                    include_dir = os.path.join(install_dir, 'include', 'libbson-1.0').replace(os.sep, '/')
+                    module.include_dirs.append(include_dir)
+                else:
+                    raise ValueError(f'Could not find the compiled libbson in {install_dir}')
+            pc_path = os.path.join(
+                install_dir, lib_dir, 'pkgconfig', 'libbson-1.0.pc')
 
-        lib_glob = glob.glob(str(install_dir / 'lib*' / lib_file))
-        if len(lib_glob) != 1:
-            raise ValueError(err_msg)
-        shutil.copy(lib_glob[0], BUILD_DIR)
+    elif IS_WIN:
+        raise ValueError('We require a LIBBSON_INSTALL_DIR with a compiled library on Windows')
 
-    cflags = query_pkgconfig(f"pkg-config --cflags {pc_path}")
+    if IS_WIN:
+        # We have added the library file without raising an error, so return.
+        return
+
+    lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
+    if not lnames:
+        raise ValueError(f'Could not find "{pc_path}" library')
+
+    cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path))
     if cflags:
         orig_cflags = os.environ.get('CFLAGS', '')
         os.environ['CFLAGS'] = cflags + " " + orig_cflags
 
-    ldflags = query_pkgconfig(f"pkg-config --libs {pc_path}")
+    ldflags = query_pkgconfig("pkg-config --libs {}".format(pc_path))
     if ldflags:
         orig_ldflags = os.environ.get('LDFLAGS', '')
         os.environ['LDFLAGS'] = ldflags + " " + orig_ldflags
 
     # https://cython.readthedocs.io/en/latest/src/tutorial/external.html#dynamic-linking
     # Strip whitespace to avoid weird linker failures on manylinux images
-    lnames = query_pkgconfig(f"pkg-config --libs-only-l {pc_path}")
-    if lnames:
-        libnames = [lname.lstrip('-l').strip() for lname in lnames.split()]
-        module.libraries.extend(libnames)
-
-
-def get_arrow_lib():
-    # Handle the arrow library files manually.
-    # Alternative to using pyarrow.create_library_symlinks().
-    # You can use MONGO_LIBARROW_DIR to explicitly set the location of the
-    # arrow libraries (for instance in a conda build).
-    # We first check for an unmodified path to the library,
-    # then look for a library file with a version modifier, e.g. libarrow.600.dylib.
-    import pyarrow as pa
-    arrow_lib = os.environ.get('MONGO_LIBARROW_DIR', pa.get_library_dirs()[0])
-    return PurePosixPath(arrow_lib)
-
-
-def append_arrow_flags_win(module):
-    import numpy as np
-    import pyarrow as pa
-
-    arrow_lib = get_arrow_lib()
-    module.include_dirs.append(np.get_include())
-    module.include_dirs.append(pa.get_include())
-
-    # Find the appropriate library file and optionally copy it locally.
-    for name in pa.get_libraries():
-        if COPY_LIBARROW:
-            lib_file = arrow_lib / f'{name}.dll'
-            if not os.path.exists(lib_file):
-                raise ValueError('Could not find compiled arrow library')
-            shutil.copy(lib_file, BUILD_DIR)
-        lib_file = arrow_lib / f'{name}.lib'
-        module.extra_link_args.append(str(lib_file))
-        continue
+    libnames = [lname.lstrip('-l').strip() for lname in lnames.split()]
+    module.libraries.extend(libnames)
 
 
 def append_arrow_flags(module):
     import numpy as np
     import pyarrow as pa
 
-    arrow_lib = get_arrow_lib()
+    if IS_WIN:
+        module.include_dirs.append(np.get_include())
+        module.include_dirs.append(pa.get_include())
+    else:
+        module.extra_compile_args.append("-isystem" + pa.get_include())
+        module.extra_compile_args.append("-isystem" + np.get_include())
+        # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
+        # - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
+        # - https://arrow.apache.org/docs/python/extending.html#example
+        if "std=" not in os.environ.get("CXXFLAGS", ""):
+            module.extra_compile_args.append("-std=c++11")
+            module.extra_compile_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
 
-    module.extra_compile_args.append("-isystem" + pa.get_include())
-    module.extra_compile_args.append("-isystem" + np.get_include())
-    # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
-    # - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
-    # - https://arrow.apache.org/docs/python/extending.html#example
-    if "std=" not in os.environ.get("CXXFLAGS", ""):
-        module.extra_compile_args.append("-std=c++11")
-        module.extra_compile_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
-
+    # Handle the arrow library files manually.
+    # Alternative to using pyarrow.create_library_symlinks().
+    # You can use MONGO_LIBARROW_DIR to explicitly set the location of the
+    # arrow libraries (for instance in a conda build).
+    # We first check for an unmodified path to the library,
+    # then look for a library file with a version modifier, e.g. libarrow.600.dylib.
+    arrow_lib = os.environ.get('MONGO_LIBARROW_DIR', pa.get_library_dirs()[0])
     if platform == "darwin":
         exts = ['.dylib', '.*.dylib']
     elif platform == 'linux':
         exts = ['.so', '.so.*']
     else:
-        raise Value(f'Unsupported platform {platform}')
+        # Windows is handled differently (see below)
+        pass
 
     # Find the appropriate library file and optionally copy it locally.
     for name in pa.get_libraries():
+        if IS_WIN:
+            if COPY_LIBARROW:
+                lib_file = os.path.join(arrow_lib, f'{name}.dll')
+                if not os.path.exists(lib_file):
+                    raise ValueError('Could not find compiled arrow library')
+                shutil.copy(lib_file, BUILD_DIR)
+            lib_file = os.path.join(arrow_lib, f'{name}.lib')
+            module.extra_link_args.append(lib_file)
+            continue
+
         for ext in exts:
-            files = glob.glob(str(arrow_lib / f'lib{name}{ext}'))
+            files = glob.glob(os.path.join(arrow_lib, f'lib{name}{ext}'))
             if not files:
                 continue
-            path = PurePosixPath(files[0])
+            path = files[0]
             if COPY_LIBARROW:
                 shutil.copy(path, BUILD_DIR)
-            module.extra_link_args.append(str(BUILD_DIR / path.name))
+                path = os.path.join(BUILD_DIR, os.path.basename(path))
+            module.extra_link_args.append(path)
             break
-
-
-def append_extra_link_args(module):
-    # Ensure our Cython extension can dynamically link to libraries
-    # - https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
-    # - https://nehckl0.medium.com/creating-relocatable-linux-executables-by-setting-rpath-with-origin-45de573a2e98
-    if platform == "darwin":
-        module.extra_link_args += ["-rpath", "@loader_path"]
-    elif platform == 'linux':
-        module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
 
 
 def get_extension_modules():
@@ -222,13 +166,15 @@ def get_extension_modules():
         return []
     modules = cythonize(['pymongoarrow/*.pyx'])
     for module in modules:
-        if IS_WIN:
-            append_libbson_flags_win(module)
-            append_arrow_flags_win(module)
-        else:
-            append_libbson_flags(module)
-            append_arrow_flags(module)
-            append_extra_link_args(module)
+        append_libbson_flags(module)
+        append_arrow_flags(module)
+        # Ensure our Cython extension can dynamically link to libraries
+        # - https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
+        # - https://nehckl0.medium.com/creating-relocatable-linux-executables-by-setting-rpath-with-origin-45de573a2e98
+        if platform == "darwin":
+            module.extra_link_args += ["-rpath", "@loader_path"]
+        elif platform == 'linux':
+            module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
     return modules
 
 
