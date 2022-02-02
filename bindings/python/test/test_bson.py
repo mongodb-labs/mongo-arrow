@@ -15,7 +15,7 @@ from unittest import TestCase
 
 from bson import encode, InvalidBSON
 
-import pyarrow
+import pyarrow as pa
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
@@ -105,7 +105,7 @@ class TestUnsupportedDataType(TestBsonToArrowConversionBase):
     def test_simple(self):
         schema = Schema({'_id': ObjectId,
                          'data': int64(),
-                         'fake':  pyarrow.float16() })
+                         'fake':  pa.float16() })
         msg =  ("Unsupported data type in schema for field " +
                 '"fake" of type "halffloat"')
         with self.assertRaisesRegex(ValueError, msg):
@@ -132,3 +132,26 @@ class TestNonAsciiFieldName(TestBsonToArrowConversionBase):
         }
 
         self._run_test(docs, as_dict)
+
+
+class TestSerializeExtensions(TestCase):
+    # Follows example in
+    # https://arrow.apache.org/docs/python/extending_types.html#defining-extension-types-user-defined-types
+
+    def get_result(self, arr):
+        batch = pa.RecordBatch.from_arrays([arr], ["ext"])
+        sink = pa.BufferOutputStream()
+        with pa.RecordBatchStreamWriter(sink, batch.schema) as writer:
+            writer.write_batch(batch)
+        buf = sink.getvalue()
+        with pa.ipc.open_stream(buf) as reader:
+            result = reader.read_all()
+        return result
+
+    def test_object_id_type(self):
+        obj_id_type = ObjectIdType()
+        oids = [ObjectId().binary for _ in range(4)]
+        storage_array = pa.array(oids, pa.binary(12))
+        arr = pa.ExtensionArray.from_storage(obj_id_type, storage_array)
+        result = self.get_result(arr)
+        assert isinstance(result.column('ext').type, ObjectIdType)

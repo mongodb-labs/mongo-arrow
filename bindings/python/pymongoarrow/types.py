@@ -32,12 +32,14 @@ class _BsonArrowTypes(enum.Enum):
 
 
 # Custom Extension Types.
+# See https://arrow.apache.org/docs/python/extending_types.html#defining-extension-types-user-defined-types
+# for details.
 
 class ObjectIdType(PyExtensionType):
     _type_marker = _BsonArrowTypes.objectid
 
     def __init__(self):
-        PyExtensionType.__init__(self, binary(12))
+        super().__init__(binary(12))
 
     def __reduce__(self):
         return ObjectIdType, ()
@@ -46,8 +48,8 @@ class ObjectIdType(PyExtensionType):
 # Internal Type Handling.
 
 def _is_objectid(obj):
-    return (hasattr(obj, '_type_marker') and
-        obj._type_marker == _BsonArrowTypes.objectid)
+    type_marker = getattr(obj, '_type_marker', '')
+    return type_marker == ObjectIdType._type_marker
 
 
 _TYPE_NORMALIZER_FACTORY = {
