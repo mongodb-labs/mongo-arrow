@@ -18,7 +18,7 @@ Support for additional types will be added in subsequent releases.
    * - String
      - :class:`py.str`, an instance of :class:`pyarrow.string`
    * - ObjectId
-     - :class:`py.bytes`, :class:`bson.ObjectId`, an instance of :class:`pyarrow.FixedSizeBinaryScalar`
+     - :class:`py.bytes`, :class:`bson.ObjectId`, an instance of :class:`pymongoarrow.types.ObjectIdType`, an instance of :class:`pyarrow.FixedSizeBinaryScalar`
    * - 64-bit binary floating point
      - :class:`py.float`, an instance of :meth:`pyarrow.float64`
    * - 32-bit integer

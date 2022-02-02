@@ -15,11 +15,11 @@ from unittest import TestCase
 
 from bson import encode, InvalidBSON
 
-import pyarrow
+import pyarrow as pa
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import int32, int64, string, ObjectId
+from pymongoarrow.types import int32, int64, string, ObjectId, ObjectIdType
 
 
 class TestBsonToArrowConversionBase(TestCase):
@@ -105,7 +105,7 @@ class TestUnsupportedDataType(TestBsonToArrowConversionBase):
     def test_simple(self):
         schema = Schema({'_id': ObjectId,
                          'data': int64(),
-                         'fake':  pyarrow.float16() })
+                         'fake':  pa.float16() })
         msg =  ("Unsupported data type in schema for field " +
                 '"fake" of type "halffloat"')
         with self.assertRaisesRegex(ValueError, msg):
@@ -115,7 +115,7 @@ class TestUnsupportedDataType(TestBsonToArrowConversionBase):
 class TestNonAsciiFieldName(TestBsonToArrowConversionBase):
 
     def setUp(self):
-        self.schema = Schema({'_id': ObjectId,
+        self.schema = Schema({'_id': ObjectIdType(),
                               'dätá': int64()})
         self.context = PyMongoArrowContext.from_schema(
             self.schema)
@@ -132,3 +132,25 @@ class TestNonAsciiFieldName(TestBsonToArrowConversionBase):
         }
 
         self._run_test(docs, as_dict)
+
+
+class TestSerializeExtensions(TestCase):
+    # Follows example in
+    # https://arrow.apache.org/docs/python/extending_types.html#defining-extension-types-user-defined-types
+
+    def serialize_array(self, arr):
+        batch = pa.RecordBatch.from_arrays([arr], ["ext"])
+        sink = pa.BufferOutputStream()
+        with pa.RecordBatchStreamWriter(sink, batch.schema) as writer:
+            writer.write_batch(batch)
+        buf = sink.getvalue()
+        with pa.ipc.open_stream(buf) as reader:
+            result = reader.read_all()
+        return result.column('ext')
+
+    def test_object_id_type(self):
+        oids = [ObjectId().binary for _ in range(4)]
+        storage_array = pa.array(oids, pa.binary(12))
+        arr = pa.ExtensionArray.from_storage(ObjectIdType(), storage_array)
+        result = self.serialize_array(arr)
+        assert result.type._type_marker == ObjectIdType._type_marker

@@ -16,7 +16,8 @@ import enum
 
 from bson import Int64, ObjectId
 
-from pyarrow import timestamp, float64, int64, int32, string
+from pyarrow import timestamp, binary, float64, int64, int32, string
+from pyarrow import PyExtensionType
 from pyarrow import DataType as _ArrowDataType
 import pyarrow.types as _atypes
 
@@ -30,18 +31,35 @@ class _BsonArrowTypes(enum.Enum):
     string = 6
 
 
+# Custom Extension Types.
+# See https://arrow.apache.org/docs/python/extending_types.html#defining-extension-types-user-defined-types
+# for details.
+
+class ObjectIdType(PyExtensionType):
+    _type_marker = _BsonArrowTypes.objectid
+
+    def __init__(self):
+        super().__init__(binary(12))
+
+    def __reduce__(self):
+        return ObjectIdType, ()
+
+
+# Internal Type Handling.
+
+def _is_objectid(obj):
+    type_marker = getattr(obj, '_type_marker', '')
+    return type_marker == ObjectIdType._type_marker
+
+
 _TYPE_NORMALIZER_FACTORY = {
     Int64: lambda _: int64(),
     float: lambda _: float64(),
     int: lambda _: int64(),
     datetime: lambda _: timestamp('ms'),     # TODO: add tzinfo support
-    ObjectId: lambda _: ObjectId,
+    ObjectId: lambda _: ObjectIdType(),
     str: lambda: string(),
 }
-
-
-def _is_objectid(obj):
-    return obj == ObjectId
 
 
 _TYPE_CHECKER_TO_INTERNAL_TYPE = {
@@ -74,15 +92,9 @@ def _get_internal_typemap(typemap):
     internal_typemap = {}
     for fname, ftype in typemap.items():
         for checker, internal_id in _TYPE_CHECKER_TO_INTERNAL_TYPE.items():
-            # Catch error where the pyarrow checkers are looking for an `id`
-            # attribute that might not exist on non-pyarrow types
-            # (like ObjectId).  For example, `is_int32()` checks for
-            # `t.id == lib.Type_INT32`.
-            try:
-                if checker(ftype):
-                    internal_typemap[fname] = internal_id
-            except AttributeError:
-                pass
+            if checker(ftype):
+                internal_typemap[fname] = internal_id
+
         if fname not in internal_typemap:
             raise ValueError('Unsupported data type in schema for ' +
                 f'field "{fname}" of type "{ftype}"')
