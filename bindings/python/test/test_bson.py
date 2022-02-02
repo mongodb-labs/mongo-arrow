@@ -138,7 +138,7 @@ class TestSerializeExtensions(TestCase):
     # Follows example in
     # https://arrow.apache.org/docs/python/extending_types.html#defining-extension-types-user-defined-types
 
-    def get_result(self, arr):
+    def serialize_array(self, arr):
         batch = pa.RecordBatch.from_arrays([arr], ["ext"])
         sink = pa.BufferOutputStream()
         with pa.RecordBatchStreamWriter(sink, batch.schema) as writer:
@@ -146,12 +146,11 @@ class TestSerializeExtensions(TestCase):
         buf = sink.getvalue()
         with pa.ipc.open_stream(buf) as reader:
             result = reader.read_all()
-        return result
+        return result.column('ext')
 
     def test_object_id_type(self):
-        obj_id_type = ObjectIdType()
         oids = [ObjectId().binary for _ in range(4)]
         storage_array = pa.array(oids, pa.binary(12))
-        arr = pa.ExtensionArray.from_storage(obj_id_type, storage_array)
-        result = self.get_result(arr)
-        assert isinstance(result.column('ext').type, ObjectIdType)
+        arr = pa.ExtensionArray.from_storage(ObjectIdType(), storage_array)
+        result = self.serialize_array(arr)
+        assert result.type._type_marker == ObjectIdType._type_marker
