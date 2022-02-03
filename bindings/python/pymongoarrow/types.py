@@ -16,7 +16,7 @@ import enum
 
 from bson import Int64, ObjectId
 
-from pyarrow import timestamp, binary, float64, int64, int32, string
+from pyarrow import timestamp, binary, float64, int64, int32, string, bool_
 from pyarrow import PyExtensionType
 from pyarrow import DataType as _ArrowDataType
 import pyarrow.types as _atypes
@@ -29,6 +29,7 @@ class _BsonArrowTypes(enum.Enum):
     int64 = 4
     objectid = 5
     string = 6
+    bool = 7
 
 
 # Custom Extension Types.
@@ -59,6 +60,7 @@ _TYPE_NORMALIZER_FACTORY = {
     datetime: lambda _: timestamp('ms'),     # TODO: add tzinfo support
     ObjectId: lambda _: ObjectIdType(),
     str: lambda: string(),
+    bool: lambda: bool_(),
 }
 
 
@@ -69,6 +71,7 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_timestamp: _BsonArrowTypes.datetime,
     _is_objectid: _BsonArrowTypes.objectid,
     _atypes.is_string: _BsonArrowTypes.string,
+    _atypes.is_boolean: _BsonArrowTypes.bool,
 }
 
 

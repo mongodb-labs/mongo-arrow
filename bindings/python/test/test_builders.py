@@ -16,11 +16,11 @@ from datetime import datetime, timedelta
 from unittest import TestCase
 from bson.objectid import ObjectId
 
-from pyarrow import Array, timestamp, int32, int64
+from pyarrow import Array, timestamp, int32, int64, bool_
 
 from pymongoarrow.lib import (
     DatetimeBuilder, DoubleBuilder, Int32Builder, Int64Builder,
-    ObjectIdBuilder, StringBuilder)
+    ObjectIdBuilder, StringBuilder, BoolBuilder)
 
 
 class TestIntBuildersMixin:
@@ -146,3 +146,26 @@ class TestStringBuilder(TestCase):
         self.assertEqual(len(arr), 5)
         self.assertEqual(
             arr.to_pylist(), values + [None])
+
+
+class TestBoolBuilderMixin:
+    def test_simple(self):
+        builder = BoolBuilder()
+        builder.append(False)
+        builder.append_values([True, False, True, False, True, False])
+        builder.append_null()
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 8)
+        self.assertEqual(
+            arr.to_pylist(), [False, True, False, True, False, True, False,
+                              None])
+        self.assertEqual(arr.type, self.data_type)
+
+
+class TestBoolBuilder(TestCase, TestBoolBuilderMixin):
+    def setUp(self):
+        self.builder_cls = BoolBuilder
+        self.data_type = bool_()
