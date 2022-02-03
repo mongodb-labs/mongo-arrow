@@ -155,6 +155,7 @@ class TestSerializeExtensions(TestCase):
         result = self.serialize_array(arr)
         assert result.type._type_marker == ObjectIdType._type_marker
 
+
 class TestBooleanType(TestBsonToArrowConversionBase):
     def setUp(self):
         self.schema = Schema({'_id': ObjectId,
