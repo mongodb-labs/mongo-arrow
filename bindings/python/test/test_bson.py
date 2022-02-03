@@ -158,20 +158,18 @@ class TestSerializeExtensions(TestCase):
 
 class TestBooleanType(TestBsonToArrowConversionBase):
     def setUp(self):
-        self.schema = Schema({'_id': ObjectId,
-                              'data': bool_()})
+        self.schema = Schema({'data': bool_()})
         self.context = PyMongoArrowContext.from_schema(
             self.schema)
 
     def test_simple(self):
-        ids = [ObjectId() for i in range(4)]
-        docs = [{'_id': ids[0], 'data': True},
-                {'_id': ids[1], 'data': False},
-                {'_id': ids[2], 'data': True},
-                {'_id': ids[3], 'data': False}]
+        docs = [{'data': True},
+                {'data': False},
+                {'data': 19},
+                {'data': "string"},
+                {'data': False},
+                {'data': True}]
         as_dict = {
-            '_id': [oid.binary for oid in ids],
-            'data': [True, False, True, False]
+            'data': [True, False, None, None, False, True]
         }
-
         self._run_test(docs, as_dict)
