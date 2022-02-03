@@ -14,8 +14,9 @@
 from bson.codec_options import DEFAULT_CODEC_OPTIONS
 
 from pyarrow import timestamp, Table
-from pymongoarrow.lib import Int32Builder, Int64Builder, DoubleBuilder, \
-    DatetimeBuilder, ObjectIdBuilder, StringBuilder, BoolBuilder
+from pymongoarrow.lib import (Int32Builder, Int64Builder, DoubleBuilder,
+                              DatetimeBuilder, ObjectIdBuilder,
+                              StringBuilder, BoolBuilder)
 from pymongoarrow.types import _get_internal_typemap, _BsonArrowTypes
 
 
