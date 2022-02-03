@@ -72,6 +72,7 @@ def process_bson_stream(bson_stream, context):
     t_datetime = _BsonArrowTypes.datetime
     t_oid = _BsonArrowTypes.objectid
     t_string = _BsonArrowTypes.string
+    t_bool = _BsonArrowTypes.bool
     builder_map = context.builder_map
 
     # initialize count to current length of builders
@@ -127,6 +128,11 @@ def process_bson_stream(bson_stream, context):
                     elif ftype == t_datetime:
                         if value_t == BSON_TYPE_DATE_TIME:
                             builder.append(bson_iter_date_time(&doc_iter))
+                        else:
+                            builder.append_null()
+                    elif ftype == t_bool:
+                        if value_t == BSON_TYPE_BOOL:
+                            builder.append(bson_iter_bool(&doc_iter))
                         else:
                             builder.append_null()
                     else:
@@ -329,4 +335,32 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
         return self.dtype
 
     cdef shared_ptr[CTimestampBuilder] unwrap(self):
+        return self.builder
+
+
+cdef class BoolBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.bool
+    cdef:
+        shared_ptr[CBooleanBuilder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CBooleanBuilder(pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(<c_bool>value)
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CBooleanBuilder] unwrap(self):
         return self.builder

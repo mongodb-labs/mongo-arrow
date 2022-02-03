@@ -19,7 +19,7 @@ import pyarrow as pa
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import int32, int64, string, ObjectId, ObjectIdType
+from pymongoarrow.types import int32, int64, string, ObjectId, ObjectIdType, bool_
 
 
 class TestBsonToArrowConversionBase(TestCase):
@@ -154,3 +154,22 @@ class TestSerializeExtensions(TestCase):
         arr = pa.ExtensionArray.from_storage(ObjectIdType(), storage_array)
         result = self.serialize_array(arr)
         assert result.type._type_marker == ObjectIdType._type_marker
+
+
+class TestBooleanType(TestBsonToArrowConversionBase):
+    def setUp(self):
+        self.schema = Schema({'data': bool_()})
+        self.context = PyMongoArrowContext.from_schema(
+            self.schema)
+
+    def test_simple(self):
+        docs = [{'data': True},
+                {'data': False},
+                {'data': 19},
+                {'data': "string"},
+                {'data': False},
+                {'data': True}]
+        as_dict = {
+            'data': [True, False, None, None, False, True]
+        }
+        self._run_test(docs, as_dict)
