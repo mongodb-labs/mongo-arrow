@@ -27,6 +27,8 @@ Support for additional types will be added in subsequent releases.
      - :class:`~py.int`, :class:`bson.int64.Int64`, an instance of :meth:`pyarrow.int64`
    * - UTC datetime
      - an instance of :class:`~pyarrow.timestamp` with ``ms`` resolution, :class:`py.datetime.datetime`
+   * - Boolean
+     - an instance of :class:`~pyarrow.bool_`, :class:`py.bool`
 
 Type identifiers can be used to specify that a field is of a certain type
 during :class:`pymongoarrow.api.Schema` declaration. For example, if your data
