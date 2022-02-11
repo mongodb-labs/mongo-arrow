@@ -15,7 +15,6 @@ from unittest import TestCase
 
 import pyarrow as pa
 from bson import InvalidBSON, encode
-
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema

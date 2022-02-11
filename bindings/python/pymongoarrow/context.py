@@ -13,7 +13,6 @@
 # limitations under the License.
 from bson.codec_options import DEFAULT_CODEC_OPTIONS
 from pyarrow import Table, timestamp
-
 from pymongoarrow.lib import (
     BoolBuilder,
     DatetimeBuilder,

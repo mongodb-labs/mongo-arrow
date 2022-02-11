@@ -20,7 +20,6 @@ from test.utils import AllowListEventListener
 import pandas as pd
 from pyarrow import int32, int64
 from pymongo import DESCENDING, WriteConcern
-
 from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all
 
 

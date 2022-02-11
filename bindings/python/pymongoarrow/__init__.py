@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
+
 # We must import pyarrow before attempting to load the Cython module.
 import pyarrow
-
 from pymongoarrow.version import _MIN_LIBBSON_VERSION, __version__
 
 try:
@@ -35,6 +36,4 @@ try:
             f"found {libbson_version}"
         )
 except ImportError:
-    import warnings
-
     warnings.warn("This library has not been compiled")

@@ -12,7 +12,6 @@ import pyarrow
 import pymongo
 from bson import BSON, CodecOptions, Int64, ObjectId
 from bson.raw_bson import RawBSONDocument
-
 from pymongoarrow.api import Schema, find_arrow_all, find_numpy_all, find_pandas_all
 
 assert pymongo.has_c()

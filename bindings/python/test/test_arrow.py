@@ -20,7 +20,6 @@ import pymongo
 from pyarrow import Table, int32, int64
 from pyarrow import schema as ArrowSchema
 from pymongo import DESCENDING, WriteConcern
-
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all
 from pymongoarrow.monkey import patch_all
 

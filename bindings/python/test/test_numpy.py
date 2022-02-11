@@ -20,7 +20,6 @@ from test.utils import AllowListEventListener
 import numpy as np
 from pyarrow import int32, int64
 from pymongo import DESCENDING, WriteConcern
-
 from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all
 
 

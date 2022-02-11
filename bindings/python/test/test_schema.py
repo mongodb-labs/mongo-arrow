@@ -16,7 +16,6 @@ from unittest import TestCase
 
 from bson import Int64
 from pyarrow import Array, float64, int32, int64, timestamp
-
 from pymongoarrow.schema import Schema
 
 

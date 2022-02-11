@@ -17,7 +17,6 @@ from unittest import TestCase
 
 from bson.objectid import ObjectId
 from pyarrow import Array, bool_, int32, int64, timestamp
-
 from pymongoarrow.lib import (
     BoolBuilder,
     DatetimeBuilder,
