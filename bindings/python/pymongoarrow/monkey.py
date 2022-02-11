@@ -13,9 +13,7 @@
 # limitations under the License.
 """Add PyMongoArrow APIs to PyMongo."""
 
-__all__ = [
-    'patch_all'
-]
+__all__ = ["patch_all"]
 
 
 def patch_all():
@@ -34,6 +32,7 @@ def patch_all():
     """
     import pymongoarrow.api as api_module
     from pymongo.collection import Collection
+
     api_methods = api_module._PATCH_METHODS
     for method_name in api_methods:
         method = getattr(api_module, method_name)

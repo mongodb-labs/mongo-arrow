@@ -14,14 +14,13 @@
 # from datetime import datetime, timedelta
 import unittest
 import unittest.mock as mock
-
-from pyarrow import int32, int64
-from pymongo import WriteConcern, DESCENDING
-from pymongoarrow.api import aggregate_pandas_all, find_pandas_all, Schema
-import pandas as pd
-
 from test import client_context
 from test.utils import AllowListEventListener
+
+import pandas as pd
+from pyarrow import int32, int64
+from pymongo import DESCENDING, WriteConcern
+from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all
 
 
 class TestExplicitPandasApi(unittest.TestCase):
@@ -29,58 +28,52 @@ class TestExplicitPandasApi(unittest.TestCase):
     def setUpClass(cls):
         if not client_context.connected:
             raise unittest.SkipTest("cannot connect to MongoDB")
-        cls.cmd_listener = AllowListEventListener('find', 'aggregate')
-        cls.getmore_listener = AllowListEventListener('getMore')
+        cls.cmd_listener = AllowListEventListener("find", "aggregate")
+        cls.getmore_listener = AllowListEventListener("getMore")
         cls.client = client_context.get_client(
-            event_listeners=[cls.getmore_listener, cls.cmd_listener])
-        cls.schema = Schema({'_id': int32(), 'data': int64()})
+            event_listeners=[cls.getmore_listener, cls.cmd_listener]
+        )
+        cls.schema = Schema({"_id": int32(), "data": int64()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
-            'test', write_concern=WriteConcern(w='majority'))
+            "test", write_concern=WriteConcern(w="majority")
+        )
 
     def setUp(self):
         self.coll.drop()
-        self.coll.insert_many([{'_id': 1, 'data': 10},
-                               {'_id': 2, 'data': 20},
-                               {'_id': 3, 'data': 30},
-                               {'_id': 4}])
+        self.coll.insert_many(
+            [{"_id": 1, "data": 10}, {"_id": 2, "data": 20}, {"_id": 3, "data": 30}, {"_id": 4}]
+        )
         self.cmd_listener.reset()
         self.getmore_listener.reset()
 
     def test_find_simple(self):
-        expected = pd.DataFrame(
-            data={'_id': [1, 2, 3, 4], 'data': [10, 20, 30, None]}).astype(
-            {'_id': 'int32'})
+        expected = pd.DataFrame(data={"_id": [1, 2, 3, 4], "data": [10, 20, 30, None]}).astype(
+            {"_id": "int32"}
+        )
 
         table = find_pandas_all(self.coll, {}, schema=self.schema)
         self.assertTrue(table.equals(expected))
 
-        expected = pd.DataFrame(
-            data={'_id': [4, 3], 'data': [None, 30]}).astype(
-            {'_id': 'int32'})
-        table = find_pandas_all(self.coll, {'_id': {'$gt': 2}},
-                                schema=self.schema,
-                                sort=[('_id', DESCENDING)])
+        expected = pd.DataFrame(data={"_id": [4, 3], "data": [None, 30]}).astype({"_id": "int32"})
+        table = find_pandas_all(
+            self.coll, {"_id": {"$gt": 2}}, schema=self.schema, sort=[("_id", DESCENDING)]
+        )
         self.assertTrue(table.equals(expected))
 
-        find_cmd = self.cmd_listener.results['started'][-1]
-        self.assertEqual(find_cmd.command_name, 'find')
-        self.assertEqual(find_cmd.command['projection'],
-                         {'_id': True, 'data': True})
+        find_cmd = self.cmd_listener.results["started"][-1]
+        self.assertEqual(find_cmd.command_name, "find")
+        self.assertEqual(find_cmd.command["projection"], {"_id": True, "data": True})
 
     def test_aggregate_simple(self):
-        expected = pd.DataFrame(
-            data={'_id': [1, 2, 3, 4], 'data': [20, 40, 60, None]}).astype(
-            {'_id': 'int32'})
-        projection = {'_id': True, 'data': {'$multiply': [2, '$data']}}
-        table = aggregate_pandas_all(
-            self.coll, [{'$project': projection}],
-            schema=self.schema)
+        expected = pd.DataFrame(data={"_id": [1, 2, 3, 4], "data": [20, 40, 60, None]}).astype(
+            {"_id": "int32"}
+        )
+        projection = {"_id": True, "data": {"$multiply": [2, "$data"]}}
+        table = aggregate_pandas_all(self.coll, [{"$project": projection}], schema=self.schema)
         self.assertTrue(table.equals(expected))
 
-        agg_cmd = self.cmd_listener.results['started'][-1]
-        self.assertEqual(agg_cmd.command_name, 'aggregate')
-        assert len(agg_cmd.command['pipeline']) == 2
-        self.assertEqual(agg_cmd.command['pipeline'][0]['$project'],
-                         projection)
-        self.assertEqual(agg_cmd.command['pipeline'][1]['$project'],
-                         {'_id': True, 'data': True})
+        agg_cmd = self.cmd_listener.results["started"][-1]
+        self.assertEqual(agg_cmd.command_name, "aggregate")
+        assert len(agg_cmd.command["pipeline"]) == 2
+        self.assertEqual(agg_cmd.command["pipeline"][0]["$project"], projection)
+        self.assertEqual(agg_cmd.command["pipeline"][1]["$project"], {"_id": True, "data": True})

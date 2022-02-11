@@ -8,13 +8,11 @@ from functools import partial
 
 import numpy as np
 import pandas as pd
+import pyarrow
 import pymongo
-
 from bson import BSON, CodecOptions, Int64, ObjectId
 from bson.raw_bson import RawBSONDocument
-
-import pyarrow
-from pymongoarrow.api import find_arrow_all, find_numpy_all, Schema, find_pandas_all
+from pymongoarrow.api import Schema, find_arrow_all, find_numpy_all, find_pandas_all
 
 assert pymongo.has_c()
 
@@ -39,25 +37,27 @@ def _setup():
     small = db[collection_names[SMALL]]
     small.drop()
 
-    print("%d small docs, %d bytes each with 3 keys" % (
-        N_SMALL_DOCS,
-        len(BSON.encode({'_id': ObjectId(), 'x': 1, 'y': math.pi}))))
+    print(
+        "%d small docs, %d bytes each with 3 keys"
+        % (N_SMALL_DOCS, len(BSON.encode({"_id": ObjectId(), "x": 1, "y": math.pi})))
+    )
 
-    small.insert_many([
-        collections.OrderedDict([('x', 1), ('y', math.pi)])
-        for _ in range(N_SMALL_DOCS)])
+    small.insert_many(
+        [collections.OrderedDict([("x", 1), ("y", math.pi)]) for _ in range(N_SMALL_DOCS)]
+    )
 
-    dtypes[SMALL] = np.dtype([('x', np.int64), ('y', np.float64)])
-    schemas[SMALL] = Schema({'x': pyarrow.int64(), 'y': pyarrow.float64()})
+    dtypes[SMALL] = np.dtype([("x", np.int64), ("y", np.float64)])
+    schemas[SMALL] = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
 
     large = db[collection_names[LARGE]]
     large.drop()
     # 2600 keys: 'a', 'aa', 'aaa', .., 'zz..z'
-    large_doc_keys = [c * i for c in string.ascii_lowercase
-                      for i in range(1, 101)]
+    large_doc_keys = [c * i for c in string.ascii_lowercase for i in range(1, 101)]
     large_doc = collections.OrderedDict([(k, math.pi) for k in large_doc_keys])
-    print("%d large docs, %dk each with %d keys" % (
-        N_LARGE_DOCS, len(BSON.encode(large_doc)) // 1024, len(large_doc_keys)))
+    print(
+        "%d large docs, %dk each with %d keys"
+        % (N_LARGE_DOCS, len(BSON.encode(large_doc)) // 1024, len(large_doc_keys))
+    )
 
     large.insert_many([large_doc.copy() for _ in range(N_LARGE_DOCS)])
 
@@ -65,19 +65,21 @@ def _setup():
     schemas[LARGE] = Schema({k: pyarrow.float64() for k in large_doc_keys})
 
     # Ignore for now that the first batch defaults to 101 documents.
-    raw_bson_docs_small = [{'x': 1, 'y': math.pi} for _ in range(N_SMALL_DOCS)]
-    raw_bson_small = BSON.encode({'ok': 1,
-                                  'cursor': {
-                                      'id': Int64(1234),
-                                      'ns': 'db.collection',
-                                      'firstBatch': raw_bson_docs_small}})
+    raw_bson_docs_small = [{"x": 1, "y": math.pi} for _ in range(N_SMALL_DOCS)]
+    raw_bson_small = BSON.encode(
+        {
+            "ok": 1,
+            "cursor": {"id": Int64(1234), "ns": "db.collection", "firstBatch": raw_bson_docs_small},
+        }
+    )
 
     raw_bson_docs_large = [large_doc.copy() for _ in range(N_LARGE_DOCS)]
-    raw_bson_large = BSON.encode({'ok': 1,
-                                  'cursor': {
-                                      'id': Int64(1234),
-                                      'ns': 'db.collection',
-                                      'firstBatch': raw_bson_docs_large}})
+    raw_bson_large = BSON.encode(
+        {
+            "ok": 1,
+            "cursor": {"id": Int64(1234), "ns": "db.collection", "firstBatch": raw_bson_docs_large},
+        }
+    )
 
     raw_bsons[SMALL] = raw_bson_small
     raw_bsons[LARGE] = raw_bson_large
@@ -99,62 +101,61 @@ def bench(name):
     return assign_name
 
 
-@bench('conventional-to-ndarray')
+@bench("conventional-to-ndarray")
 def conventional_ndarray(use_large):
     collection = db[collection_names[use_large]]
     cursor = collection.find()
     dtype = dtypes[use_large]
 
     if use_large:
-        np.array([tuple(doc[k] for k in large_doc_keys) for doc in cursor],
-                 dtype=dtype)
+        np.array([tuple(doc[k] for k in large_doc_keys) for doc in cursor], dtype=dtype)
     else:
-        np.array([(doc['x'], doc['y']) for doc in cursor], dtype=dtype)
+        np.array([(doc["x"], doc["y"]) for doc in cursor], dtype=dtype)
 
 
 # Note: this is called "to-numpy" and not "to-ndarray" because find_numpy_all
 # does not produce an ndarray.
-@bench('pymongoarrow-to-numpy')
+@bench("pymongoarrow-to-numpy")
 def to_numpy(use_large):
     c = db[collection_names[use_large]]
     schema = schemas[use_large]
     find_numpy_all(c, {}, schema=schema)
 
 
-@bench('conventional-to-pandas')
+@bench("conventional-to-pandas")
 def conventional_pandas(use_large):
     collection = db[collection_names[use_large]]
     dtype = dtypes[use_large]
-    cursor = collection.find(projection={'_id': 0})
+    cursor = collection.find(projection={"_id": 0})
     data_frame = pd.DataFrame(list(cursor))
 
 
-@bench('pymongoarrow-to-pandas')
+@bench("pymongoarrow-to-pandas")
 def to_pandas(use_large):
     c = db[collection_names[use_large]]
     schema = schemas[use_large]
     find_pandas_all(c, {}, schema=schema)
 
 
-@bench('pymongoarrow-to-arrow')
+@bench("pymongoarrow-to-arrow")
 def to_arrow(use_large):
     c = db[collection_names[use_large]]
     schema = schemas[use_large]
     find_arrow_all(c, {}, schema=schema)
 
 
-parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter,
-                                 epilog="""
+parser = argparse.ArgumentParser(
+    formatter_class=argparse.RawTextHelpFormatter,
+    epilog="""
 Available benchmark functions:
    %s
-""" % ("\n   ".join(bench_fns.keys()),))
-parser.add_argument('--large', action='store_true',
-                    help='only test with large documents')
-parser.add_argument('--small', action='store_true',
-                    help='only test with small documents')
-parser.add_argument('--test', action='store_true',
-                    help='quick test of benchmark.py')
-parser.add_argument('funcs', nargs='*', default=bench_fns.keys())
+"""
+    % ("\n   ".join(bench_fns.keys()),),
+)
+parser.add_argument("--large", action="store_true", help="only test with large documents")
+parser.add_argument("--small", action="store_true", help="only test with small documents")
+parser.add_argument("--test", action="store_true", help="quick test of benchmark.py")
+parser.add_argument("funcs", nargs="*", default=bench_fns.keys())
 options = parser.parse_args()
 
 if options.test:
@@ -175,7 +176,7 @@ if options.small and not options.large:
 
 for name in options.funcs:
     if name not in bench_fns:
-        sys.stderr.write("Unknown function \"%s\"\n" % name)
+        sys.stderr.write('Unknown function "%s"\n' % name)
         sys.stderr.write("Available functions:\n%s\n" % ("\n".join(bench_fns)))
         sys.exit(1)
 

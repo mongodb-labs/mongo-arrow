@@ -33,6 +33,7 @@ class Schema:
     ``float``). To see a complete list of supported data types and their
     corresponding type-identifiers, see :ref:`type support`.
     """
+
     def __init__(self, schema):
         """Create a :class:`~pymongoarrow.schema.Schema` instance from a
         mapping or an iterable.
@@ -43,7 +44,7 @@ class Schema:
         if isinstance(schema, abc.Mapping):
             normed = type(self)._normalize_mapping(schema)
         else:
-            raise ValueError('schema must be a mapping or sequence')
+            raise ValueError("schema must be a mapping or sequence")
         self.typemap = normed
 
     def __iter__(self):
@@ -58,7 +59,7 @@ class Schema:
         return normed
 
     def _get_projection(self):
-        projection = {'_id': False}
+        projection = {"_id": False}
         for fname, _ in self.typemap.items():
             projection[fname] = True
         return projection

@@ -14,13 +14,18 @@
 import calendar
 from datetime import datetime, timedelta
 from unittest import TestCase
+
 from bson.objectid import ObjectId
-
-from pyarrow import Array, timestamp, int32, int64, bool_
-
+from pyarrow import Array, bool_, int32, int64, timestamp
 from pymongoarrow.lib import (
-    DatetimeBuilder, DoubleBuilder, Int32Builder, Int64Builder,
-    ObjectIdBuilder, StringBuilder, BoolBuilder)
+    BoolBuilder,
+    DatetimeBuilder,
+    DoubleBuilder,
+    Int32Builder,
+    Int64Builder,
+    ObjectIdBuilder,
+    StringBuilder,
+)
 
 
 class TestIntBuildersMixin:
@@ -34,8 +39,7 @@ class TestIntBuildersMixin:
         self.assertIsInstance(arr, Array)
         self.assertEqual(arr.null_count, 1)
         self.assertEqual(len(arr), 6)
-        self.assertEqual(
-            arr.to_pylist(), [0, 1, 2, 3, 4, None])
+        self.assertEqual(arr.to_pylist(), [0, 1, 2, 3, 4, None])
         self.assertEqual(arr.type, self.data_type)
 
 
@@ -55,15 +59,14 @@ class TestDate64Builder(TestCase):
     def test_default_unit(self):
         # Check default unit
         builder = DatetimeBuilder()
-        self.assertEqual(builder.unit, timestamp('ms'))
+        self.assertEqual(builder.unit, timestamp("ms"))
 
     def _datetime_to_millis(self, dtm):
         """Convert datetime to milliseconds since epoch UTC.
         Vendored from bson."""
         if dtm.utcoffset() is not None:
             dtm = dtm - dtm.utcoffset()
-        return int(calendar.timegm(dtm.timetuple()) * 1000 +
-                   dtm.microsecond // 1000)
+        return int(calendar.timegm(dtm.timetuple()) * 1000 + dtm.microsecond // 1000)
 
     def _millis_only(self, dt):
         """Convert a datetime to millisecond resolution."""
@@ -73,12 +76,10 @@ class TestDate64Builder(TestCase):
     def test_simple(self):
         self.maxDiff = None
 
-        builder = DatetimeBuilder(dtype=timestamp('ms'))
-        datetimes = [datetime.utcnow() + timedelta(days=k*100)
-                     for k in range(5)]
+        builder = DatetimeBuilder(dtype=timestamp("ms"))
+        datetimes = [datetime.utcnow() + timedelta(days=k * 100) for k in range(5)]
         builder.append(self._datetime_to_millis(datetimes[0]))
-        builder.append_values(
-            [self._datetime_to_millis(k) for k in datetimes[1:]])
+        builder.append_values([self._datetime_to_millis(k) for k in datetimes[1:]])
         builder.append_null()
         arr = builder.finish()
 
@@ -90,10 +91,10 @@ class TestDate64Builder(TestCase):
                 self.assertEqual(actual.as_py(), self._millis_only(expected))
             else:
                 self.assertIsNone(expected)
-        self.assertEqual(arr.type, timestamp('ms'))
+        self.assertEqual(arr.type, timestamp("ms"))
 
     def test_unsupported_units(self):
-        for unit in ('s', 'us', 'ns'):
+        for unit in ("s", "us", "ns"):
             with self.assertRaises(TypeError):
                 DatetimeBuilder(dtype=timestamp(unit))
 
@@ -109,8 +110,7 @@ class TestDoubleBuilder(TestCase):
         self.assertIsInstance(arr, Array)
         self.assertEqual(arr.null_count, 1)
         self.assertEqual(len(arr), 6)
-        self.assertEqual(
-            arr.to_pylist(), [0.123, 1.234, 2.345, 3.456, 4.567, None])
+        self.assertEqual(arr.to_pylist(), [0.123, 1.234, 2.345, 3.456, 4.567, None])
 
 
 class TestObjectIdBuilder(TestCase):
@@ -125,8 +125,7 @@ class TestObjectIdBuilder(TestCase):
         self.assertIsInstance(arr, Array)
         self.assertEqual(arr.null_count, 1)
         self.assertEqual(len(arr), 6)
-        self.assertEqual(
-            arr.to_pylist(), [oid.binary for oid in ids] + [None])
+        self.assertEqual(arr.to_pylist(), [oid.binary for oid in ids] + [None])
 
 
 class TestStringBuilder(TestCase):
@@ -136,7 +135,7 @@ class TestStringBuilder(TestCase):
         values = ["Hello world", "Καλημέρα κόσμε", "コンニチハ"]
         values += ["hello\u0000world"]
         builder = StringBuilder()
-        builder.append(values[0].encode('utf8'))
+        builder.append(values[0].encode("utf8"))
         builder.append_values(values[1:])
         builder.append_null()
         arr = builder.finish()
@@ -144,8 +143,7 @@ class TestStringBuilder(TestCase):
         self.assertIsInstance(arr, Array)
         self.assertEqual(arr.null_count, 1)
         self.assertEqual(len(arr), 5)
-        self.assertEqual(
-            arr.to_pylist(), values + [None])
+        self.assertEqual(arr.to_pylist(), values + [None])
 
 
 class TestBoolBuilderMixin:
@@ -159,9 +157,7 @@ class TestBoolBuilderMixin:
         self.assertIsInstance(arr, Array)
         self.assertEqual(arr.null_count, 1)
         self.assertEqual(len(arr), 8)
-        self.assertEqual(
-            arr.to_pylist(), [False, True, False, True, False, True, False,
-                              None])
+        self.assertEqual(arr.to_pylist(), [False, True, False, True, False, True, False, None])
         self.assertEqual(arr.type, self.data_type)
 
 

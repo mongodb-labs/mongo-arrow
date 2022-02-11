@@ -19,4 +19,5 @@ from bson.errors import InvalidBSON
 
 class PyMongoArrowError(Exception):
     """Base class for all PyMongoArrow exceptions."""
+
     pass

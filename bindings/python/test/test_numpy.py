@@ -14,14 +14,13 @@
 # from datetime import datetime, timedelta
 import unittest
 import unittest.mock as mock
-
-from pyarrow import int32, int64
-from pymongo import WriteConcern, DESCENDING
-from pymongoarrow.api import aggregate_numpy_all, find_numpy_all, Schema
-import numpy as np
-
 from test import client_context
 from test.utils import AllowListEventListener
+
+import numpy as np
+from pyarrow import int32, int64
+from pymongo import DESCENDING, WriteConcern
+from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all
 
 
 class TestExplicitNumPyApi(unittest.TestCase):
@@ -29,20 +28,21 @@ class TestExplicitNumPyApi(unittest.TestCase):
     def setUpClass(cls):
         if not client_context.connected:
             raise unittest.SkipTest("cannot connect to MongoDB")
-        cls.cmd_listener = AllowListEventListener('find', 'aggregate')
-        cls.getmore_listener = AllowListEventListener('getMore')
+        cls.cmd_listener = AllowListEventListener("find", "aggregate")
+        cls.getmore_listener = AllowListEventListener("getMore")
         cls.client = client_context.get_client(
-            event_listeners=[cls.getmore_listener, cls.cmd_listener])
-        cls.schema = Schema({'_id': int32(), 'data': int64()})
+            event_listeners=[cls.getmore_listener, cls.cmd_listener]
+        )
+        cls.schema = Schema({"_id": int32(), "data": int64()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
-            'test', write_concern=WriteConcern(w='majority'))
+            "test", write_concern=WriteConcern(w="majority")
+        )
 
     def setUp(self):
         self.coll.drop()
-        self.coll.insert_many([{'_id': 1, 'data': 10},
-                               {'_id': 2, 'data': 20},
-                               {'_id': 3, 'data': 30},
-                               {'_id': 4}])
+        self.coll.insert_many(
+            [{"_id": 1, "data": 10}, {"_id": 2, "data": 20}, {"_id": 3, "data": 30}, {"_id": 4}]
+        )
         self.cmd_listener.reset()
         self.getmore_listener.reset()
 
@@ -57,40 +57,38 @@ class TestExplicitNumPyApi(unittest.TestCase):
 
     def test_find_simple(self):
         expected = {
-            '_id': np.array([1, 2, 3, 4], dtype=np.int32),
+            "_id": np.array([1, 2, 3, 4], dtype=np.int32),
             # integer arrays with NaNs are given dtype float64 by NumPy
-            'data': np.array([10, 20, 30, np.nan], dtype=np.float64)}
+            "data": np.array([10, 20, 30, np.nan], dtype=np.float64),
+        }
 
         actual = find_numpy_all(self.coll, {}, schema=self.schema)
         self.assert_numpy_equal(actual, expected)
 
         expected = {
-            '_id': np.array([4, 3], dtype=np.int32),
-            'data': np.array([np.nan, 30], dtype=np.float64)}
-        actual = find_numpy_all(self.coll, {'_id': {'$gt': 2}},
-                                schema=self.schema,
-                                sort=[('_id', DESCENDING)])
+            "_id": np.array([4, 3], dtype=np.int32),
+            "data": np.array([np.nan, 30], dtype=np.float64),
+        }
+        actual = find_numpy_all(
+            self.coll, {"_id": {"$gt": 2}}, schema=self.schema, sort=[("_id", DESCENDING)]
+        )
         self.assert_numpy_equal(actual, expected)
 
-        find_cmd = self.cmd_listener.results['started'][-1]
-        self.assertEqual(find_cmd.command_name, 'find')
-        self.assertEqual(find_cmd.command['projection'],
-                         {'_id': True, 'data': True})
+        find_cmd = self.cmd_listener.results["started"][-1]
+        self.assertEqual(find_cmd.command_name, "find")
+        self.assertEqual(find_cmd.command["projection"], {"_id": True, "data": True})
 
     def test_aggregate_simple(self):
         expected = {
-            '_id': np.array([1, 2, 3, 4], dtype=np.int32),
-            'data': np.array([20, 40, 60, np.nan], dtype=np.float64)}
-        projection = {'_id': True, 'data': {'$multiply': [2, '$data']}}
-        actual = aggregate_numpy_all(
-            self.coll, [{'$project': projection}],
-            schema=self.schema)
+            "_id": np.array([1, 2, 3, 4], dtype=np.int32),
+            "data": np.array([20, 40, 60, np.nan], dtype=np.float64),
+        }
+        projection = {"_id": True, "data": {"$multiply": [2, "$data"]}}
+        actual = aggregate_numpy_all(self.coll, [{"$project": projection}], schema=self.schema)
         self.assert_numpy_equal(actual, expected)
 
-        agg_cmd = self.cmd_listener.results['started'][-1]
-        self.assertEqual(agg_cmd.command_name, 'aggregate')
-        assert len(agg_cmd.command['pipeline']) == 2
-        self.assertEqual(agg_cmd.command['pipeline'][0]['$project'],
-                         projection)
-        self.assertEqual(agg_cmd.command['pipeline'][1]['$project'],
-                         {'_id': True, 'data': True})
+        agg_cmd = self.cmd_listener.results["started"][-1]
+        self.assertEqual(agg_cmd.command_name, "aggregate")
+        assert len(agg_cmd.command["pipeline"]) == 2
+        self.assertEqual(agg_cmd.command["pipeline"][0]["$project"], projection)
+        self.assertEqual(agg_cmd.command["pipeline"][1]["$project"], {"_id": True, "data": True})

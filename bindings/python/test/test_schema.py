@@ -15,35 +15,27 @@ from datetime import datetime, timedelta
 from unittest import TestCase
 
 from bson import Int64
-from pyarrow import Array, timestamp, int32, int64, float64
-
+from pyarrow import Array, float64, int32, int64, timestamp
 from pymongoarrow.schema import Schema
 
 
 class TestSchema(TestCase):
     def test_initialization(self):
-        dict_schema = Schema(
-            {'field1': int, 'field2': datetime, 'field3': float})
+        dict_schema = Schema({"field1": int, "field2": datetime, "field3": float})
         self.assertEqual(
-            dict_schema.typemap,
-            {'field1': int64(), 'field2': timestamp('ms'),
-             'field3': float64()})
+            dict_schema.typemap, {"field1": int64(), "field2": timestamp("ms"), "field3": float64()}
+        )
 
     def test_from_py_units(self):
-        schema = Schema(
-            {'field1': int, 'field2': datetime, 'field3': float})
+        schema = Schema({"field1": int, "field2": datetime, "field3": float})
         self.assertEqual(
-            schema.typemap,
-            {'field1': int64(), 'field2': timestamp('ms'),
-             'field3': float64()})
+            schema.typemap, {"field1": int64(), "field2": timestamp("ms"), "field3": float64()}
+        )
 
     def test_from_bson_units(self):
-        schema = Schema({'field1': Int64})
-        self.assertEqual(schema.typemap, {'field1': int64()})
+        schema = Schema({"field1": Int64})
+        self.assertEqual(schema.typemap, {"field1": int64()})
 
     def test_from_arrow_units(self):
-        schema = Schema(
-            {'field1': int64(), 'field2': timestamp('s')})
-        self.assertEqual(
-            schema.typemap,
-            {'field1': int64(), 'field2': timestamp('s')})
+        schema = Schema({"field1": int64(), "field2": timestamp("s")})
+        self.assertEqual(schema.typemap, {"field1": int64(), "field2": timestamp("s")})

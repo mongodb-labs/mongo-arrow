@@ -15,25 +15,22 @@ import pymongo
 
 
 class ClientContext:
-    def __init__(self, host='localhost', port=27017):
+    def __init__(self, host="localhost", port=27017):
         self.host = host
         self.port = port
         self.client = None
         self.connected = False
 
     def get_client(self, **args):
-        kwargs = {'directConnection': False}
+        kwargs = {"directConnection": False}
         kwargs.update(args)
-        return pymongo.MongoClient(
-            self.host, self.port, **kwargs)
+        return pymongo.MongoClient(self.host, self.port, **kwargs)
 
     def init(self):
-        client = pymongo.MongoClient(self.host, self.port,
-                                     serverSelectionTimeoutMS=5000)
+        client = pymongo.MongoClient(self.host, self.port, serverSelectionTimeoutMS=5000)
         try:
-            client.admin.command('isMaster')
-        except (pymongo.errors.OperationFailure,
-                pymongo.errors.ConnectionFailure):
+            client.admin.command("isMaster")
+        except (pymongo.errors.OperationFailure, pymongo.errors.ConnectionFailure):
             self.connected = False
         else:
             self.connected = True

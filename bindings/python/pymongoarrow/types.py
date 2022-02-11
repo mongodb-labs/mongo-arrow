@@ -11,15 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from datetime import datetime
 import enum
+from datetime import datetime
 
-from bson import Int64, ObjectId
-
-from pyarrow import timestamp, binary, float64, int64, int32, string, bool_
-from pyarrow import PyExtensionType
-from pyarrow import DataType as _ArrowDataType
 import pyarrow.types as _atypes
+from bson import Int64, ObjectId
+from pyarrow import DataType as _ArrowDataType
+from pyarrow import (
+    PyExtensionType,
+    binary,
+    bool_,
+    float64,
+    int32,
+    int64,
+    string,
+    timestamp,
+)
 
 
 class _BsonArrowTypes(enum.Enum):
@@ -36,6 +43,7 @@ class _BsonArrowTypes(enum.Enum):
 # See https://arrow.apache.org/docs/python/extending_types.html#defining-extension-types-user-defined-types
 # for details.
 
+
 class ObjectIdType(PyExtensionType):
     _type_marker = _BsonArrowTypes.objectid
 
@@ -48,8 +56,9 @@ class ObjectIdType(PyExtensionType):
 
 # Internal Type Handling.
 
+
 def _is_objectid(obj):
-    type_marker = getattr(obj, '_type_marker', '')
+    type_marker = getattr(obj, "_type_marker", "")
     return type_marker == ObjectIdType._type_marker
 
 
@@ -57,7 +66,7 @@ _TYPE_NORMALIZER_FACTORY = {
     Int64: lambda _: int64(),
     float: lambda _: float64(),
     int: lambda _: int64(),
-    datetime: lambda _: timestamp('ms'),     # TODO: add tzinfo support
+    datetime: lambda _: timestamp("ms"),  # TODO: add tzinfo support
     ObjectId: lambda _: ObjectIdType(),
     str: lambda: string(),
     bool: lambda: bool_(),
@@ -86,9 +95,7 @@ def _normalize_typeid(typeid, field_name):
         normalizer = _TYPE_NORMALIZER_FACTORY[typeid]
         return normalizer(typeid)
     else:
-        raise ValueError(
-            "Unsupported type identifier {} for field {}".format(
-                typeid, field_name))
+        raise ValueError("Unsupported type identifier {} for field {}".format(typeid, field_name))
 
 
 def _get_internal_typemap(typemap):
@@ -99,7 +106,8 @@ def _get_internal_typemap(typemap):
                 internal_typemap[fname] = internal_id
 
         if fname not in internal_typemap:
-            raise ValueError('Unsupported data type in schema for ' +
-                f'field "{fname}" of type "{ftype}"')
+            raise ValueError(
+                "Unsupported data type in schema for " + f'field "{fname}" of type "{ftype}"'
+            )
 
     return internal_typemap
