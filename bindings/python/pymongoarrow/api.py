@@ -17,25 +17,24 @@ from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
 
-
 __all__ = [
-    'aggregate_arrow_all',
-    'find_arrow_all',
-    'aggregate_pandas_all',
-    'find_pandas_all',
-    'aggregate_numpy_all',
-    'find_numpy_all',
-    'Schema'
+    "aggregate_arrow_all",
+    "find_arrow_all",
+    "aggregate_pandas_all",
+    "find_pandas_all",
+    "aggregate_numpy_all",
+    "find_numpy_all",
+    "Schema",
 ]
 
 
 _PATCH_METHODS = [
-    'aggregate_arrow_all',
-    'find_arrow_all',
-    'aggregate_pandas_all',
-    'find_pandas_all',
-    'aggregate_numpy_all',
-    'find_numpy_all',
+    "aggregate_arrow_all",
+    "find_arrow_all",
+    "aggregate_pandas_all",
+    "find_pandas_all",
+    "aggregate_numpy_all",
+    "find_numpy_all",
 ]
 
 
@@ -55,18 +54,18 @@ def find_arrow_all(collection, query, *, schema, **kwargs):
     :Returns:
       An instance of class:`pyarrow.Table`.
     """
-    context = PyMongoArrowContext.from_schema(
-        schema, codec_options=collection.codec_options)
+    context = PyMongoArrowContext.from_schema(schema, codec_options=collection.codec_options)
 
-    for opt in ('cursor_type',):
+    for opt in ("cursor_type",):
         if kwargs.pop(opt, None):
             warnings.warn(
-                f'Ignoring option {opt!r} as it is not supported by '
-                'PyMongoArrow', UserWarning, stacklevel=2)
+                f"Ignoring option {opt!r} as it is not supported by " "PyMongoArrow",
+                UserWarning,
+                stacklevel=2,
+            )
 
-    kwargs.setdefault('projection', schema._get_projection())
-    raw_batch_cursor = collection.find_raw_batches(
-        query, **kwargs)
+    kwargs.setdefault("projection", schema._get_projection())
+    raw_batch_cursor = collection.find_raw_batches(query, **kwargs)
     for batch in raw_batch_cursor:
         process_bson_stream(batch, context)
 
@@ -89,19 +88,21 @@ def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
     :Returns:
       An instance of class:`pyarrow.Table`.
     """
-    context = PyMongoArrowContext.from_schema(
-        schema, codec_options=collection.codec_options)
+    context = PyMongoArrowContext.from_schema(schema, codec_options=collection.codec_options)
 
     if pipeline and ("$out" in pipeline[-1] or "$merge" in pipeline[-1]):
         raise ValueError(
             "Aggregation pipelines containing a '$out' or '$merge' stage are "
-            "not supported by PyMongoArrow")
+            "not supported by PyMongoArrow"
+        )
 
-    for opt in ('batchSize', 'useCursor'):
+    for opt in ("batchSize", "useCursor"):
         if kwargs.pop(opt, None):
             warnings.warn(
-                f'Ignoring option {opt!r} as it is not supported by '
-                'PyMongoArrow', UserWarning, stacklevel=2)
+                f"Ignoring option {opt!r} as it is not supported by " "PyMongoArrow",
+                UserWarning,
+                stacklevel=2,
+            )
 
     pipeline.append({"$project": schema._get_projection()})
     raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
@@ -138,8 +139,7 @@ def find_pandas_all(collection, query, *, schema, **kwargs):
     :Returns:
       An instance of class:`pandas.DataFrame`.
     """
-    return _arrow_to_pandas(
-        find_arrow_all(collection, query, schema=schema, **kwargs))
+    return _arrow_to_pandas(find_arrow_all(collection, query, schema=schema, **kwargs))
 
 
 def aggregate_pandas_all(collection, pipeline, *, schema, **kwargs):
@@ -158,8 +158,7 @@ def aggregate_pandas_all(collection, pipeline, *, schema, **kwargs):
     :Returns:
       An instance of class:`pandas.DataFrame`.
     """
-    return _arrow_to_pandas(aggregate_arrow_all(
-        collection, pipeline, schema=schema, **kwargs))
+    return _arrow_to_pandas(aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs))
 
 
 def _arrow_to_numpy(arrow_table, schema):
@@ -202,8 +201,7 @@ def find_numpy_all(collection, query, *, schema, **kwargs):
     :Returns:
       An instance of :class:`dict`.
     """
-    return _arrow_to_numpy(
-        find_arrow_all(collection, query, schema=schema, **kwargs), schema)
+    return _arrow_to_numpy(find_arrow_all(collection, query, schema=schema, **kwargs), schema)
 
 
 def aggregate_numpy_all(collection, pipeline, *, schema, **kwargs):
@@ -233,4 +231,5 @@ def aggregate_numpy_all(collection, pipeline, *, schema, **kwargs):
       An instance of :class:`dict`.
     """
     return _arrow_to_numpy(
-        aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs), schema)
+        aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs), schema
+    )

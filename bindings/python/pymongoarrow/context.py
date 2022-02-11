@@ -12,13 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from bson.codec_options import DEFAULT_CODEC_OPTIONS
+from pyarrow import Table, timestamp
 
-from pyarrow import timestamp, Table
-from pymongoarrow.lib import (Int32Builder, Int64Builder, DoubleBuilder,
-                              DatetimeBuilder, ObjectIdBuilder,
-                              StringBuilder, BoolBuilder)
-from pymongoarrow.types import _get_internal_typemap, _BsonArrowTypes
-
+from pymongoarrow.lib import (
+    BoolBuilder,
+    DatetimeBuilder,
+    DoubleBuilder,
+    Int32Builder,
+    Int64Builder,
+    ObjectIdBuilder,
+    StringBuilder,
+)
+from pymongoarrow.types import _BsonArrowTypes, _get_internal_typemap
 
 _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.int32: Int32Builder,
@@ -33,6 +38,7 @@ _TYPE_TO_BUILDER_CLS = {
 
 class PyMongoArrowContext:
     """A context for converting BSON-formatted data to an Arrow Table."""
+
     def __init__(self, schema, builder_map):
         """Initialize the context.
 
@@ -58,13 +64,12 @@ class PyMongoArrowContext:
         str_type_map = _get_internal_typemap(schema.typemap)
         for fname, ftype in str_type_map.items():
             builder_cls = _TYPE_TO_BUILDER_CLS[ftype]
-            encoded_fname = fname.encode('utf-8')
+            encoded_fname = fname.encode("utf-8")
             # special-case initializing builders for parameterized types
             if builder_cls == DatetimeBuilder:
                 arrow_type = schema.typemap[fname]
                 if codec_options.tzinfo is not None and arrow_type.tz is None:
-                    arrow_type = timestamp(
-                        arrow_type.unit, tz=codec_options.tzinfo)
+                    arrow_type = timestamp(arrow_type.unit, tz=codec_options.tzinfo)
                 builder_map[encoded_fname] = builder_cls(dtype=arrow_type)
             else:
                 builder_map[encoded_fname] = builder_cls()
@@ -75,5 +80,5 @@ class PyMongoArrowContext:
         names = []
         for fname, builder in self.builder_map.items():
             arrays.append(builder.finish())
-            names.append(fname.decode('utf-8'))
+            names.append(fname.decode("utf-8"))
         return Table.from_arrays(arrays=arrays, names=names)

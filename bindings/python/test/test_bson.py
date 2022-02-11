@@ -13,26 +13,23 @@
 # limitations under the License.
 from unittest import TestCase
 
-from bson import encode, InvalidBSON
-
 import pyarrow as pa
+from bson import InvalidBSON, encode
+
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import int32, int64, string, ObjectId, ObjectIdType, bool_
+from pymongoarrow.types import ObjectId, ObjectIdType, bool_, int32, int64, string
 
 
 class TestBsonToArrowConversionBase(TestCase):
     def setUp(self):
-        self.schema = Schema({'_id': ObjectId,
-                              'data': int64(),
-                              'title': string() })
-        self.context = PyMongoArrowContext.from_schema(
-            self.schema)
+        self.schema = Schema({"_id": ObjectId, "data": int64(), "title": string()})
+        self.context = PyMongoArrowContext.from_schema(self.schema)
 
     @staticmethod
     def _generate_payload(doclist):
-        payload = b''
+        payload = b""
         for doc in doclist:
             payload += encode(doc)
         return payload
@@ -49,32 +46,37 @@ class TestBsonToArrowConversionBase(TestCase):
 
 
 class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
-
     def test_simple(self):
         ids = [ObjectId() for i in range(4)]
-        docs = [{'_id': ids[0], 'data': 10, 'title': 'ä'},
-                {'_id': ids[1], 'data': 20, 'title': 'b'},
-                {'_id': ids[2], 'data': 30, 'title': 'č'},
-                {'_id': ids[3], 'data': 40, 'title': 'ê'}]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "ä"},
+            {"_id": ids[1], "data": 20, "title": "b"},
+            {"_id": ids[2], "data": 30, "title": "č"},
+            {"_id": ids[3], "data": 40, "title": "ê"},
+        ]
         as_dict = {
-            '_id': [oid.binary for oid in ids] ,
-            'data': [10, 20, 30, 40],
-            'title': ['ä', 'b', 'č', 'ê']}
+            "_id": [oid.binary for oid in ids],
+            "data": [10, 20, 30, 40],
+            "title": ["ä", "b", "č", "ê"],
+        }
 
         self._run_test(docs, as_dict)
 
     def test_with_nulls(self):
         ids = [ObjectId() for i in range(4)]
-        docs = [{'_id': ids[0], 'data': 10, 'title': 'a'},
-                {'_id': ids[1], 'data': 20},
-                {'_id': ids[2]},
-                {'_id': ids[3], 'data': 40},
-                {'foo': 1},
-                {}]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "a"},
+            {"_id": ids[1], "data": 20},
+            {"_id": ids[2]},
+            {"_id": ids[3], "data": 40},
+            {"foo": 1},
+            {},
+        ]
         as_dict = {
-            '_id': [oid.binary for oid in ids] + [None, None],
-            'data': [10, 20, None, 40, None, None],
-            'title': ['a', None, None, None, None, None] }
+            "_id": [oid.binary for oid in ids] + [None, None],
+            "data": [10, 20, None, 40, None, None],
+            "title": ["a", None, None, None, None, None],
+        }
 
         self._run_test(docs, as_dict)
 
@@ -82,54 +84,44 @@ class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
 class TestInvalidBsonToArrowConversion(TestBsonToArrowConversionBase):
     @staticmethod
     def _generate_payload(doclist):
-        return TestBsonToArrowConversionBase._generate_payload(
-            doclist)[:-2]
+        return TestBsonToArrowConversionBase._generate_payload(doclist)[:-2]
 
     def test_simple(self):
         ids = [ObjectId() for i in range(4)]
-        docs = [{'_id': ids[0], 'data': 10},
-                {'_id': ids[1], 'data': 20},
-                {'_id': ids[2], 'data': 30},
-                {'_id': ids[3], 'data': 40}]
-        as_dict = {
-            '_id': [oid.binary for oid in ids],
-            'data': [10, 20, 30, 40]}
+        docs = [
+            {"_id": ids[0], "data": 10},
+            {"_id": ids[1], "data": 20},
+            {"_id": ids[2], "data": 30},
+            {"_id": ids[3], "data": 40},
+        ]
+        as_dict = {"_id": [oid.binary for oid in ids], "data": [10, 20, 30, 40]}
 
-        with self.assertRaisesRegex(
-                InvalidBSON, "Could not read BSON document stream"):
+        with self.assertRaisesRegex(InvalidBSON, "Could not read BSON document stream"):
             self._run_test(docs, as_dict)
 
 
 class TestUnsupportedDataType(TestBsonToArrowConversionBase):
-
     def test_simple(self):
-        schema = Schema({'_id': ObjectId,
-                         'data': int64(),
-                         'fake':  pa.float16() })
-        msg =  ("Unsupported data type in schema for field " +
-                '"fake" of type "halffloat"')
+        schema = Schema({"_id": ObjectId, "data": int64(), "fake": pa.float16()})
+        msg = "Unsupported data type in schema for field " + '"fake" of type "halffloat"'
         with self.assertRaisesRegex(ValueError, msg):
             PyMongoArrowContext.from_schema(schema)
 
 
 class TestNonAsciiFieldName(TestBsonToArrowConversionBase):
-
     def setUp(self):
-        self.schema = Schema({'_id': ObjectIdType(),
-                              'dätá': int64()})
-        self.context = PyMongoArrowContext.from_schema(
-            self.schema)
+        self.schema = Schema({"_id": ObjectIdType(), "dätá": int64()})
+        self.context = PyMongoArrowContext.from_schema(self.schema)
 
     def test_simple(self):
         ids = [ObjectId() for i in range(4)]
-        docs = [{'_id': ids[0], 'dätá': 10 },
-                {'_id': ids[1], 'dätá': 20 },
-                {'_id': ids[2], 'dätá': 30 },
-                {'_id': ids[3], 'dätá': 40 }]
-        as_dict = {
-            '_id': [oid.binary for oid in ids] ,
-            'dätá': [10, 20, 30, 40]
-        }
+        docs = [
+            {"_id": ids[0], "dätá": 10},
+            {"_id": ids[1], "dätá": 20},
+            {"_id": ids[2], "dätá": 30},
+            {"_id": ids[3], "dätá": 40},
+        ]
+        as_dict = {"_id": [oid.binary for oid in ids], "dätá": [10, 20, 30, 40]}
 
         self._run_test(docs, as_dict)
 
@@ -146,7 +138,7 @@ class TestSerializeExtensions(TestCase):
         buf = sink.getvalue()
         with pa.ipc.open_stream(buf) as reader:
             result = reader.read_all()
-        return result.column('ext')
+        return result.column("ext")
 
     def test_object_id_type(self):
         oids = [ObjectId().binary for _ in range(4)]
@@ -158,18 +150,17 @@ class TestSerializeExtensions(TestCase):
 
 class TestBooleanType(TestBsonToArrowConversionBase):
     def setUp(self):
-        self.schema = Schema({'data': bool_()})
-        self.context = PyMongoArrowContext.from_schema(
-            self.schema)
+        self.schema = Schema({"data": bool_()})
+        self.context = PyMongoArrowContext.from_schema(self.schema)
 
     def test_simple(self):
-        docs = [{'data': True},
-                {'data': False},
-                {'data': 19},
-                {'data': "string"},
-                {'data': False},
-                {'data': True}]
-        as_dict = {
-            'data': [True, False, None, None, False, True]
-        }
+        docs = [
+            {"data": True},
+            {"data": False},
+            {"data": 19},
+            {"data": "string"},
+            {"data": False},
+            {"data": True},
+        ]
+        as_dict = {"data": [True, False, None, None, False, True]}
         self._run_test(docs, as_dict)

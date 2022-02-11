@@ -17,22 +17,21 @@ from pymongo import monitoring
 
 
 class EventListener(monitoring.CommandListener):
-
     def __init__(self):
         self.results = defaultdict(list)
 
     def started(self, event):
-        self.results['started'].append(event)
+        self.results["started"].append(event)
 
     def succeeded(self, event):
-        self.results['succeeded'].append(event)
+        self.results["succeeded"].append(event)
 
     def failed(self, event):
-        self.results['failed'].append(event)
+        self.results["failed"].append(event)
 
     def started_command_names(self):
         """Return list of command names started."""
-        return [event.command_name for event in self.results['started']]
+        return [event.command_name for event in self.results["started"]]
 
     def reset(self):
         """Reset the state of this listener."""
@@ -40,7 +39,6 @@ class EventListener(monitoring.CommandListener):
 
 
 class AllowListEventListener(EventListener):
-
     def __init__(self, *commands):
         self.commands = set(commands)
         super(AllowListEventListener, self).__init__()

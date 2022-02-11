@@ -13,9 +13,7 @@
 # limitations under the License.
 """Add PyMongoArrow APIs to PyMongo."""
 
-__all__ = [
-    'patch_all'
-]
+__all__ = ["patch_all"]
 
 
 def patch_all():
@@ -32,8 +30,10 @@ def patch_all():
        # Example of patched usage
        df = coll.db.test.find_pandas_all({'amount': {'$gte': 20}}, schema=schema)
     """
-    import pymongoarrow.api as api_module
     from pymongo.collection import Collection
+
+    import pymongoarrow.api as api_module
+
     api_methods = api_module._PATCH_METHODS
     for method_name in api_methods:
         method = getattr(api_module, method_name)
