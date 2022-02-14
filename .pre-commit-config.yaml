@@ -38,3 +38,12 @@ repos:
     - id: shellcheck
       name: shellcheck
       args: ["--severity=warning"]
+
+- repo: https://github.com/sirosen/check-jsonschema
+  rev: 0.10.2
+  hooks:
+    - id: check-jsonschema
+      name: "Check GitHub Workflows"
+      files: ^\.github/workflows/
+      types: [yaml]
+      args: ["--schemafile", "https://json.schemastore.org/github-workflow"]

@@ -43,4 +43,3 @@ respectively, and '_id' that is an `ObjectId`, your schema can be defined as::
 
 Unsupported data types in a schema cause a ``ValueError`` identifying the
 field and its data type.
-

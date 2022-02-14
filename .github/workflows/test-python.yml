@@ -8,8 +8,8 @@ concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
-defaults:  
-  run:  
+defaults:
+  run:
     working-directory: ./bindings/python
     shell: bash
 

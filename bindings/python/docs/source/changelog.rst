@@ -36,4 +36,3 @@ Changes in Version 0.1.0
   - 32-bit integer
   - 64-bit integer
   - Timestamp
-

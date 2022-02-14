@@ -117,4 +117,3 @@ of formats including CSV, and HDF. For example, to write the data frame
 referenced by the variable ``df`` to a CSV file ``out.csv``, run::
 
   df.to_csv('out.csv', index=False)
-
