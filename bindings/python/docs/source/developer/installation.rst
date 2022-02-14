@@ -65,3 +65,20 @@ To run the test suite, you will need a MongoDB instance running on
 ``localhost`` using port ``27017``. To run the entire test suite, do::
 
   (pymongoarrow) $ python -m unittest discover test
+
+Running Linters
+---------------
+
+PyMongoArrow uses `pre-commit <https://pypi.org/project/pre-commit/>`_
+for managing linting of the codebase.
+``pre-commit`` performs various checks on all files in PyMongoArrow and uses tools
+that help follow a consistent code style within the codebase.
+
+To set up ``pre-commit`` locally, run::
+
+    pip install pre-commit
+    pre-commit install
+
+To run ``pre-commit`` manually, run::
+
+    pre-commit run --all-files

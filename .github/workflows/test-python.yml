@@ -8,12 +8,24 @@ concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
-defaults:  
-  run:  
+defaults:
+  run:
     working-directory: ./bindings/python
     shell: bash
 
 jobs:
+
+  pre-commit:
+    name: pre-commit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: pre-commit/action@v2.0.0
+        with:
+          extra_args: --all-files --hook-stage=manual
+
   build:
     # supercharge/mongodb-github-action requires containers so we don't test other platforms
     runs-on: ${{ matrix.os }}
