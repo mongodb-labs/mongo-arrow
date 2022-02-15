@@ -10,8 +10,7 @@ import numpy as np
 import pandas as pd
 import pyarrow
 import pymongo
-from bson import BSON, CodecOptions, Int64, ObjectId
-from bson.raw_bson import RawBSONDocument
+from bson import BSON, Int64, ObjectId
 from pymongoarrow.api import Schema, find_arrow_all, find_numpy_all, find_pandas_all
 
 assert pymongo.has_c()
@@ -125,9 +124,9 @@ def to_numpy(use_large):
 @bench("conventional-to-pandas")
 def conventional_pandas(use_large):
     collection = db[collection_names[use_large]]
-    dtype = dtypes[use_large]
+    _ = dtypes[use_large]
     cursor = collection.find(projection={"_id": 0})
-    data_frame = pd.DataFrame(list(cursor))
+    _ = pd.DataFrame(list(cursor))
 
 
 @bench("pymongoarrow-to-pandas")

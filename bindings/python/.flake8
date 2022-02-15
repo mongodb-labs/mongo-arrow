@@ -1,0 +1,15 @@
+[flake8]
+max-line-length = 100
+enable-extensions = G
+extend-ignore =
+    G200, G202,
+    # black adds spaces around ':'
+    E203,
+    # E501 line too long (let black handle line length)
+    E501
+per-file-ignores =
+    # E227 missing whitespace around bitwise or shift operator
+    # E225 missing whitespace around operator
+    # E999 SyntaxError: invalid syntax
+    bindings/python/pymongoarrow/*.pyx: E227,E225,E999
+    bindings/python/pymongoarrow/*.pxd: E227,E225,E999

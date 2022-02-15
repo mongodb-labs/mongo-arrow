@@ -17,16 +17,7 @@ from datetime import datetime
 import pyarrow.types as _atypes
 from bson import Int64, ObjectId
 from pyarrow import DataType as _ArrowDataType
-from pyarrow import (
-    PyExtensionType,
-    binary,
-    bool_,
-    float64,
-    int32,
-    int64,
-    string,
-    timestamp,
-)
+from pyarrow import PyExtensionType, binary, bool_, float64, int64, string, timestamp
 
 
 class _BsonArrowTypes(enum.Enum):
@@ -107,7 +98,7 @@ def _get_internal_typemap(typemap):
 
         if fname not in internal_typemap:
             raise ValueError(
-                "Unsupported data type in schema for " + f'field "{fname}" of type "{ftype}"'
+                f'Unsupported data type in schema for field "{fname}" of type "{ftype}"'
             )
 
     return internal_typemap
