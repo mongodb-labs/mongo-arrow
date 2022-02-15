@@ -23,6 +23,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
+          cache-dependency-path: '**/setup.cfg'
       - name: Build wheels
         working-directory: ./bindings/python
         shell: bash
@@ -47,6 +48,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
+          cache-dependency-path: '**/setup.cfg'
       - name: Download a previously created wheel
         uses: actions/download-artifact@v2
         with:
