@@ -42,6 +42,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
+          cache-dependency-path: '**/setup.cfg'
       - name: Start MongoDB on Linux
         if: ${{ startsWith(runner.os, 'Linux') }}
         uses: supercharge/mongodb-github-action@1.3.0
