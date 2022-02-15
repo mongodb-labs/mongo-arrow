@@ -94,7 +94,7 @@ class TestArrowApiMixin:
 
         with self.client.start_session() as session:
             self.assertIsNone(session.operation_time)
-            last_use = session._server_session.last_use
+            _ = session._server_session.last_use
             expected = Table.from_pydict(
                 {"_id": [1, 2, 3, 4], "data": [10, 20, 30, None]},
                 ArrowSchema([("_id", int32()), ("data", int64())]),

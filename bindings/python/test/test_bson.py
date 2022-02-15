@@ -18,7 +18,7 @@ from bson import InvalidBSON, encode
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import ObjectId, ObjectIdType, bool_, int32, int64, string
+from pymongoarrow.types import ObjectId, ObjectIdType, bool_, int64, string
 
 
 class TestBsonToArrowConversionBase(TestCase):
@@ -102,7 +102,7 @@ class TestInvalidBsonToArrowConversion(TestBsonToArrowConversionBase):
 class TestUnsupportedDataType(TestBsonToArrowConversionBase):
     def test_simple(self):
         schema = Schema({"_id": ObjectId, "data": int64(), "fake": pa.float16()})
-        msg = "Unsupported data type in schema for field " + '"fake" of type "halffloat"'
+        msg = 'Unsupported data type in schema for field "fake" of type "halffloat"'
         with self.assertRaisesRegex(ValueError, msg):
             PyMongoArrowContext.from_schema(schema)
 

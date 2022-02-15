@@ -13,7 +13,6 @@
 # limitations under the License.
 # from datetime import datetime, timedelta
 import unittest
-import unittest.mock as mock
 from test import client_context
 from test.utils import AllowListEventListener
 

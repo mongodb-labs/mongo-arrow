@@ -59,7 +59,7 @@ def find_arrow_all(collection, query, *, schema, **kwargs):
     for opt in ("cursor_type",):
         if kwargs.pop(opt, None):
             warnings.warn(
-                f"Ignoring option {opt!r} as it is not supported by " "PyMongoArrow",
+                f"Ignoring option {opt!r} as it is not supported by PyMongoArrow",
                 UserWarning,
                 stacklevel=2,
             )
@@ -99,7 +99,7 @@ def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
     for opt in ("batchSize", "useCursor"):
         if kwargs.pop(opt, None):
             warnings.warn(
-                f"Ignoring option {opt!r} as it is not supported by " "PyMongoArrow",
+                f"Ignoring option {opt!r} as it is not supported by PyMongoArrow",
                 UserWarning,
                 stacklevel=2,
             )

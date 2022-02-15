@@ -108,7 +108,7 @@ cdef extern from "<bson/bson.h>":
 
     int64_t bson_iter_date_time(const bson_iter_t *iter)
 
-    const bson_oid_t * bson_iter_oid (const bson_iter_t *iter)
+    const bson_oid_t * bson_iter_oid(const bson_iter_t *iter)
 
     # TODO: add decimal128
 
@@ -122,8 +122,7 @@ cdef extern from "<bson/bson.h>":
 
     int64_t bson_iter_as_int64(const bson_iter_t *iter)
 
-    const char * bson_iter_utf8 (const bson_iter_t *iter, uint32_t *length)
-
+    const char * bson_iter_utf8(const bson_iter_t *iter, uint32_t *length)
 
 
 # bson_reader_t API

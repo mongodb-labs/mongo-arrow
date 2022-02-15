@@ -48,7 +48,7 @@ libbson_version = bson_get_version().decode('utf-8')
 cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? NULL:
     cdef cbool reached_eof = False
     cdef const bson_t* doc = bson_reader_read(stream_reader, &reached_eof)
-    if doc == NULL and reached_eof == False:
+    if doc == NULL and reached_eof is False:
         raise InvalidBSON("Could not read BSON document stream")
     return doc
 
@@ -113,7 +113,7 @@ def process_bson_stream(bson_stream, context):
                             builder.append_null()
                     elif ftype == t_string:
                         if value_t == BSON_TYPE_UTF8:
-                            bson_str = bson_iter_utf8 (&doc_iter, &str_len)
+                            bson_str = bson_iter_utf8(&doc_iter, &str_len)
                             builder.append(<bytes>(bson_str)[:str_len])
                         else:
                             builder.append_null()
