@@ -45,7 +45,7 @@ Dependencies
 
 PyMongoArrow requires:
 
-- PyMongo>=3.11 (PyMongo 4.0 is supported)
+- PyMongo>=3.11 (PyMongo 4.0 is supported from 0.2)
 - PyArrow>=3,<3.1
 
 To use PyMongoArrow with a PyMongo feature that requires an optional
