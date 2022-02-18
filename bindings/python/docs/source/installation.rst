@@ -45,7 +45,7 @@ Dependencies
 
 PyMongoArrow requires:
 
-- PyMongo>=3.11,<4
+- PyMongo>=3.11 (PyMongo 4.0 is supported from 0.2)
 - PyArrow>=3,<3.1
 
 To use PyMongoArrow with a PyMongo feature that requires an optional
@@ -58,7 +58,7 @@ For example, to use PyMongoArrow with MongoDB Atlas' ``mongodb+srv://`` URIs
 users must install PyMongo with the ``srv`` extra in addition to installing
 PyMongoArrow::
 
-  $ python -m pip install 'pymongo[srv]<4' pymongoarrow
+  $ python -m pip install 'pymongo[srv]' pymongoarrow
 
 Applications intending to use PyMongoArrow APIs that return query result sets
 as :class:`pandas.DataFrame` instances (e.g. :meth:`~pymongoarrow.api.find_pandas_all`)
