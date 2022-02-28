@@ -3,6 +3,7 @@ Changelog
 
 Changes in Version 0.3.0
 ------------------------
+- Support for `PyArrow` 7.0.
 - Support for `ObjectId` `bson` type.
 - Improve error message when schema contains an unsupported type.
 - Add support for BSON string type.
