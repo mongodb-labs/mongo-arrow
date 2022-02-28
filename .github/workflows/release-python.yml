@@ -64,7 +64,7 @@ jobs:
       matrix:
         # Cannot have '/' in artifact names, so hardcode 'quay.io/pypa/'
         container: ['manylinux2010_x86_64', 'manylinux2014_x86_64']
-        python-version: ['cp36-cp36m', 'cp37-cp37m', 'cp38-cp38',
+        python-version: ['cp37-cp37m', 'cp38-cp38',
                          'cp39-cp39', 'cp310-cp310']
     name: Build CPython ${{ matrix.python-version }}-${{ matrix.container }}
     steps:
@@ -84,7 +84,7 @@ jobs:
     strategy:
       matrix:
         container: ['manylinux2010_x86_64', 'manylinux2014_x86_64']
-        python-version: ['cp36-cp36m', 'cp37-cp37m', 'cp38-cp38',
+        python-version: ['cp37-cp37m', 'cp38-cp38',
                          'cp39-cp39', 'cp310-cp310']
     name: Test CPython ${{ matrix.python-version }}-${{ matrix.container }}
     steps:
