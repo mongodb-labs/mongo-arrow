@@ -3,10 +3,12 @@ Changelog
 
 Changes in Version 0.3.0
 ------------------------
+- Support for `PyArrow` 7.0.
 - Support for `ObjectId` `bson` type.
 - Improve error message when schema contains an unsupported type.
 - Add support for BSON string type.
 - Add support for BSON boolean type.
+- Dropped Python 3.6 support (it was dropped in `PyArrow` 7.0).
 
 Changes in Version 0.2.0
 ------------------------
