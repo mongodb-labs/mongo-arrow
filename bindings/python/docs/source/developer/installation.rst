@@ -37,14 +37,18 @@ PyMongoArrow uses `libbson <http://mongoc.org/libbson/current/index.html>`_.
 Detailed instructions for building/installing ``libbson`` can be found
 `here <http://mongoc.org/libmongoc/1.17.5/installing.html#installing-the-mongodb-c-driver-libmongoc-and-bson-library-libbson>`_.
 
-On macOS, users can install the latest ``libbson`` via Homebrew::
-
-  $ brew install mongo-c-driver
-
-Alternatively, you can use the provided `build-libbson.sh` script to build it::
+You can either use a system-provided version of ``libbson`` that is properly
+configured for use with ``pkg-config``, or use the provided ``build-libbson.sh` ` script to build it::
 
   $ LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
 
+On macOS, users can install the latest ``libbson`` using Homebrew::
+
+  $ brew install mongo-c-driver
+
+Conda users can install ``libbson`` as follows::
+
+  $ conda install --channel conda-forge libbson pkg-config
 
 Build
 -----
