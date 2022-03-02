@@ -35,7 +35,7 @@ libbson
 
 PyMongoArrow uses `libbson <http://mongoc.org/libbson/current/index.html>`_.
 Detailed instructions for building/installing ``libbson`` can be found
-`here <http://mongoc.org/libmongoc/1.17.5/installing.html#installing-the-mongodb-c-driver-libmongoc-and-bson-library-libbson>`_.
+`here <http://mongoc.org/libmongoc/1.21.0/installing.html#installing-the-mongodb-c-driver-libmongoc-and-bson-library-libbson>`_.
 
 You can either use a system-provided version of ``libbson`` that is properly
 configured for use with ``pkg-config``, or use the provided ``build-libbson.sh` ` script to build it::

@@ -5,7 +5,7 @@ set -o errexit
 
 # Version of libbson to build
 # Keep in sync with pymongoarrow.version._MIN_LIBBSON_VERSION
-LIBBSON_VERSION=${LIBBSON_VERSION:-"1.17.5"}
+LIBBSON_VERSION=${LIBBSON_VERSION:-"1.21.1"}
 if [ -z "$LIBBSON_VERSION" ]
 then
   echo "Did not provide a libbson revision ID to build"
