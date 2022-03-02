@@ -30,14 +30,23 @@ To upgrade using pip::
 
   $ python -m pip install --upgrade pymongoarrow
 
-.. attention:: Installing PyMongoArrow from
-   `wheels <https://www.python.org/dev/peps/pep-0427/>`_ on macOS Big Sur
-   requires ``pip`` >= 20.3. To upgrade ``pip`` run::
+.. attention:: If the install fails due to an error like ``ValueError: Could not find "libbson-1.0" library`` it means that ``pip`` failed to find a
+suitable wheel for your platform.  We recommend first ensuring you have ``pip`` >= 20.3 installed. To upgrade ``pip`` run::
 
      $ python -m pip install --upgrade pip
 
-   We currently distribute wheels for macOS and Linux on x86_64
+   You can then attempt to re-install ``pymongoarrow``.
+
+   We currently distribute wheels for macOS, Windows, and Linux on x86_64
    architectures.
+
+**PyMongoArrow** is also available for ``conda`` users by running::
+
+  $ conda install --channel conda-forge pymongoarrow
+
+
+If the above options still do not allow you to install ``pymongoarrow`` on your
+system, you will have to install from source, see :doc:`developer/installation`.
 
 
 Dependencies
