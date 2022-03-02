@@ -8,6 +8,7 @@ Changes in Version 0.3.0
 - Improve error message when schema contains an unsupported type.
 - Add support for BSON string type.
 - Add support for BSON boolean type.
+- Upgraded to bundle ``libbson`` 1.21.1. If installing from source, the minimum supported ``libbson`` version is now 1.21.0.
 - Dropped Python 3.6 support (it was dropped in `PyArrow` 7.0).
 
 Changes in Version 0.2.0
