@@ -16,7 +16,8 @@ import warnings
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
-
+from bson import encode
+from pymongo.common import MAX_BSON_SIZE, MAX_WRITE_BATCH_SIZE
 __all__ = [
     "aggregate_arrow_all",
     "find_arrow_all",
@@ -233,3 +234,20 @@ def aggregate_numpy_all(collection, pipeline, *, schema, **kwargs):
     return _arrow_to_numpy(
         aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs), schema
     )
+
+def write(collection, tabular, mode="insert"):
+    cur_batch = []
+    cur_size = 0
+    for row in tabular.to_pylist():
+        if cur_size <= MAX_BSON_SIZE and len(cur_batch) <= MAX_WRITE_BATCH_SIZE:
+            cur_batch.append(row)
+            cur_size += len(encode(row))
+        else:
+            result = collection.insert_many(cur_batch)
+            print(result.inserted_ids)
+            cur_batch, cur_size = [row], 0
+
+    if cur_batch:
+        result = collection.insert_many(cur_batch)
+
+

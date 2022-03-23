@@ -20,7 +20,7 @@ import pymongo
 from pyarrow import Table, int32, int64
 from pyarrow import schema as ArrowSchema
 from pymongo import DESCENDING, WriteConcern
-from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all
+from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.monkey import patch_all
 
 
@@ -179,6 +179,19 @@ class TestArrowApiMixin:
             if op_name == "$project":
                 self.assertFalse(stage[op_name]["_id"])
                 break
+
+    def round_trip(self, data, schema):
+        self.coll.drop()
+        write(self.coll, data)
+        self.assertEqual(data, find_arrow_all(self.coll, {}, schema=schema))
+
+    def test_roundtrip(self):
+        schema = Schema({"_id": int32(), "data": int64()})
+        data = Table.from_pydict(
+            {"_id": [i for i in range(10000)], "data": [i*2 for i in range(10000)]},
+            ArrowSchema([("_id", int32()), ("data", int64())])
+        )
+        self.round_trip(data, schema)
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
