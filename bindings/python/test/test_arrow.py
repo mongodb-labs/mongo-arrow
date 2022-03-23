@@ -188,7 +188,7 @@ class TestArrowApiMixin:
     def test_roundtrip(self):
         schema = Schema({"_id": int32(), "data": int64()})
         data = Table.from_pydict(
-            {"_id": [i for i in range(10000)], "data": [i * 2 for i in range(1000)]},
+            {"_id": [i for i in range(10000)], "data": [i * 2 for i in range(10000)]},
             ArrowSchema([("_id", int32()), ("data", int64())]),
         )
         self.round_trip(data, schema)
