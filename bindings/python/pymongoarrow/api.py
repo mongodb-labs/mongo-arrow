@@ -14,10 +14,13 @@
 import warnings
 
 from bson import encode
+from pymongo.bulk import BulkWriteError
 from pymongo.common import MAX_BSON_SIZE, MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext
+from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
+from pymongoarrow.types import in_type_map
 
 __all__ = [
     "aggregate_arrow_all",
@@ -238,15 +241,30 @@ def aggregate_numpy_all(collection, pipeline, *, schema, **kwargs):
 
 
 def write(collection, tabular, mode="insert"):
+    for i in tabular.schema.types:
+        if not in_type_map(i):
+            raise ValueError(f'Unsupported data type "{i}" in schema')
     cur_batch = []
     cur_size = 0
+    cur_offset = 0
+
+    def transform_bwe(bwe, offset):
+        for i in bwe["writeErrors"]:
+            i["index"] += offset
+        return bwe
+
     for row in tabular.to_pylist():
         if cur_size <= MAX_BSON_SIZE and len(cur_batch) <= MAX_WRITE_BATCH_SIZE:
             cur_batch.append(row)
             cur_size += len(encode(row))
         else:
-            collection.insert_many(cur_batch)
+            ins_b_size = len(cur_batch)
+            try:
+                collection.insert_many(cur_batch)
+            except BulkWriteError as bwe:
+                raise ArrowWriteError(transform_bwe(bwe.details, cur_offset)) from bwe
             cur_batch, cur_size = [row], 0
+            cur_offset += ins_b_size
 
     if cur_batch:
         collection.insert_many(cur_batch)

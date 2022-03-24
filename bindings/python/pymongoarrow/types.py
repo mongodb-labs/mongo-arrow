@@ -102,3 +102,10 @@ def _get_internal_typemap(typemap):
             )
 
     return internal_typemap
+
+
+def in_type_map(t):
+    for checker in _TYPE_CHECKER_TO_INTERNAL_TYPE.keys():
+        if checker(t):
+            return True
+    return False

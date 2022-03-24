@@ -17,10 +17,11 @@ from test import client_context
 from test.utils import AllowListEventListener
 
 import pymongo
-from pyarrow import Table, int32, int64
+from pyarrow import Table, decimal128, int32, int64
 from pyarrow import schema as ArrowSchema
 from pymongo import DESCENDING, WriteConcern
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
+from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
 
 
@@ -186,12 +187,33 @@ class TestArrowApiMixin:
         self.assertEqual(data, find_arrow_all(self.coll, {}, schema=schema))
 
     def test_roundtrip(self):
-        schema = Schema({"_id": int32(), "data": int64()})
+        schema = {"_id": int32(), "data": int64()}
         data = Table.from_pydict(
             {"_id": [i for i in range(10000)], "data": [i * 2 for i in range(10000)]},
-            ArrowSchema([("_id", int32()), ("data", int64())]),
+            ArrowSchema(schema),
         )
-        self.round_trip(data, schema)
+        self.round_trip(data, Schema(schema))
+
+        schema = {"_id": int32(), "data": decimal128(2)}
+        data = Table.from_pydict(
+            {"_id": [i for i in range(2)], "data": [i for i in range(2)]},
+            ArrowSchema(schema),
+        )
+        with self.assertRaises(ValueError):
+            self.round_trip(data, Schema(schema))
+
+    def test_write_error(self):
+        schema = {"_id": int32(), "data": int64()}
+        data = Table.from_pydict(
+            {"_id": [i for i in range(10001)] * 2, "data": [i * 2 for i in range(10001)] * 2},
+            ArrowSchema(schema),
+        )
+        with self.assertRaises(ArrowWriteError):
+            try:
+                self.round_trip(data, Schema(schema))
+            except ArrowWriteError as awe:
+                self.assertEqual(10001, awe.details["writeErrors"][0]["index"])
+                raise awe
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):

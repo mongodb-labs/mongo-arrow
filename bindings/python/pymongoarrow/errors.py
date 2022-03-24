@@ -21,3 +21,14 @@ class PyMongoArrowError(Exception):
     """Base class for all PyMongoArrow exceptions."""
 
     pass
+
+
+class ArrowWriteError(PyMongoArrowError):
+    """Error raised when we encounter an exception inserting into MongoDB"""
+
+    def __init__(self, details):
+        self._details = details
+
+    @property
+    def details(self):
+        return self._details
