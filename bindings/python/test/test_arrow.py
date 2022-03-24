@@ -17,12 +17,14 @@ from test import client_context
 from test.utils import AllowListEventListener
 
 import pymongo
-from pyarrow import Table, decimal128, int32, int64
+from pyarrow import Table, bool_, decimal128, float64, int32, int64
 from pyarrow import schema as ArrowSchema
+from pyarrow import string, timestamp
 from pymongo import DESCENDING, WriteConcern
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
+from pymongoarrow.types import ObjectIdType, validate_schema
 
 
 class TestArrowApiMixin:
@@ -188,7 +190,10 @@ class TestArrowApiMixin:
         self.assertEqual(data, find_arrow_all(self.coll, {}, schema=schema))
 
     def test_roundtrip(self):
-        schema = {"_id": int32(), "data": int64()}
+        schema = {
+            "_id": int32(),
+            "data": int64(),
+        }
         data = Table.from_pydict(
             {"_id": [i for i in range(10000)], "data": [i * 2 for i in range(10000)]},
             ArrowSchema(schema),
@@ -217,6 +222,27 @@ class TestArrowApiMixin:
                     10001, awe.details["writeErrors"][0]["index"], awe.details["nInserted"]
                 )
                 raise awe
+
+    def test_schema_validation(self):
+        schema = {
+            "_id": int32(),
+            "data": int64(),
+            "float": float64(),
+            "datetime": timestamp("s"),
+            "objectid": ObjectIdType(),
+            "string": string(),
+            "bool": bool_(),
+        }
+        validate_schema(ArrowSchema(schema))
+
+        schema = {
+            "_id": int32(),
+            "float": float64(),
+            "datetime": timestamp("s"),
+            "decimal128": decimal128(10),
+        }
+        with self.assertRaises(ValueError):
+            validate_schema(ArrowSchema(schema))
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):

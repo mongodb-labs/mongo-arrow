@@ -109,3 +109,9 @@ def in_type_map(t):
         if checker(t):
             return True
     return False
+
+
+def validate_schema(schema):
+    for i in schema.types:
+        if not in_type_map(i):
+            raise ValueError(f'Unsupported data type "{i}" in schema')

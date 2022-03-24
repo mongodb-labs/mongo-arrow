@@ -21,7 +21,7 @@ from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import in_type_map
+from pymongoarrow.types import validate_schema
 
 __all__ = [
     "aggregate_arrow_all",
@@ -242,9 +242,7 @@ def aggregate_numpy_all(collection, pipeline, *, schema, **kwargs):
 
 
 def write(collection, tabular, mode="insert"):
-    for i in tabular.schema.types:
-        if not in_type_map(i):
-            raise ValueError(f'Unsupported data type "{i}" in schema')
+    validate_schema(tabular.schema)
     cur_batch = []
     cur_size = 0
     cur_offset = 0
