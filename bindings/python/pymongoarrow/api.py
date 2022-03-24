@@ -257,7 +257,7 @@ def write(collection, tabular, mode="insert"):
         return bwe
 
     for row in tabular.to_pylist():
-        if cur_size <= MAX_BSON_SIZE * 2 and len(cur_batch) <= MAX_WRITE_BATCH_SIZE * 2:
+        if cur_size <= MAX_BSON_SIZE and len(cur_batch) <= MAX_WRITE_BATCH_SIZE:
             cur_batch.append(row)
             cur_size += len(encode(row))
         else:
