@@ -19,6 +19,7 @@ from pymongo.common import MAX_BSON_SIZE, MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.lib import process_bson_stream
+from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import in_type_map
 
@@ -247,24 +248,35 @@ def write(collection, tabular, mode="insert"):
     cur_batch = []
     cur_size = 0
     cur_offset = 0
+    from collections import Counter
+
+    results = Counter({})
 
     def transform_bwe(bwe, offset):
+        bwe["nInserted"] += cur_offset
         for i in bwe["writeErrors"]:
             i["index"] += offset
         return bwe
 
     for row in tabular.to_pylist():
-        if cur_size <= MAX_BSON_SIZE and len(cur_batch) <= MAX_WRITE_BATCH_SIZE:
+        if cur_size <= MAX_BSON_SIZE * 2 and len(cur_batch) <= MAX_WRITE_BATCH_SIZE * 2:
             cur_batch.append(row)
             cur_size += len(encode(row))
         else:
-            ins_b_size = len(cur_batch)
             try:
                 collection.insert_many(cur_batch)
             except BulkWriteError as bwe:
-                raise ArrowWriteError(transform_bwe(bwe.details, cur_offset)) from bwe
-            cur_batch, cur_size = [row], 0
+                raise ArrowWriteError(transform_bwe(dict(bwe.details), cur_offset)) from bwe
+            ins_b_size = len(cur_batch)
+            results["insertedCount"] += ins_b_size
             cur_offset += ins_b_size
+            cur_batch, cur_size = [row], 0
 
     if cur_batch:
-        collection.insert_many(cur_batch)
+        try:
+            collection.insert_many(cur_batch)
+        except BulkWriteError as bwe:
+            raise ArrowWriteError(transform_bwe(dict(bwe.details), cur_offset)) from bwe
+        results["insertedCount"] += len(cur_batch)
+        cur_offset += ins_b_size
+    return ArrowWriteResult(results)

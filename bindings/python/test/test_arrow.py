@@ -183,7 +183,8 @@ class TestArrowApiMixin:
 
     def round_trip(self, data, schema):
         self.coll.drop()
-        write(self.coll, data)
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
         self.assertEqual(data, find_arrow_all(self.coll, {}, schema=schema))
 
     def test_roundtrip(self):
@@ -212,7 +213,9 @@ class TestArrowApiMixin:
             try:
                 self.round_trip(data, Schema(schema))
             except ArrowWriteError as awe:
-                self.assertEqual(10001, awe.details["writeErrors"][0]["index"])
+                self.assertEqual(
+                    10001, awe.details["writeErrors"][0]["index"], awe.details["nInserted"]
+                )
                 raise awe
 
 
