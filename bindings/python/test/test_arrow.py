@@ -188,17 +188,9 @@ class TestArrowApiMixin:
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
         self.assertEqual(data, find_arrow_all(self.coll, {}, schema=schema))
+        return res
 
     def test_roundtrip(self):
-        schema = {
-            "_id": int32(),
-            "data": int64(),
-        }
-        data = Table.from_pydict(
-            {"_id": [i for i in range(10000)], "data": [i * 2 for i in range(10000)]},
-            ArrowSchema(schema),
-        )
-        self.round_trip(data, Schema(schema))
 
         schema = {"_id": int32(), "data": decimal128(2)}
         data = Table.from_pydict(
@@ -243,6 +235,17 @@ class TestArrowApiMixin:
         }
         with self.assertRaises(ValueError):
             validate_schema(ArrowSchema(schema))
+
+    def test_write_batching(self):
+        schema = {
+            "_id": int64(),
+        }
+        data = Table.from_pydict(
+            {"_id": [i for i in range(100040)]},
+            ArrowSchema(schema),
+        )
+        res = self.round_trip(data, Schema(schema))
+        self.assertEqual(res.num_batches, 2)
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):

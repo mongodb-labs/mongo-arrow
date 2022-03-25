@@ -16,7 +16,7 @@ import warnings
 from bson import encode
 from bson.raw_bson import RawBSONDocument
 from pymongo.bulk import BulkWriteError
-from pymongo.common import MAX_BSON_SIZE, MAX_WRITE_BATCH_SIZE
+from pymongo.common import MAX_MESSAGE_SIZE, MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.lib import process_bson_stream
@@ -253,14 +253,17 @@ def write(collection, tabular, mode="insert"):
     validate_schema(tabular.schema)
     tabular = tabular.to_pylist()
     cur_offset = 0
-    results = {"insertedCount": 0}
+    results = {
+        "insertedCount": 0,
+        "numBatches": 0,
+    }
     while cur_offset < len(tabular):
         cur_size = 0
         cur_batch = []
         i = 0
         while (
-            cur_size <= MAX_BSON_SIZE
-            and len(cur_batch) <= MAX_WRITE_BATCH_SIZE
+            cur_size <= MAX_MESSAGE_SIZE - 1000
+            and len(cur_batch) <= max(100000, MAX_WRITE_BATCH_SIZE)
             and cur_offset + i < len(tabular)
         ):
             enc_tab = RawBSONDocument(encode(tabular[cur_offset + i]))
@@ -272,6 +275,7 @@ def write(collection, tabular, mode="insert"):
         except BulkWriteError as bwe:
             raise ArrowWriteError(_transform_bwe(dict(bwe.details), cur_offset)) from bwe
         results["insertedCount"] += i
+        results["numBatches"] += 1
         cur_offset += i
 
     return ArrowWriteResult(results)

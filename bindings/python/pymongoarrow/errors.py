@@ -31,4 +31,5 @@ class ArrowWriteError(PyMongoArrowError):
 
     @property
     def details(self):
+        """Details for the error. It is a dictionary of key-value pairs giving diagnostic information about what went wrong. To see the entire dictionary simply use `print(awe.details)`"""
         return self._details
