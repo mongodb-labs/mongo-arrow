@@ -14,6 +14,7 @@
 import warnings
 
 from bson import encode
+from bson.raw_bson import RawBSONDocument
 from pymongo.bulk import BulkWriteError
 from pymongo.common import MAX_BSON_SIZE, MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext
@@ -241,40 +242,36 @@ def aggregate_numpy_all(collection, pipeline, *, schema, **kwargs):
     )
 
 
+def _transform_bwe(bwe, offset):
+    bwe["nInserted"] += offset
+    for i in bwe["writeErrors"]:
+        i["index"] += offset
+    return bwe
+
+
 def write(collection, tabular, mode="insert"):
     validate_schema(tabular.schema)
-    cur_batch = []
-    cur_size = 0
+    tabular = tabular.to_pylist()
     cur_offset = 0
-    from collections import Counter
-
-    results = Counter({})
-
-    def transform_bwe(bwe, offset):
-        bwe["nInserted"] += cur_offset
-        for i in bwe["writeErrors"]:
-            i["index"] += offset
-        return bwe
-
-    for row in tabular.to_pylist():
-        if cur_size <= MAX_BSON_SIZE and len(cur_batch) <= MAX_WRITE_BATCH_SIZE:
-            cur_batch.append(row)
-            cur_size += len(encode(row))
-        else:
-            try:
-                collection.insert_many(cur_batch)
-            except BulkWriteError as bwe:
-                raise ArrowWriteError(transform_bwe(dict(bwe.details), cur_offset)) from bwe
-            ins_b_size = len(cur_batch)
-            results["insertedCount"] += ins_b_size
-            cur_offset += ins_b_size
-            cur_batch, cur_size = [row], 0
-
-    if cur_batch:
+    results = {"insertedCount": 0}
+    while cur_offset < len(tabular):
+        cur_size = 0
+        cur_batch = []
+        i = 0
+        while (
+            cur_size <= MAX_BSON_SIZE
+            and len(cur_batch) <= MAX_WRITE_BATCH_SIZE
+            and cur_offset + i < len(tabular)
+        ):
+            enc_tab = RawBSONDocument(encode(tabular[cur_offset + i]))
+            cur_batch.append(enc_tab)
+            cur_size += len(enc_tab)
+            i += 1
         try:
             collection.insert_many(cur_batch)
         except BulkWriteError as bwe:
-            raise ArrowWriteError(transform_bwe(dict(bwe.details), cur_offset)) from bwe
-        results["insertedCount"] += len(cur_batch)
-        cur_offset += ins_b_size
+            raise ArrowWriteError(_transform_bwe(dict(bwe.details), cur_offset)) from bwe
+        results["insertedCount"] += i
+        cur_offset += i
+
     return ArrowWriteResult(results)

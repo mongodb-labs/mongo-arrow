@@ -27,21 +27,5 @@ class ArrowWriteResult:
         return self._result.get("insertedCount", 0)
 
     @property
-    def matched_count(self):
-        return self._result.get("matchedCount", 0)
-
-    @property
-    def modified_count(self):
-        return self._result.get("modifiedCount", 0)
-
-    @property
-    def upserted_count(self):
-        return self._result.get("upsertedCount", 0)
-
-    @property
-    def upserted_ids(self):
-        return self._result.get("upsertedIds", [])
-
-    @property
     def raw_result(self):
         return self._result
