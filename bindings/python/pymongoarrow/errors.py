@@ -24,7 +24,7 @@ class PyMongoArrowError(Exception):
 
 
 class ArrowWriteError(PyMongoArrowError):
-    """Error raised when we encounter an exception inserting into MongoDB"""
+    """Error raised when we encounter an exception writing into MongoDB"""
 
     def __init__(self, details):
         self._details = details

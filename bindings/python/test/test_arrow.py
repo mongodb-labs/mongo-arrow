@@ -17,6 +17,8 @@ from test import client_context
 from test.utils import AllowListEventListener
 
 import pymongo
+from bson.codec_options import DEFAULT_CODEC_OPTIONS, UuidRepresentation
+from bson.raw_bson import RawBSONDocument
 from pyarrow import Table, bool_, decimal128, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
@@ -24,7 +26,7 @@ from pymongo import DESCENDING, WriteConcern
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
-from pymongoarrow.types import ObjectIdType, validate_schema
+from pymongoarrow.types import ObjectIdType, _validate_schema
 
 
 class TestArrowApiMixin:
@@ -183,14 +185,16 @@ class TestArrowApiMixin:
                 self.assertFalse(stage[op_name]["_id"])
                 break
 
-    def round_trip(self, data, schema):
+    def round_trip(self, data, schema, coll=None):
+        if coll is None:
+            coll = self.coll
         self.coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
-        self.assertEqual(data, find_arrow_all(self.coll, {}, schema=schema))
+        self.assertEqual(data, find_arrow_all(coll, {}, schema=schema))
         return res
 
-    def test_roundtrip(self):
+    def test_write_roundtrip(self):
 
         schema = {"_id": int32(), "data": decimal128(2)}
         data = Table.from_pydict(
@@ -215,7 +219,7 @@ class TestArrowApiMixin:
                 )
                 raise awe
 
-    def test_schema_validation(self):
+    def test_write_schema_validation(self):
         schema = {
             "_id": int32(),
             "data": int64(),
@@ -225,7 +229,7 @@ class TestArrowApiMixin:
             "string": string(),
             "bool": bool_(),
         }
-        validate_schema(ArrowSchema(schema))
+        _validate_schema(ArrowSchema(schema))
 
         schema = {
             "_id": int32(),
@@ -234,7 +238,7 @@ class TestArrowApiMixin:
             "decimal128": decimal128(10),
         }
         with self.assertRaises(ValueError):
-            validate_schema(ArrowSchema(schema))
+            _validate_schema(ArrowSchema(schema))
 
     def test_write_batching(self):
         schema = {
@@ -246,6 +250,20 @@ class TestArrowApiMixin:
         )
         res = self.round_trip(data, Schema(schema))
         self.assertEqual(res.num_batches, 2)
+
+    def test_write_codec_options(self):
+        schema = {"_id": int32()}
+        data = Table.from_pydict(
+            {"_id": [3]},
+            ArrowSchema(schema),
+        )
+        co = DEFAULT_CODEC_OPTIONS.with_options(
+            document_class=RawBSONDocument, uuid_representation=UuidRepresentation.PYTHON_LEGACY
+        )
+        coll = self.coll.with_options(codec_options=co)
+        self.round_trip(data, Schema(schema), coll=coll)
+        self.assertEqual(type(coll.find_one()), RawBSONDocument)
+        self.assertEqual(coll.find_one()._RawBSONDocument__codec_options, co)
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):

@@ -22,7 +22,7 @@ from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import validate_schema
+from pymongoarrow.types import _validate_schema
 
 __all__ = [
     "aggregate_arrow_all",
@@ -250,7 +250,7 @@ def _transform_bwe(bwe, offset):
 
 
 def write(collection, tabular, mode="insert"):
-    validate_schema(tabular.schema)
+    _validate_schema(tabular.schema)
     tabular = tabular.to_pylist()
     cur_offset = 0
     results = {
@@ -266,7 +266,9 @@ def write(collection, tabular, mode="insert"):
             and len(cur_batch) <= max(100000, MAX_WRITE_BATCH_SIZE)
             and cur_offset + i < len(tabular)
         ):
-            enc_tab = RawBSONDocument(encode(tabular[cur_offset + i]))
+            enc_tab = RawBSONDocument(
+                encode(tabular[cur_offset + i], codec_options=collection.codec_options)
+            )
             cur_batch.append(enc_tab)
             cur_size += len(enc_tab)
             i += 1

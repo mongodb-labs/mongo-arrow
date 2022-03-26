@@ -104,14 +104,14 @@ def _get_internal_typemap(typemap):
     return internal_typemap
 
 
-def in_type_map(t):
+def _in_type_map(t):
     for checker in _TYPE_CHECKER_TO_INTERNAL_TYPE.keys():
         if checker(t):
             return True
     return False
 
 
-def validate_schema(schema):
+def _validate_schema(schema):
     for i in schema.types:
-        if not in_type_map(i):
+        if not _in_type_map(i):
             raise ValueError(f'Unsupported data type "{i}" in schema')
