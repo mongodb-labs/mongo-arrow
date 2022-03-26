@@ -249,7 +249,17 @@ def _transform_bwe(bwe, offset):
     return bwe
 
 
-def write(collection, tabular, mode="insert"):
+def write(collection, tabular):
+    """Method that writes the values in tabular data store `tabular`
+    into the MongoDB collection `collection` using
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``find`` operation.
+      - `tabular`: A tabular data store to use for the write operation.
+
+    :Returns:
+      An instance of :class:`result.ArrowWriteResult`."""
     _validate_schema(tabular.schema)
     tabular = tabular.to_pylist()
     cur_offset = 0
