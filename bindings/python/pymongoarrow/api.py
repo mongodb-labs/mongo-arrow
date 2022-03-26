@@ -249,24 +249,30 @@ def _transform_bwe(bwe, offset):
     return bwe
 
 
+def _tabular_generator(tabular):
+    for i in tabular.to_batches():
+        for row in i.to_pylist():
+            yield row
+
+
 def write(collection, tabular):
     """Method that writes the values in tabular data store `tabular`
-    into the MongoDB collection `collection` using
+    into the MongoDB collection `collection`.
 
     :Parameters:
       - `collection`: Instance of :class:`~pymongo.collection.Collection`.
-        against which to run the ``find`` operation.
+        against which to run the operation.
       - `tabular`: A tabular data store to use for the write operation.
 
     :Returns:
       An instance of :class:`result.ArrowWriteResult`."""
     _validate_schema(tabular.schema)
-    tabular = tabular.to_pylist()
     cur_offset = 0
     results = {
         "insertedCount": 0,
         "numBatches": 0,
     }
+    tabular_gen = _tabular_generator(tabular)
     while cur_offset < len(tabular):
         cur_size = 0
         cur_batch = []
@@ -277,7 +283,7 @@ def write(collection, tabular):
             and cur_offset + i < len(tabular)
         ):
             enc_tab = RawBSONDocument(
-                encode(tabular[cur_offset + i], codec_options=collection.codec_options)
+                encode(next(tabular_gen), codec_options=collection.codec_options)
             )
             cur_batch.append(enc_tab)
             cur_size += len(enc_tab)
@@ -286,6 +292,7 @@ def write(collection, tabular):
             collection.insert_many(cur_batch)
         except BulkWriteError as bwe:
             raise ArrowWriteError(_transform_bwe(dict(bwe.details), cur_offset)) from bwe
+
         results["insertedCount"] += i
         results["numBatches"] += 1
         cur_offset += i
