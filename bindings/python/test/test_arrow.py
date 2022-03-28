@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import cProfile
+import pstats
 import unittest
 import unittest.mock as mock
 from test import client_context
@@ -264,6 +266,23 @@ class TestArrowApiMixin:
         self.round_trip(data, Schema(schema), coll=coll)
         self.assertEqual(type(coll.find_one()), RawBSONDocument)
         self.assertEqual(coll.find_one()._RawBSONDocument__codec_options, co)
+
+    def test_profile_writing(self):
+        schema = {
+            "_id": int64(),
+        }
+        data = Table.from_pydict(
+            {"_id": [i for i in range(2**20)]},
+            ArrowSchema(schema),
+        )
+        self.coll.drop()
+        profiler = cProfile.Profile()
+        profiler.enable()
+        write(self.coll, data)
+        profiler.disable()
+        stats = pstats.Stats(profiler).sort_stats("cumtime")
+        stats.print_stats()
+        stats.dump_stats("yes_batching.prof")
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
