@@ -16,7 +16,7 @@ import warnings
 from bson import encode
 from bson.raw_bson import RawBSONDocument
 from pymongo.bulk import BulkWriteError
-from pymongo.common import MAX_MESSAGE_SIZE, MAX_WRITE_BATCH_SIZE
+from pymongo.common import MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.lib import process_bson_stream
@@ -43,6 +43,12 @@ _PATCH_METHODS = [
     "aggregate_numpy_all",
     "find_numpy_all",
 ]
+
+# MongoDB 3.6's maxMessageSizeBytes minus some overhead to account
+# for the command plus OP_MSG.
+_MAX_MESSAGE_SIZE = 48000000 - 16 * 1024
+# The maximum number of bulk write operations in one batch.
+_MAX_WRITE_BATCH_SIZE = max(100000, MAX_WRITE_BATCH_SIZE)
 
 
 def find_arrow_all(collection, query, *, schema, **kwargs):
@@ -256,8 +262,7 @@ def _tabular_generator(tabular):
 
 
 def write(collection, tabular):
-    """Method that writes the values in tabular data store `tabular`
-    into the MongoDB collection `collection`.
+    """Write data from `tabular` into the given MongoDB `collection`.
 
     :Parameters:
       - `collection`: Instance of :class:`~pymongo.collection.Collection`.
@@ -265,7 +270,9 @@ def write(collection, tabular):
       - `tabular`: A tabular data store to use for the write operation.
 
     :Returns:
-      An instance of :class:`result.ArrowWriteResult`."""
+      An instance of :class:`result.ArrowWriteResult`.
+    """
+
     _validate_schema(tabular.schema)
     cur_offset = 0
     results = {
@@ -278,8 +285,8 @@ def write(collection, tabular):
         cur_batch = []
         i = 0
         while (
-            cur_size <= MAX_MESSAGE_SIZE - 1000
-            and len(cur_batch) <= max(100000, MAX_WRITE_BATCH_SIZE)
+            cur_size <= _MAX_MESSAGE_SIZE
+            and len(cur_batch) <= _MAX_WRITE_BATCH_SIZE
             and cur_offset + i < len(tabular)
         ):
             enc_tab = RawBSONDocument(

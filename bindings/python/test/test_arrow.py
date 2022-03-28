@@ -11,16 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import cProfile
-import pstats
 import unittest
 import unittest.mock as mock
 from test import client_context
 from test.utils import AllowListEventListener
 
 import pymongo
-from bson.codec_options import DEFAULT_CODEC_OPTIONS, UuidRepresentation
-from bson.raw_bson import RawBSONDocument
 from pyarrow import Table, bool_, decimal128, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
@@ -28,7 +24,6 @@ from pymongo import DESCENDING, WriteConcern
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
-from pymongoarrow.types import ObjectIdType, _validate_schema
 
 
 class TestArrowApiMixin:
@@ -196,16 +191,6 @@ class TestArrowApiMixin:
         self.assertEqual(data, find_arrow_all(coll, {}, schema=schema))
         return res
 
-    def test_write_roundtrip(self):
-
-        schema = {"_id": int32(), "data": decimal128(2)}
-        data = Table.from_pydict(
-            {"_id": [i for i in range(2)], "data": [i for i in range(2)]},
-            ArrowSchema(schema),
-        )
-        with self.assertRaises(ValueError):
-            self.round_trip(data, Schema(schema))
-
     def test_write_error(self):
         schema = {"_id": int32(), "data": int64()}
         data = Table.from_pydict(
@@ -223,24 +208,31 @@ class TestArrowApiMixin:
 
     def test_write_schema_validation(self):
         schema = {
-            "_id": int32(),
             "data": int64(),
             "float": float64(),
-            "datetime": timestamp("s"),
-            "objectid": ObjectIdType(),
+            "datetime": timestamp("ms"),
             "string": string(),
             "bool": bool_(),
         }
-        _validate_schema(ArrowSchema(schema))
+        data = Table.from_pydict(
+            {
+                "data": [i for i in range(2)],
+                "float": [i for i in range(2)],
+                "datetime": [i for i in range(2)],
+                "string": [str(i) for i in range(2)],
+                "bool": [True for _ in range(2)],
+            },
+            ArrowSchema(schema),
+        )
+        self.round_trip(data, Schema(schema))
 
-        schema = {
-            "_id": int32(),
-            "float": float64(),
-            "datetime": timestamp("s"),
-            "decimal128": decimal128(10),
-        }
+        schema = {"_id": int32(), "data": decimal128(2)}
+        data = Table.from_pydict(
+            {"_id": [i for i in range(2)], "data": [i for i in range(2)]},
+            ArrowSchema(schema),
+        )
         with self.assertRaises(ValueError):
-            _validate_schema(ArrowSchema(schema))
+            self.round_trip(data, Schema(schema))
 
     def test_write_batching(self):
         schema = {
@@ -252,37 +244,6 @@ class TestArrowApiMixin:
         )
         res = self.round_trip(data, Schema(schema))
         self.assertEqual(res.num_batches, 2)
-
-    def test_write_codec_options(self):
-        schema = {"_id": int32()}
-        data = Table.from_pydict(
-            {"_id": [3]},
-            ArrowSchema(schema),
-        )
-        co = DEFAULT_CODEC_OPTIONS.with_options(
-            document_class=RawBSONDocument, uuid_representation=UuidRepresentation.PYTHON_LEGACY
-        )
-        coll = self.coll.with_options(codec_options=co)
-        self.round_trip(data, Schema(schema), coll=coll)
-        self.assertEqual(type(coll.find_one()), RawBSONDocument)
-        self.assertEqual(coll.find_one()._RawBSONDocument__codec_options, co)
-
-    def test_profile_writing(self):
-        schema = {
-            "_id": int64(),
-        }
-        data = Table.from_pydict(
-            {"_id": [i for i in range(2**20)]},
-            ArrowSchema(schema),
-        )
-        self.coll.drop()
-        profiler = cProfile.Profile()
-        profiler.enable()
-        write(self.coll, data)
-        profiler.disable()
-        stats = pstats.Stats(profiler).sort_stats("cumtime")
-        stats.print_stats()
-        stats.dump_stats("yes_batching.prof")
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
