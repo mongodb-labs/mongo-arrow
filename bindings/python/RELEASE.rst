@@ -28,9 +28,9 @@ Release Process
 #. Add release notes to `doc/source/changelog.rst`. Generally just summarize/clarify
    the git log, but you might add some more long form notes for big changes.
 
-#. Search and replace the `devN` version number w/ the new version number (see
+#. Replace the `devN` version number w/ the new version number (see
    note above in `Versioning`_). Make sure version number is updated in
-   `setup.py` and `pymongoarrow/version.py`. Commit the change and tag the release.
+   `pymongoarrow/version.py`. Commit the change and tag the release.
    Immediately bump the version number to `dev0` in a new commit::
 
      $ # Bump to release version number
@@ -49,15 +49,18 @@ https://github.com/mongodb-labs/mongo-arrow/actions/runs/2060477840.
      $ python3 -m twine upload dist/*
 
 #. Make sure the new version appears on https://mongo-arrow.readthedocs.io/en/latest/. If the
-    new version does not show up automatically, trigger a rebuild of "latest":
-    https://readthedocs.org/projects/mongo-arrow/builds/
+   new version does not show up automatically, trigger a rebuild of "latest":
+   https://readthedocs.org/projects/mongo-arrow/builds/
 
-#. Bump the version number to <next version>.dev0 in setup.py/version.py,
-    commit, push.
+#. Bump the version number to <next version>.dev0 in version.py,
+   commit, push.
 
 #. Publish the release version in Jira.
 
 #. Announce the release on:
-    https://developer.mongodb.com/community/forums/c/community/release-notes/
+   https://developer.mongodb.com/community/forums/c/community/release-notes/
 
-#. Create a GitHub Release for the tag using https://github.com/mongodb/mongo-arrow/releases/new.  The title should be "PyMongoArrow X.Y.Z", and the description should contain a link to the release notes on the the community forum, e.g. "Release notes: mongodb.com/community/forums/t/pymongoarrow-0-1-1-released/104574."
+#. Create a GitHub Release for the tag using https://github.com/mongodb/mongo-arrow/releases/new.
+   The title should be "PyMongoArrow X.Y.Z", and the description should contain
+   a link to the release notes on the the community forum, e.g.
+   "Release notes: mongodb.com/community/forums/t/pymongoarrow-0-1-1-released/104574."
