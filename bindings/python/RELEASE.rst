@@ -58,7 +58,7 @@ https://github.com/mongodb-labs/mongo-arrow/actions/runs/2060477840.
 #. Publish the release version in Jira.
 
 #. Announce the release on:
-   https://developer.mongodb.com/community/forums/c/community/release-notes/
+   https://www.mongodb.com/community/forums/c/announcements/driver-releases
 
 #. Create a GitHub Release for the tag using https://github.com/mongodb/mongo-arrow/releases/new.
    The title should be "PyMongoArrow X.Y.Z", and the description should contain
