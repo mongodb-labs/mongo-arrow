@@ -8,6 +8,7 @@ exclude release.sh
 exclude addtags.py
 exclude benchmark.py
 exclude .flake8
+exclude RELEASE.rst
 
 graft pymongoarrow
 
