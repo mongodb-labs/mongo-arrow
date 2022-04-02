@@ -21,6 +21,7 @@ from pyarrow import Table, bool_, decimal128, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
 from pymongo import DESCENDING, WriteConcern
+from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
@@ -234,7 +235,8 @@ class TestArrowApiMixin:
         with self.assertRaises(ValueError):
             self.round_trip(data, Schema(schema))
 
-    def test_write_batching(self):
+    @mock.patch.object(Collection, "insert_many", side_effect=Collection.insert_many, autospec=True)
+    def test_write_batching(self, mock):
         schema = {
             "_id": int64(),
         }
@@ -242,8 +244,8 @@ class TestArrowApiMixin:
             {"_id": [i for i in range(100040)]},
             ArrowSchema(schema),
         )
-        res = self.round_trip(data, Schema(schema))
-        self.assertEqual(res.num_batches, 2)
+        self.round_trip(data, Schema(schema), coll=self.coll)
+        self.assertEqual(mock.call_count, 2)
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):

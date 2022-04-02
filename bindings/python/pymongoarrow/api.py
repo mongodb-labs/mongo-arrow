@@ -277,7 +277,6 @@ def write(collection, tabular):
     cur_offset = 0
     results = {
         "insertedCount": 0,
-        "numBatches": 0,
     }
     tabular_gen = _tabular_generator(tabular)
     while cur_offset < len(tabular):
@@ -301,7 +300,6 @@ def write(collection, tabular):
             raise ArrowWriteError(_transform_bwe(dict(bwe.details), cur_offset)) from bwe
 
         results["insertedCount"] += i
-        results["numBatches"] += 1
         cur_offset += i
 
     return ArrowWriteResult(results)

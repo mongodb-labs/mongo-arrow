@@ -27,9 +27,5 @@ class ArrowWriteResult:
         return self._result.get("insertedCount", 0)
 
     @property
-    def num_batches(self):
-        return self._result.get("numBatches", 0)
-
-    @property
     def raw_result(self):
         return self._result
