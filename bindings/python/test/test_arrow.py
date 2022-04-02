@@ -17,10 +17,13 @@ from test import client_context
 from test.utils import AllowListEventListener
 
 import pymongo
-from pyarrow import Table, int32, int64
+from pyarrow import Table, bool_, decimal128, float64, int32, int64
 from pyarrow import schema as ArrowSchema
+from pyarrow import string, timestamp
 from pymongo import DESCENDING, WriteConcern
-from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all
+from pymongo.collection import Collection
+from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
+from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
 
 
@@ -179,6 +182,70 @@ class TestArrowApiMixin:
             if op_name == "$project":
                 self.assertFalse(stage[op_name]["_id"])
                 break
+
+    def round_trip(self, data, schema, coll=None):
+        if coll is None:
+            coll = self.coll
+        self.coll.drop()
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        self.assertEqual(data, find_arrow_all(coll, {}, schema=schema))
+        return res
+
+    def test_write_error(self):
+        schema = {"_id": int32(), "data": int64()}
+        data = Table.from_pydict(
+            {"_id": [i for i in range(10001)] * 2, "data": [i * 2 for i in range(10001)] * 2},
+            ArrowSchema(schema),
+        )
+        with self.assertRaises(ArrowWriteError):
+            try:
+                self.round_trip(data, Schema(schema))
+            except ArrowWriteError as awe:
+                self.assertEqual(
+                    10001, awe.details["writeErrors"][0]["index"], awe.details["nInserted"]
+                )
+                raise awe
+
+    def test_write_schema_validation(self):
+        schema = {
+            "data": int64(),
+            "float": float64(),
+            "datetime": timestamp("ms"),
+            "string": string(),
+            "bool": bool_(),
+        }
+        data = Table.from_pydict(
+            {
+                "data": [i for i in range(2)],
+                "float": [i for i in range(2)],
+                "datetime": [i for i in range(2)],
+                "string": [str(i) for i in range(2)],
+                "bool": [True for _ in range(2)],
+            },
+            ArrowSchema(schema),
+        )
+        self.round_trip(data, Schema(schema))
+
+        schema = {"_id": int32(), "data": decimal128(2)}
+        data = Table.from_pydict(
+            {"_id": [i for i in range(2)], "data": [i for i in range(2)]},
+            ArrowSchema(schema),
+        )
+        with self.assertRaises(ValueError):
+            self.round_trip(data, Schema(schema))
+
+    @mock.patch.object(Collection, "insert_many", side_effect=Collection.insert_many, autospec=True)
+    def test_write_batching(self, mock):
+        schema = {
+            "_id": int64(),
+        }
+        data = Table.from_pydict(
+            {"_id": [i for i in range(100040)]},
+            ArrowSchema(schema),
+        )
+        self.round_trip(data, Schema(schema), coll=self.coll)
+        self.assertEqual(mock.call_count, 2)
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):

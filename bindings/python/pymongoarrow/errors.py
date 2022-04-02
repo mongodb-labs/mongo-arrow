@@ -21,3 +21,30 @@ class PyMongoArrowError(Exception):
     """Base class for all PyMongoArrow exceptions."""
 
     pass
+
+
+class ArrowWriteError(PyMongoArrowError):
+    """Error raised when we encounter an exception writing into MongoDB"""
+
+    def __init__(self, details):
+        self._details = details
+
+    @property
+    def details(self):
+        """Details for the error.
+
+        It is a dictionary of key-value pairs giving diagnostic information about what went wrong. To see the entire dictionary simply use `print(awe.details)`.
+
+        Details will have the following format:
+        {
+            'writeErrors': [...],
+            'writeConcernErrors': [...],
+            'nInserted': ...,
+            'nUpserted': ...,
+            'nMatched': ...,
+            'nModified': ...,
+            'nRemoved': ...,
+            'upserted': [...]
+        }
+        """
+        return self._details

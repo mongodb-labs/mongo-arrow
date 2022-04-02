@@ -13,9 +13,16 @@
 # limitations under the License.
 import warnings
 
+from bson import encode
+from bson.raw_bson import RawBSONDocument
+from pymongo.bulk import BulkWriteError
+from pymongo.common import MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext
+from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.lib import process_bson_stream
+from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
+from pymongoarrow.types import _validate_schema
 
 __all__ = [
     "aggregate_arrow_all",
@@ -36,6 +43,12 @@ _PATCH_METHODS = [
     "aggregate_numpy_all",
     "find_numpy_all",
 ]
+
+# MongoDB 3.6's maxMessageSizeBytes minus some overhead to account
+# for the command plus OP_MSG.
+_MAX_MESSAGE_SIZE = 48000000 - 16 * 1024
+# The maximum number of bulk write operations in one batch.
+_MAX_WRITE_BATCH_SIZE = max(100000, MAX_WRITE_BATCH_SIZE)
 
 
 def find_arrow_all(collection, query, *, schema, **kwargs):
@@ -233,3 +246,60 @@ def aggregate_numpy_all(collection, pipeline, *, schema, **kwargs):
     return _arrow_to_numpy(
         aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs), schema
     )
+
+
+def _transform_bwe(bwe, offset):
+    bwe["nInserted"] += offset
+    for i in bwe["writeErrors"]:
+        i["index"] += offset
+    return bwe
+
+
+def _tabular_generator(tabular):
+    for i in tabular.to_batches():
+        for row in i.to_pylist():
+            yield row
+
+
+def write(collection, tabular):
+    """Write data from `tabular` into the given MongoDB `collection`.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the operation.
+      - `tabular`: A tabular data store to use for the write operation.
+
+    :Returns:
+      An instance of :class:`result.ArrowWriteResult`.
+    """
+
+    _validate_schema(tabular.schema)
+    cur_offset = 0
+    results = {
+        "insertedCount": 0,
+    }
+    tabular_gen = _tabular_generator(tabular)
+    while cur_offset < len(tabular):
+        cur_size = 0
+        cur_batch = []
+        i = 0
+        while (
+            cur_size <= _MAX_MESSAGE_SIZE
+            and len(cur_batch) <= _MAX_WRITE_BATCH_SIZE
+            and cur_offset + i < len(tabular)
+        ):
+            enc_tab = RawBSONDocument(
+                encode(next(tabular_gen), codec_options=collection.codec_options)
+            )
+            cur_batch.append(enc_tab)
+            cur_size += len(enc_tab)
+            i += 1
+        try:
+            collection.insert_many(cur_batch)
+        except BulkWriteError as bwe:
+            raise ArrowWriteError(_transform_bwe(dict(bwe.details), cur_offset)) from bwe
+
+        results["insertedCount"] += i
+        cur_offset += i
+
+    return ArrowWriteResult(results)
