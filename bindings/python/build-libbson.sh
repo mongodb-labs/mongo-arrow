@@ -22,6 +22,8 @@ fi
 # Directory where build artifacts will be placed
 LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR:-""}
 
+LIBBSON_INSTALL_DIR=$(realpath -s ${LIBBSON_INSTALL_DIR})
+
 # Build libbson
 pushd "$WORKDIR"
   git checkout "$LIBBSON_VERSION"
