@@ -13,7 +13,7 @@ before-build = "bash ./bindings/python/build-libbson.sh"
 test-command = "python -c \"from pymongoarrow.lib import process_bson_stream\""
 
 [tool.cibuildwheel.environment]
-LIBBSON_INSTALL_DIR = "./bindings/pythonlibbson"
+LIBBSON_INSTALL_DIR = "./bindings/python/libbson"
 
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux2014"
