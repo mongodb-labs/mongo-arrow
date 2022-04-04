@@ -9,11 +9,11 @@ requires = [
 
 [tool.cibuildwheel]
 skip = "pp* *-manylinux_i686 *_ppc64le *_s390x *-musllinux*"
-before-build = "bash ./bindings/python/build-libbson.sh"
+before-build = "bash ./build-libbson.sh"
 test-command = "python -c \"from pymongoarrow.lib import process_bson_stream\""
 
 [tool.cibuildwheel.environment]
-LIBBSON_INSTALL_DIR = "./bindings/python/libbson"
+LIBBSON_INSTALL_DIR = "./libbson"
 
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux2014"
