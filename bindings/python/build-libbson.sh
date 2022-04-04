@@ -24,7 +24,8 @@ LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR:-""}
 
 # Resolve a relative path if given
 mkdir -p ${LIBBSON_INSTALL_DIR}
-LIBBSON_INSTALL_DIR=$(readlink -f ${LIBBSON_INSTALL_DIR})
+# Fall back to older FreeBSD CLI option
+LIBBSON_INSTALL_DIR=$(readlink -f ${LIBBSON_INSTALL_DIR} || readlink -n ${LIBBSON_INSTALL_DIR})
 
 # Build libbson
 pushd "$WORKDIR"
