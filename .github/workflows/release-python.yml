@@ -37,6 +37,7 @@ jobs:
 
       - name: Build wheels
         working-directory: ./bindings/python
+        shell: bash
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
         run: python -m cibuildwheel --output-dir wheelhouse
@@ -72,6 +73,7 @@ jobs:
       - name: Test Sdist
         working-directory: ./bindings/python
         run: |
+          export LIBBSON_INSTALL_DIR="$(pwd)/libbson"
           python -m pip install dist/*.gz
           cd ..
           python -c "from pymongoarrow.lib import process_bson_stream"
