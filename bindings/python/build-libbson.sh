@@ -22,7 +22,6 @@ fi
 # Directory where build artifacts will be placed
 LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR:-""}
 
-LIBBSON_INSTALL_DIR=$(realpath -s ${LIBBSON_INSTALL_DIR})
 
 # Build libbson
 pushd "$WORKDIR"
@@ -31,7 +30,12 @@ pushd "$WORKDIR"
   pushd cmake-build
     if [ -n "$LIBBSON_INSTALL_DIR" ]
     then
-      echo "Installing libbson in $LIBBSON_INSTALL_DIR"
+      echo "Installing libbson in ${LIBBSON_INSTALL_DIR}"
+
+      # Resolve a relative path if given
+      mkdir -p ${LIBBSON_INSTALL_DIR}
+      LIBBSON_INSTALL_DIR=$(readlink -f ${LIBBSON_INSTALL_DIR})
+
       cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
             -DENABLE_MONGOC=OFF \
             -DCMAKE_OSX_DEPLOYMENT_TARGET="10.9" \
