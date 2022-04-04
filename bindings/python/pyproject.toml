@@ -9,6 +9,7 @@ requires = [
 
 [tool.cibuildwheel]
 skip = "pp* *-manylinux_i686 *_ppc64le *_s390x *-musllinux*"
+before-all = "LIBBSON_INSTALL_DIR=$(pwd/libbson"
 before-build = "bash ./build-libbson.sh"
 test-command = "python -c \"from pymongoarrow.lib import process_bson_stream\""
 
