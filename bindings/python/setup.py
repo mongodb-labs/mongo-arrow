@@ -37,6 +37,10 @@ def append_libbson_flags(module):
     pc_path = "libbson-1.0"
     install_dir = os.environ.get("LIBBSON_INSTALL_DIR")
     if install_dir:
+        install_dir = os.path.abspath(install_dir)
+        if not os.path.exists(install_dir):
+            raise RuntimeError(f"{install_dir} does not exist")
+
         # Handle the copy-able library file if applicable.
         if COPY_LIBBSON:
             if platform == "darwin":
