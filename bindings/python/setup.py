@@ -56,6 +56,7 @@ def append_libbson_flags(module):
         lib_dirs = glob.glob(os.path.join(install_dir, "lib*"))
         if len(lib_dirs) != 1:
             warnings.warn(f"Unable to locate libbson in {install_dir}")
+            warnings.warn(str(os.listdir(install_dir)))
         else:
             lib_dir = lib_dirs[0]
             if IS_WIN:
