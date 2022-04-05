@@ -22,8 +22,8 @@ fi
 # Directory where build artifacts will be placed
 LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR:-""}
 
-# Replace a relative path with an absolute on for cmake
-LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR/.\//$(pwd)\/}
+# Replace a relative path with an absolute one for cmake
+LIBBSON_INSTALL_DIR="$(cd "$(dirname "$LIBBSON_INSTALL_DIR")"; pwd)/$(basename "$LIBBSON_INSTALL_DIR")"
 
 # Build libbson
 pushd "$WORKDIR"
