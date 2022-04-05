@@ -37,9 +37,6 @@ def append_libbson_flags(module):
     pc_path = "libbson-1.0"
     install_dir = os.environ.get("LIBBSON_INSTALL_DIR")
     if install_dir:
-        install_dir = os.path.abspath(install_dir)
-        if not os.path.exists(install_dir):
-            raise RuntimeError(f"{install_dir} does not exist")
 
         # Handle the copy-able library file if applicable.
         if COPY_LIBBSON:
@@ -60,7 +57,10 @@ def append_libbson_flags(module):
         lib_dirs = glob.glob(os.path.join(install_dir, "lib*"))
         if len(lib_dirs) != 1:
             warnings.warn(f"Unable to locate libbson in {install_dir}")
-            warnings.warn(str(os.listdir(install_dir)))
+            if IS_WIN:
+                raise ValueError(
+                    "We require a LIBBSON_INSTALL_DIR with a compiled library on Windows"
+                )
         else:
             lib_dir = lib_dirs[0]
             if IS_WIN:

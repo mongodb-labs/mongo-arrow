@@ -47,7 +47,5 @@ pushd "$WORKDIR"
     cmake --build . --target clean
     cmake --build .
     cmake --build . --target install
-
-    ls ${LIBBSON_INSTALL_DIR}
   popd
 popd
