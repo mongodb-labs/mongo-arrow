@@ -279,23 +279,24 @@ def write(collection, tabular):
         "insertedCount": 0,
     }
     tabular_gen = _tabular_generator(tabular)
-    while cur_offset < len(tabular):
+    tab_size = len(tabular)
+    while cur_offset < tab_size:
         cur_size = 0
         cur_batch = []
         i = 0
         while (
             cur_size <= _MAX_MESSAGE_SIZE
             and len(cur_batch) <= _MAX_WRITE_BATCH_SIZE
-            and cur_offset + i < len(tabular)
+            and cur_offset + i < tab_size
         ):
             enc_tab = RawBSONDocument(
                 encode(next(tabular_gen), codec_options=collection.codec_options)
             )
             cur_batch.append(enc_tab)
-            cur_size += len(enc_tab)
+            cur_size += len(enc_tab.raw)
             i += 1
         try:
-            collection.insert_many(cur_batch)
+            collection.insert_many(cur_batch, bypass_document_validation=True)
         except BulkWriteError as bwe:
             raise ArrowWriteError(_transform_bwe(dict(bwe.details), cur_offset)) from bwe
 

@@ -152,13 +152,13 @@ def to_arrow(use_large):
     find_arrow_all(c, {}, schema=schema)
 
 
-@bench("arrow-roundtrip")
-def roundtrip_arrow(use_large):
-    write(db.test, arrow_tables[use_large])
+@bench("insert_arrow")
+def insert_arrow(use_large):
+    write(db[collection_names[use_large]], arrow_tables[use_large])
 
 
-@bench("naive-roundtrip")
-def roundtrip_naive(use_large):
+@bench("insert_naive")
+def insert_naive(use_large):
     tab = arrow_tables[use_large].to_pylist()
     db[collection_names[use_large]].insert_many(tab)
 
