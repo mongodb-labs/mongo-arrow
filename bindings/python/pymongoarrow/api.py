@@ -296,7 +296,7 @@ def write(collection, tabular):
             cur_size += len(enc_tab.raw)
             i += 1
         try:
-            collection.insert_many(cur_batch, bypass_document_validation=True)
+            collection.insert_many(cur_batch)
         except BulkWriteError as bwe:
             raise ArrowWriteError(_transform_bwe(dict(bwe.details), cur_offset)) from bwe
 
