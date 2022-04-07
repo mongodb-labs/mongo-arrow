@@ -12,7 +12,7 @@ mac_version="${MACOSX_DEPLOYMENT_TARGET/\./_}"
 if [[ "$CIBW_BUILD" == *"macosx_"* ]]
 then
   os_name=macosx
-else if [[ "$CIBW_BUILD" == *"win_amd64"* ]]
+elif [[ "$CIBW_BUILD" == *"win_amd64"* ]]
 then
   os_name=win_amd64
 else
@@ -21,10 +21,10 @@ fi
 
 if [[ "$ARCHFLAGS" == *"arm64"* ]]
 then
-  CMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+  export CMAKE_OSX_ARCHITECTURES="arm64;x86_64"
   platform="${os_name}_${mac_version}_universal2"
 else
-  CMAKE_OSX_ARCHITECTURES="x86_64"
+  export CMAKE_OSX_ARCHITECTURES="x86_64"
   platform="${os_name}_${mac_version}_x86_64"
 fi
 
