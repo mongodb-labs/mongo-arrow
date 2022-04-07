@@ -20,7 +20,7 @@ jobs:
         # https://github.com/github/feedback/discussions/7835#discussioncomment-1769026
         buildplat:
         - [ubuntu-20.04, manylinux_x86_64]
-        - [macos-11, macosx_*]
+        - [macos-10.15, macosx_*]
         - [windows-2019, win_amd64]
         python: ["cp37", "cp38", "cp39", "cp310"]
 
@@ -40,7 +40,7 @@ jobs:
         shell: bash
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
-          MACOSX_DEPLOYMENT_TARGET: "11.0"
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
         run: python -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v2
