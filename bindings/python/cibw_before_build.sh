@@ -32,4 +32,4 @@ fi
 ./build-libbson.sh
 
 # Install pyarrow with the appropriate platform.
-pip install --platform $platform --no-deps --only-binary=:all: pyarrow
+pip install --platform $platform --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
