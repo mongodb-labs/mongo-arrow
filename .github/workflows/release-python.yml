@@ -40,7 +40,7 @@ jobs:
         shell: bash
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
-          MACOSX_DEPLOYMENT_TARGET: "10.13"
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
         run: python -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v2
