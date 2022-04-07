@@ -25,7 +25,8 @@ jobs:
         python: ["cp37", "cp38", "cp39", "cp310"]
         include:
           # pyarrow only has universal wheels on Python 3.9+.
-          - buildplat: [macos-10.15, macosx_universal2]
+          - buildplat:
+            - [macos-10.15, macosx_universal2]
             python: ["cp39", "cp310"]
 
     steps:
