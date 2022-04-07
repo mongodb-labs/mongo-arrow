@@ -13,13 +13,17 @@
 # limitations under the License.
 # from datetime import datetime, timedelta
 import unittest
+import unittest.mock as mock
 from test import client_context
 from test.utils import AllowListEventListener
 
+import numpy as np
 import pandas as pd
-from pyarrow import int32, int64
+from pyarrow import bool_, decimal128, float64, int32, int64, string, timestamp
 from pymongo import DESCENDING, WriteConcern
-from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all
+from pymongo.collection import Collection
+from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, write
+from pymongoarrow.errors import ArrowWriteError
 
 
 class TestExplicitPandasApi(unittest.TestCase):
@@ -76,3 +80,81 @@ class TestExplicitPandasApi(unittest.TestCase):
         assert len(agg_cmd.command["pipeline"]) == 2
         self.assertEqual(agg_cmd.command["pipeline"][0]["$project"], projection)
         self.assertEqual(agg_cmd.command["pipeline"][1]["$project"], {"_id": True, "data": True})
+
+    def round_trip(self, data, schema, coll=None):
+        if coll is None:
+            coll = self.coll
+        coll.drop()
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        pd.testing.assert_frame_equal(data, find_pandas_all(coll, {}, schema=schema))
+        return res
+
+    def test_write_error(self):
+        schema = {"_id": "int32", "data": "int64"}
+
+        data = pd.DataFrame(
+            data={"_id": [i for i in range(10001)] * 2, "data": [i * 2 for i in range(10001)] * 2}
+        ).astype(schema)
+        with self.assertRaises(ArrowWriteError):
+            try:
+                self.round_trip(data, Schema({"_id": int32(), "data": int64()}))
+            except ArrowWriteError as awe:
+                self.assertEqual(
+                    10001, awe.details["writeErrors"][0]["index"], awe.details["nInserted"]
+                )
+                raise awe
+
+    def test_write_schema_validation(self):
+        schema = {
+            "data": "int64",
+            "float": "float64",
+            "datetime": "datetime64[ms]",
+            "string": "object",
+            "bool": "bool",
+        }
+        data = pd.DataFrame(
+            data={
+                "data": [i for i in range(2)],
+                "float": [i for i in range(2)],
+                "datetime": [i for i in range(2)],
+                "string": [str(i) for i in range(2)],
+                "bool": [True for _ in range(2)],
+            }
+        ).astype(schema)
+        self.round_trip(
+            data,
+            Schema(
+                {
+                    "data": int64(),
+                    "float": float64(),
+                    "datetime": timestamp("ms"),
+                    "string": string(),
+                    "bool": bool_(),
+                }
+            ),
+        )
+
+        schema = {"_id": "int32", "data": np.ubyte()}
+        data = pd.DataFrame(
+            data={"_id": [i for i in range(2)], "data": [i for i in range(2)]}
+        ).astype(schema)
+        with self.assertRaises(ValueError):
+            self.round_trip(data, Schema({"_id": int32(), "data": decimal128(2)}))
+
+    @mock.patch.object(Collection, "insert_many", side_effect=Collection.insert_many, autospec=True)
+    def test_write_batching(self, mock):
+        schema = {"_id": "int64"}
+        data = pd.DataFrame(
+            data={"_id": [i for i in range(100040)]},
+        ).astype(schema)
+        self.round_trip(
+            data,
+            Schema(
+                {
+                    "_id": int64(),
+                }
+            ),
+            coll=self.coll,
+        )
+        self.assertEqual(mock.call_count, 2)

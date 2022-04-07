@@ -31,7 +31,9 @@ collection_names = {LARGE: "large", SMALL: "small"}
 dtypes = {}
 schemas = {}
 raw_bsons = {}
+
 arrow_tables = {}
+pandas_tables = {}
 
 
 def _setup():
@@ -91,6 +93,8 @@ def _setup():
     raw_bsons[LARGE] = raw_bson_large
     arrow_tables[SMALL] = find_arrow_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
     arrow_tables[LARGE] = find_arrow_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
+    pandas_tables[SMALL] = find_pandas_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
+    pandas_tables[LARGE] = find_pandas_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
 
 
 def _teardown():
@@ -161,6 +165,11 @@ def insert_arrow(use_large):
 def insert_conventional(use_large):
     tab = arrow_tables[use_large].to_pylist()
     db[collection_names[use_large]].insert_many(tab)
+
+
+@bench("insert_pandas")
+def insert_pandas(use_large):
+    write(db[collection_names[use_large]], pandas_tables[use_large])
 
 
 parser = argparse.ArgumentParser(
