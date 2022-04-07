@@ -29,7 +29,7 @@ else
 fi
 
 # Build libbson with the appropriate arch.
-./build_libbson
+./build_libbson.sh
 
 # Install pyarrow with the appropriate platform.
 pip install --platform $platform --no-deps --only-binary=:all: pyarrow
