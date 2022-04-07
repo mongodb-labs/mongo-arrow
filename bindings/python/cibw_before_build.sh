@@ -13,12 +13,13 @@ then
   if [[ "$ARCHFLAGS" == *"arm64"* ]]
   then
     platform="macosx_${mac_version}_universal2"
+    export CMAKE_OSX_ARCHITECTURES="arm64;x86_64"
   else
     platform="macosx_${mac_version}_x86_64"
-
-    # Install pyarrow with the appropriate platform.
-    pip install --platform $platform --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
   fi
+
+  # Install pyarrow with the appropriate platform.
+  pip install --platform $platform --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
 fi
 
 
