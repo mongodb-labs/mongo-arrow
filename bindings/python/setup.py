@@ -88,7 +88,10 @@ def append_libbson_flags(module):
     if not lnames:
         raise ValueError(f'Could not find "{pc_path}" library')
 
-    cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path))
+    cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path)) or ""
+    if "arm64" in os.environ.get("CIBW_BUILD", ""):
+        cflags += " -arch x86_64 -arch arm64 "
+
     if cflags:
         orig_cflags = os.environ.get("CFLAGS", "")
         os.environ["CFLAGS"] = cflags + " " + orig_cflags
@@ -179,6 +182,7 @@ def get_extension_modules():
             module.extra_link_args += ["-rpath", "@loader_path"]
         elif platform == "linux":
             module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
+
     return modules
 
 
