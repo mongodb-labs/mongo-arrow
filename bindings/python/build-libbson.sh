@@ -3,6 +3,11 @@
 set -o xtrace
 set -o errexit
 
+env
+
+# we want to install the following for the universal build
+#  pip install --platform macosx_11_0_arm64 --no-deps --only-binary=:all: pyarrow
+
 # Version of libbson to build
 # Keep in sync with pymongoarrow.version._MIN_LIBBSON_VERSION
 LIBBSON_VERSION=${LIBBSON_VERSION:-"1.21.1"}
