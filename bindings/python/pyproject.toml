@@ -16,6 +16,7 @@ test-command = "python -c \"from pymongoarrow.lib import process_bson_stream\""
 [tool.cibuildwheel.environment]
 LIBBSON_INSTALL_DIR = "./libbson"
 MONGO_NO_COPY_LIBBSON = "true"
+MONGO_NO_COPY_LIBARROW = "true"
 
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux2014"
