@@ -11,7 +11,13 @@ import pandas as pd
 import pyarrow
 import pymongo
 from bson import BSON, Int64, ObjectId
-from pymongoarrow.api import Schema, find_arrow_all, find_numpy_all, find_pandas_all
+from pymongoarrow.api import (
+    Schema,
+    find_arrow_all,
+    find_numpy_all,
+    find_pandas_all,
+    write,
+)
 
 assert pymongo.has_c()
 
@@ -25,6 +31,7 @@ collection_names = {LARGE: "large", SMALL: "small"}
 dtypes = {}
 schemas = {}
 raw_bsons = {}
+arrow_tables = {}
 
 
 def _setup():
@@ -82,6 +89,8 @@ def _setup():
 
     raw_bsons[SMALL] = raw_bson_small
     raw_bsons[LARGE] = raw_bson_large
+    arrow_tables[SMALL] = find_arrow_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
+    arrow_tables[LARGE] = find_arrow_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
 
 
 def _teardown():
@@ -141,6 +150,17 @@ def to_arrow(use_large):
     c = db[collection_names[use_large]]
     schema = schemas[use_large]
     find_arrow_all(c, {}, schema=schema)
+
+
+@bench("insert_arrow")
+def insert_arrow(use_large):
+    write(db[collection_names[use_large]], arrow_tables[use_large])
+
+
+@bench("insert_conventional")
+def insert_conventional(use_large):
+    tab = arrow_tables[use_large].to_pylist()
+    db[collection_names[use_large]].insert_many(tab)
 
 
 parser = argparse.ArgumentParser(
