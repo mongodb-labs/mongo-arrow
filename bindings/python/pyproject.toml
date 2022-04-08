@@ -6,3 +6,19 @@ requires = [
     # Must be kept in sync with the `install_requires` in `setup.cfg`
     "pyarrow>=7.0.0,<7.1.0",
 ]
+
+[tool.cibuildwheel]
+skip = "pp* *-manylinux_i686 *_ppc64le *_s390x *-musllinux*"
+before-build = "bash ./cibw_before_build.sh"
+build-frontend = "build"
+test-command = "python -c \"from pymongoarrow.lib import process_bson_stream\""
+
+[tool.cibuildwheel.environment]
+LIBBSON_INSTALL_DIR = "./libbson"
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux2014"
+
+[tool.cibuildwheel.macos]
+archs = "x86_64 universal2"
+test-skip = "*universal2:arm64"

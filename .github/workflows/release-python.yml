@@ -9,101 +9,103 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-non-linux-wheels:
-    runs-on: ${{ matrix.os }}
+  build_wheels:
+    name: Build wheel for ${{ matrix.python }}-${{ matrix.buildplat[1] }}
+    runs-on: ${{ matrix.buildplat[0] }}
     strategy:
+      # Ensure that a wheel builder finishes even if another fails
+      fail-fast: false
       matrix:
-        os: [macos-10.15, windows-latest]
-        python-version: [3.7, 3.8, 3.9, "3.10"]
-    name: Build CPython ${{ matrix.python-version }}-${{ matrix.os }}
+        # Github Actions doesn't support pairing matrix values together, let's improvise
+        # https://github.com/github/feedback/discussions/7835#discussioncomment-1769026
+        buildplat:
+        - [ubuntu-20.04, manylinux_x86_64]
+        - [macos-10.15, macosx_*]
+        - [windows-2019, win_amd64]
+        python: ["cp37", "cp38", "cp39", "cp310"]
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup Python
-        uses: actions/setup-python@v2
+      - name: Checkout pymongoarrow
+        uses: actions/checkout@v2
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-          cache-dependency-path: '**/setup.cfg'
-      - name: Build wheels
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v2
+
+      - name: Install cibuildwheel
+        run: python -m pip install "cibuildwheel>=2.4,<3"
+
+      - name: Build MacOS Py38 Wheel
+        if: ${{ matrix.python == 'cp38' && matrix.buildplat[0] == 'macos-10.15' }}
         working-directory: ./bindings/python
         shell: bash
-        run: |
-          ./release.sh
-      - uses: actions/upload-artifact@v2
-        with:
-          name: pymongoarrow-${{ matrix.python-version }}-${{ matrix.os }}-wheel
-          path: ./bindings/python/dist/*.whl
-          if-no-files-found: error
-  test-non-linux-wheels:
-    needs: build-non-linux-wheels
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-10.15, windows-latest]
-        python-version: [3.7, 3.8, 3.9, "3.10"]
-    name: Test CPython ${{ matrix.python-version }}-${{ matrix.os }}
-    steps:
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Download a previously created wheel
-        uses: actions/download-artifact@v2
-        with:
-          name: pymongoarrow-${{ matrix.python-version }}-${{ matrix.os }}-wheel
-      - name: Test wheel
-        shell: bash
-        run: |
-          python -m pip install -U pip
-          python -m pip install *.whl
-          python -c "from pymongoarrow.lib import process_bson_stream"
-  # Linux
-  build-manylinux-wheels:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        # Cannot have '/' in artifact names, so hardcode 'quay.io/pypa/'
-        container: ['manylinux2010_x86_64', 'manylinux2014_x86_64']
-        python-version: ['cp37-cp37m', 'cp38-cp38',
-                         'cp39-cp39', 'cp310-cp310']
-    name: Build CPython ${{ matrix.python-version }}-${{ matrix.container }}
-    steps:
-      - uses: actions/checkout@v2
+        env:
+          CIBW_BUILD: cp38-macosx_x86_64
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
+        run: python -m cibuildwheel --output-dir wheelhouse
+
       - name: Build wheels
+        if: ${{ matrix.python != 'cp38' || matrix.buildplat[0] != 'macos-10.15' }}
         working-directory: ./bindings/python
-        run: |
-          docker run --rm --volume `pwd`:/python --workdir /python --env PLAT=${{ matrix.container }} --env PYTHON_BINARY=/opt/python/${{ matrix.python-version }}/bin/python quay.io/pypa/${{ matrix.container }} ./release.sh
+        shell: bash
+        env:
+          CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
+          MACOSX_DEPLOYMENT_TARGET: "10.13"
+        run: python -m cibuildwheel --output-dir wheelhouse
+
       - uses: actions/upload-artifact@v2
         with:
-          name: pymongoarrow-${{ matrix.python-version }}-${{ matrix.container }}-wheel
+          name: ${{ matrix.python }}-${{ startsWith(matrix.buildplat[1], 'macosx') && 'macosx' || matrix.buildplat[1] }}
           path: ./bindings/python/wheelhouse/*.whl
           if-no-files-found: error
-  test-manylinux-wheels:
+
+  make_sdist:
+    name: Make SDist
     runs-on: ubuntu-latest
-    needs: build-manylinux-wheels
-    strategy:
-      matrix:
-        container: ['manylinux2010_x86_64', 'manylinux2014_x86_64']
-        python-version: ['cp37-cp37m', 'cp38-cp38',
-                         'cp39-cp39', 'cp310-cp310']
-    name: Test CPython ${{ matrix.python-version }}-${{ matrix.container }}
     steps:
-      - name: Download a previously created wheel
-        uses: actions/download-artifact@v2
+      - uses: actions/checkout@v2
         with:
-          name: pymongoarrow-${{ matrix.python-version }}-${{ matrix.container }}-wheel
-      - name: Test wheel
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v2
+        with:
+          # Build sdist on lowest supported Python
+          python-version: '3.7'
+
+      - name: Build SDist
+        working-directory: ./bindings/python
         run: |
-          docker run --rm --volume `pwd`:/python quay.io/pypa/${{ matrix.container }} /bin/bash -c "/opt/python/${{ matrix.python-version }}/bin/python -m pip install -U pip && /opt/python/${{ matrix.python-version }}/bin/python -m pip install /python/*.whl && /opt/python/${{ matrix.python-version }}/bin/python -c 'from pymongoarrow.lib import process_bson_stream'"
-  # Collect all built wheels
-  collect-wheels:
+          set -ex
+          python -m pip install -U pip build
+          export LIBBSON_INSTALL_DIR="$(pwd)/libbson"
+          ./build-libbson.sh
+          python -m build --sdist .
+
+      - name: Test Sdist
+        working-directory: ./bindings/python
+        run: |
+          export LIBBSON_INSTALL_DIR="$(pwd)/libbson"
+          python -m pip install dist/*.gz
+          cd ..
+          python -c "from pymongoarrow.lib import process_bson_stream"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: "sdist"
+          path: ./bindings/python/dist/*.tar.gz
+
+  collect-dist:
     runs-on: ubuntu-latest
-    needs: [build-non-linux-wheels, build-manylinux-wheels]
+    needs: [build_wheels, make_sdist]
     name: Download Wheels
     steps:
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v2
+      - name: Flatten directory
+        run: |
+          find . -mindepth 2 -type f -exec mv {} . \;
+          find . -type d -empty -delete
       - uses: actions/upload-artifact@v2
         with:
-          name: nix-wheels
-          path: "*-wheel"
+          name: all-dist
+          path: "./*"

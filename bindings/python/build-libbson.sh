@@ -19,8 +19,20 @@ then
   git clone --depth 1 -b "$LIBBSON_VERSION" https://github.com/mongodb/mongo-c-driver.git "$WORKDIR"
 fi
 
+echo "Installing libbson..."
+
+MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-"10.15"}
+CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES:-"x86_64"}
+
 # Directory where build artifacts will be placed
 LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR:-""}
+
+# Replace a relative path with an absolute one for cmake
+LIBBSON_INSTALL_DIR="$(cd "$(dirname "$LIBBSON_INSTALL_DIR")"; pwd)/$(basename "$LIBBSON_INSTALL_DIR")"
+
+echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET}"
+echo "CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+echo "LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR}"
 
 # Build libbson
 pushd "$WORKDIR"
@@ -29,16 +41,17 @@ pushd "$WORKDIR"
   pushd cmake-build
     if [ -n "$LIBBSON_INSTALL_DIR" ]
     then
-      echo "Installing libbson in $LIBBSON_INSTALL_DIR"
       cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
             -DENABLE_MONGOC=OFF \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET="10.9" \
+            -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES} \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET} \
             -DCMAKE_INSTALL_PREFIX:PATH="$LIBBSON_INSTALL_DIR" \
             ..
     else
       cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
+            -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES} \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET} \
             -DENABLE_MONGOC=OFF \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET="10.9" \
             ..
     fi
     cmake --build . --target clean

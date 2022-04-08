@@ -37,6 +37,7 @@ def append_libbson_flags(module):
     pc_path = "libbson-1.0"
     install_dir = os.environ.get("LIBBSON_INSTALL_DIR")
     if install_dir:
+        install_dir = os.path.abspath(install_dir)
         # Handle the copy-able library file if applicable.
         if COPY_LIBBSON:
             if platform == "darwin":
@@ -56,6 +57,10 @@ def append_libbson_flags(module):
         lib_dirs = glob.glob(os.path.join(install_dir, "lib*"))
         if len(lib_dirs) != 1:
             warnings.warn(f"Unable to locate libbson in {install_dir}")
+            if IS_WIN:
+                raise ValueError(
+                    "We require a LIBBSON_INSTALL_DIR with a compiled library on Windows"
+                )
         else:
             lib_dir = lib_dirs[0]
             if IS_WIN:
@@ -84,6 +89,7 @@ def append_libbson_flags(module):
         raise ValueError(f'Could not find "{pc_path}" library')
 
     cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path))
+
     if cflags:
         orig_cflags = os.environ.get("CFLAGS", "")
         os.environ["CFLAGS"] = cflags + " " + orig_cflags
@@ -174,6 +180,7 @@ def get_extension_modules():
             module.extra_link_args += ["-rpath", "@loader_path"]
         elif platform == "linux":
             module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
+
     return modules
 
 
