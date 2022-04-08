@@ -1,6 +1,6 @@
 include README.rst
 include LICENSE
-include build-libbson.sh
+include *.sh
 include pyproject.toml
 
 exclude THIRD-PARTY-NOTICES
