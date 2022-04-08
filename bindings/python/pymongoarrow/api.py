@@ -15,6 +15,9 @@ import warnings
 
 from bson import encode
 from bson.raw_bson import RawBSONDocument
+from pandas import DataFrame
+from pyarrow import Schema as ArrowSchema
+from pyarrow import Table
 from pymongo.bulk import BulkWriteError
 from pymongo.common import MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext
@@ -256,9 +259,13 @@ def _transform_bwe(bwe, offset):
 
 
 def _tabular_generator(tabular):
-    for i in tabular.to_batches():
-        for row in i.to_pylist():
-            yield row
+    if isinstance(tabular, Table):
+        for i in tabular.to_batches():
+            for row in i.to_pylist():
+                yield row
+    elif isinstance(tabular, DataFrame):
+        for i in tabular.to_dict("records"):
+            yield i
 
 
 def write(collection, tabular):
@@ -273,7 +280,10 @@ def write(collection, tabular):
       An instance of :class:`result.ArrowWriteResult`.
     """
 
-    _validate_schema(tabular.schema)
+    if isinstance(tabular, Table):
+        _validate_schema(tabular.schema.types)
+    elif isinstance(tabular, DataFrame):
+        _validate_schema(ArrowSchema.from_pandas(tabular).types)
     cur_offset = 0
     results = {
         "insertedCount": 0,
