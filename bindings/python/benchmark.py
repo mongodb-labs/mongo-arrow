@@ -34,6 +34,7 @@ raw_bsons = {}
 
 arrow_tables = {}
 pandas_tables = {}
+numpy_arrays = {}
 
 
 def _setup():
@@ -95,6 +96,8 @@ def _setup():
     arrow_tables[LARGE] = find_arrow_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
     pandas_tables[SMALL] = find_pandas_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
     pandas_tables[LARGE] = find_pandas_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
+    numpy_arrays[SMALL] = find_numpy_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
+    numpy_arrays[LARGE] = find_numpy_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
 
 
 def _teardown():
@@ -170,6 +173,11 @@ def insert_conventional(use_large):
 @bench("insert_pandas")
 def insert_pandas(use_large):
     write(db[collection_names[use_large]], pandas_tables[use_large])
+
+
+@bench("insert_numpy")
+def insert_numpy(use_large):
+    write(db[collection_names[use_large]], numpy_arrays[use_large])
 
 
 parser = argparse.ArgumentParser(
