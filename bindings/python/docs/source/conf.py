@@ -74,4 +74,5 @@ intersphinx_mapping = {
     "pandas": ("https://pandas.pydata.org/docs/", None),
     "numpy": ("https://numpy.org/doc/1.20/", None),
     "pymongo": ("https://pymongo.readthedocs.io/en/stable/", None),
+    "bson": ("https://pymongo.readthedocs.io/en/stable/", None),
 }
