@@ -273,10 +273,10 @@ def _tabular_generator(tabular):
         for row in tabular.to_dict("records"):
             yield row
     elif isinstance(tabular, dict):
-        iter_dict = {k: iter(v.tolist()) for k, v in tabular.items()}
+        iter_dict = {k: np.nditer(v) for k, v in tabular.items()}
         while True:
             try:
-                yield {k: next(i) for k, i in iter_dict.items()}
+                yield {k: next(i).item() for k, i in iter_dict.items()}
             except StopIteration:
                 break
 

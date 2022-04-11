@@ -19,7 +19,7 @@ from test.utils import AllowListEventListener
 
 import numpy as np
 import pandas as pd
-from pyarrow import bool_, decimal128, float64, int32, int64, string, timestamp
+from pyarrow import bool_, decimal256, float64, int32, int64, string, timestamp
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, write
@@ -140,7 +140,7 @@ class TestExplicitPandasApi(unittest.TestCase):
             data={"_id": [i for i in range(2)], "data": [i for i in range(2)]}
         ).astype(schema)
         with self.assertRaises(ValueError):
-            self.round_trip(data, Schema({"_id": int32(), "data": decimal128(2)}))
+            self.round_trip(data, Schema({"_id": int32(), "data": decimal256(2)}))
 
     @mock.patch.object(Collection, "insert_many", side_effect=Collection.insert_many, autospec=True)
     def test_write_batching(self, mock):
