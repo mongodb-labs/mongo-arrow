@@ -34,6 +34,7 @@ __all__ = [
     "find_pandas_all",
     "aggregate_numpy_all",
     "find_numpy_all",
+    "write",
     "Schema",
 ]
 

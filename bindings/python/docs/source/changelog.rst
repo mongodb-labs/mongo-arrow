@@ -1,10 +1,15 @@
 Changelog
 =========
 
+Changes in Version 0.4.0
+------------------------
+- Support for :class:`~bson.Decimal128` type.
+- Support for macOS arm64 architecture on Python 3.9+.
+
 Changes in Version 0.3.0
 ------------------------
 - Support for `PyArrow` 7.0.
-- Support for `ObjectId` `bson` type.
+- Support for :class:`~bson.ObjectId` type.
 - Improve error message when schema contains an unsupported type.
 - Add support for BSON string type.
 - Add support for BSON boolean type.

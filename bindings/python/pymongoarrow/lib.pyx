@@ -33,6 +33,7 @@ from cython.operator cimport dereference
 from libcpp cimport bool as cbool
 from libcpp.map cimport map
 from libcpp.string cimport string
+from libc.stdlib cimport malloc, free
 from pyarrow.lib cimport *
 from pyarrow.lib import tobytes
 from pymongoarrow.libarrow cimport *
@@ -59,11 +60,14 @@ def process_bson_stream(bson_stream, context):
     cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
     cdef const bson_t * doc = NULL
     cdef bson_iter_t doc_iter
+    cdef bson_decimal128_t dec128
     cdef const char* key
     cdef bson_type_t value_t
     cdef Py_ssize_t count = 0
     cdef const char * bson_str
     cdef uint32_t str_len
+    cdef char *decimal128_str = <char *> malloc(
+        BSON_DECIMAL128_STRING * sizeof(char))
 
     # Localize types for better performance.
     t_int32 = _BsonArrowTypes.int32
@@ -115,6 +119,10 @@ def process_bson_stream(bson_stream, context):
                         if value_t == BSON_TYPE_UTF8:
                             bson_str = bson_iter_utf8(&doc_iter, &str_len)
                             builder.append(<bytes>(bson_str)[:str_len])
+                        elif value_t == BSON_TYPE_DECIMAL128:
+                            bson_iter_decimal128(&doc_iter, &dec128)
+                            bson_decimal128_to_string(&dec128, decimal128_str)
+                            builder.append(<bytes>(decimal128_str))
                         else:
                             builder.append_null()
                     elif ftype == t_double:
@@ -144,6 +152,7 @@ def process_bson_stream(bson_stream, context):
                     builder.append_null()
     finally:
         bson_reader_destroy(stream_reader)
+        free(decimal128_str)
 
 
 # Builders

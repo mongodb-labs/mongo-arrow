@@ -30,6 +30,7 @@ _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.double: DoubleBuilder,
     _BsonArrowTypes.datetime: DatetimeBuilder,
     _BsonArrowTypes.objectid: ObjectIdBuilder,
+    _BsonArrowTypes.decimal128_str: StringBuilder,
     _BsonArrowTypes.string: StringBuilder,
     _BsonArrowTypes.bool: BoolBuilder,
 }
