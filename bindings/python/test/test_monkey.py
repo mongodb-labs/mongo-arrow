@@ -18,7 +18,7 @@ from pymongoarrow import api as api
 
 class TestMonkey(TestCase):
     def test_all_methods_listed_for_patching(self):
-        unpatched_apis = {"Schema"}
+        unpatched_apis = {"Schema", "write"}
         all_methods = set(api.__all__) - unpatched_apis
         methods_to_patch = set(api._PATCH_METHODS)
         self.assertEqual(all_methods, methods_to_patch)
