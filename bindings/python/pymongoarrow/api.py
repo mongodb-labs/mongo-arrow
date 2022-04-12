@@ -274,11 +274,11 @@ def _tabular_generator(tabular):
             yield row
     elif isinstance(tabular, dict):
         iter_dict = {k: np.nditer(v) for k, v in tabular.items()}
-        while True:
-            try:
+        try:
+            while True:
                 yield {k: next(i).item() for k, i in iter_dict.items()}
-            except StopIteration:
-                break
+        except StopIteration:
+            return
 
 
 def write(collection, tabular):
