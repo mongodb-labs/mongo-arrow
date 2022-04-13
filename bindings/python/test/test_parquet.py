@@ -1,4 +1,4 @@
-# Copyright 2021-present MongoDB, Inc.
+# Copyright 2022-present MongoDB, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+import os
 import unittest
 import unittest.mock as mock
 from test import client_context
@@ -40,8 +42,6 @@ class TestParquetAPIMixin:
         self.coll.drop()
 
     def tearDown(self):
-        import os
-
         os.remove("table.parquet")
 
     def run_find(self, *args, **kwargs):
