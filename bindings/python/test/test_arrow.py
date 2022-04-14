@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import unittest
 import unittest.mock as mock
 from test import client_context
@@ -20,6 +21,7 @@ import pymongo
 from pyarrow import Table, bool_, decimal128, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
+from pyarrow.parquet import read_table, write_table
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
@@ -246,6 +248,29 @@ class TestArrowApiMixin:
         )
         self.round_trip(data, Schema(schema), coll=self.coll)
         self.assertEqual(mock.call_count, 2)
+
+    def test_parquet(self):
+        schema = {
+            "data": int64(),
+            "float": float64(),
+            "datetime": timestamp("ms"),
+            "string": string(),
+            "bool": bool_(),
+        }
+        data = Table.from_pydict(
+            {
+                "data": [i for i in range(2)],
+                "float": [i for i in range(2)],
+                "datetime": [i for i in range(2)],
+                "string": [str(i) for i in range(2)],
+                "bool": [True for _ in range(2)],
+            },
+            ArrowSchema(schema),
+        )
+        write_table(data, "test.parquet")
+        data = read_table("test.parquet")
+        self.round_trip(data, Schema(schema))
+        os.remove("test.parquet")
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
