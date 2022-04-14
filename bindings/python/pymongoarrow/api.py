@@ -300,10 +300,10 @@ def write(collection, tabular):
     elif (
         isinstance(tabular, dict)
         and len(tabular.values()) >= 1
-        and isinstance(list(tabular.values())[0], ndarray)
+        and all([isinstance(i, ndarray) for i in tabular.values()])
     ):
         _validate_schema([i.dtype for i in tabular.values()])
-        tab_size = len(list(tabular.values())[0])
+        tab_size = len(next(iter(tabular.values())))
     cur_offset = 0
     results = {
         "insertedCount": 0,

@@ -48,10 +48,9 @@ class TestExplicitNumPyApi(unittest.TestCase):
         self.cmd_listener.reset()
         self.getmore_listener.reset()
 
-    def assert_numpy_equal(self, actual, expected, schema=None):
+    def assert_numpy_equal(self, actual, expected):
         self.assertIsInstance(actual, dict)
-        for field in schema or self.schema:
-            # print(set(actual)-set(e))
+        for field in expected:
             # workaround np.nan == np.nan evaluating to False
             a = np.nan_to_num(actual[field])
             e = np.nan_to_num(expected[field])
@@ -102,7 +101,7 @@ class TestExplicitNumPyApi(unittest.TestCase):
         coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(list(data.values())[0]), res.raw_result["insertedCount"])
-        self.assert_numpy_equal(find_numpy_all(coll, {}, schema=schema), data, schema=schema)
+        self.assert_numpy_equal(find_numpy_all(coll, {}, schema=schema), data)
         return res
 
     def schemafied_ndarray_dict(self, dict, schema):
