@@ -292,6 +292,10 @@ def write(collection, tabular):
     :Returns:
       An instance of :class:`result.ArrowWriteResult`.
     """
+    cur_offset = 0
+    results = {
+        "insertedCount": 0,
+    }
     tab_size = len(tabular)
     if isinstance(tabular, Table):
         _validate_schema(tabular.schema.types)
@@ -304,10 +308,9 @@ def write(collection, tabular):
     ):
         _validate_schema([i.dtype for i in tabular.values()])
         tab_size = len(next(iter(tabular.values())))
-    cur_offset = 0
-    results = {
-        "insertedCount": 0,
-    }
+    else:
+        raise ArrowWriteError(results)
+
     tabular_gen = _tabular_generator(tabular)
     while cur_offset < tab_size:
         cur_size = 0
