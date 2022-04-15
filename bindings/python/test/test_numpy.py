@@ -175,3 +175,7 @@ class TestExplicitNumPyApi(unittest.TestCase):
             coll=self.coll,
         )
         self.assertEqual(mock.call_count, 2)
+
+    def test_write_dictionaries(self):
+        with self.assertRaises(ArrowWriteError):
+            write(self.coll, {"foo": 1})
