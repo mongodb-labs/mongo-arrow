@@ -309,7 +309,11 @@ def write(collection, tabular):
         _validate_schema([i.dtype for i in tabular.values()])
         tab_size = len(next(iter(tabular.values())))
     else:
-        raise ArrowWriteError(results)
+        raise ValueError(
+            f"You passed an invalid tabular data object of type {type(tabular)} \n"
+            "Please ensure that it is one of the supported types: "
+            "DataFrame, Table, or a dictionary containing NumPy arrays."
+        )
 
     tabular_gen = _tabular_generator(tabular)
     while cur_offset < tab_size:

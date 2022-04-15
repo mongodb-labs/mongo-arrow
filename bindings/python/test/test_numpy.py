@@ -83,7 +83,7 @@ class TestExplicitNumPyApi(unittest.TestCase):
     def test_aggregate_simple(self):
         expected = {
             "_id": np.array([1, 2, 3, 4], dtype=np.int32),
-            "data": np.array([20, 40, 60, np.nan], dtype=np.float64),
+            "data": np.array([20, 40, 60, None], dtype=np.float64),
         }
         projection = {"_id": True, "data": {"$multiply": [2, "$data"]}}
         actual = aggregate_numpy_all(self.coll, [{"$project": projection}], schema=self.schema)
@@ -177,5 +177,7 @@ class TestExplicitNumPyApi(unittest.TestCase):
         self.assertEqual(mock.call_count, 2)
 
     def test_write_dictionaries(self):
-        with self.assertRaises(ArrowWriteError):
+        with self.assertRaisesRegex(
+            ValueError, "You passed an invalid tabular data object of type <class 'dict'>"
+        ):
             write(self.coll, {"foo": 1})
