@@ -1,0 +1,96 @@
+name: Python Tests
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ./bindings/python
+    shell: bash
+
+jobs:
+
+  pre-commit:
+    name: pre-commit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: pre-commit/action@v2.0.0
+        with:
+          extra_args: --all-files --hook-stage=manual
+
+  build:
+    # supercharge/mongodb-github-action requires containers so we don't test other platforms
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: ["ubuntu-20.04", "macos-latest", "windows-latest"]
+        python-version: [3.7, 3.8, 3.9, "3.10"]
+      fail-fast: false
+    name: CPython ${{ matrix.python-version }}-${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: '**/setup.cfg'
+      - name: Start MongoDB on Linux
+        if: ${{ startsWith(runner.os, 'Linux') }}
+        uses: supercharge/mongodb-github-action@1.3.0
+        with:
+          mongodb-version: 4.4
+          mongodb-replica-set: test-rs
+      - name: Start MongoDB on MacOS
+        if: ${{ startsWith(runner.os, 'macOS') }}
+        run: |
+          mkdir data
+          mongod --fork --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
+      - name: Start MongoDB on Windows
+        if: ${{ startsWith(runner.os, 'Windows') }}
+        shell: powershell
+        run: |
+          mkdir data
+          mongod --remove
+          mongod --install --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
+          net start MongoDB
+      - name: Install libbson
+        run: |
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
+      - name: Install Python dependencies
+        run: |
+          python -m pip install -U pip
+      - name: Install pymongoarrow
+        run: |
+          # Install the library
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
+      - name: Run tests
+        run: |
+          set -eu
+          run_asv () {
+              git show --no-patch --format="%H (%s)"
+              asv run -E existing --set-commit-hash $(git rev-parse HEAD)
+          }
+
+          pip install asv
+          asv machine --yes
+
+          git update-ref refs/bm/pr HEAD
+          # We know this is a PR run. The branch is a GitHub refs/pull/*/merge ref, so
+          # the current target that this PR will be merged into is HEAD^1.
+          git update-ref refs/bm/merge-target HEAD^1
+
+          run_asv
+
+          git checkout --force refs/bm/merge-target
+          run_asv
+
+          asv compare refs/bm/merge-target refs/bm/pr
