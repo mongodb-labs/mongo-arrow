@@ -24,7 +24,7 @@ from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all
 from pymongoarrow.types import Decimal128StringType, ObjectIdType
 
 
-class TestExplicitNumPyApi(unittest.TestCase):
+class NumpyTestBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not client_context.connected:
@@ -34,6 +34,22 @@ class TestExplicitNumPyApi(unittest.TestCase):
         cls.client = client_context.get_client(
             event_listeners=[cls.getmore_listener, cls.cmd_listener]
         )
+        cls.schema = {}
+
+    def assert_numpy_equal(self, actual, expected):
+        self.assertIsInstance(actual, dict)
+        for field in self.schema:
+            # workaround np.nan == np.nan evaluating to False
+            a = np.nan_to_num(actual[field])
+            e = np.nan_to_num(expected[field])
+            self.assertTrue(np.all(a == e))
+            self.assertEqual(actual[field].dtype, expected[field].dtype)
+
+
+class TestExplicitNumPyApi(NumpyTestBase):
+    @classmethod
+    def setUpClass(cls):
+        NumpyTestBase.setUpClass()
         cls.schema = Schema({"_id": int32(), "data": int64()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
@@ -46,15 +62,6 @@ class TestExplicitNumPyApi(unittest.TestCase):
         )
         self.cmd_listener.reset()
         self.getmore_listener.reset()
-
-    def assert_numpy_equal(self, actual, expected):
-        self.assertIsInstance(actual, dict)
-        for field in self.schema:
-            # workaround np.nan == np.nan evaluating to False
-            a = np.nan_to_num(actual[field])
-            e = np.nan_to_num(expected[field])
-            self.assertTrue(np.all(a == e))
-            self.assertEqual(actual[field].dtype, expected[field].dtype)
 
     def test_find_simple(self):
         expected = {
@@ -95,10 +102,10 @@ class TestExplicitNumPyApi(unittest.TestCase):
         self.assertEqual(agg_cmd.command["pipeline"][1]["$project"], {"_id": True, "data": True})
 
 
-class TestBSONTypes(TestExplicitNumPyApi):
+class TestBSONTypes(NumpyTestBase):
     @classmethod
     def setUpClass(cls):
-        TestExplicitNumPyApi.setUpClass()
+        NumpyTestBase.setUpClass()
         cls.schema = Schema({"_id": ObjectIdType(), "decimal128": Decimal128StringType()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")

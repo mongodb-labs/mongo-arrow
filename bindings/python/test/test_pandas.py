@@ -28,7 +28,7 @@ from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.types import Decimal128StringType, ObjectIdType
 
 
-class TestExplicitPandasApi(unittest.TestCase):
+class PandasTestBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not client_context.connected:
@@ -38,6 +38,12 @@ class TestExplicitPandasApi(unittest.TestCase):
         cls.client = client_context.get_client(
             event_listeners=[cls.getmore_listener, cls.cmd_listener]
         )
+
+
+class TestExplicitPandasApi(PandasTestBase):
+    @classmethod
+    def setUpClass(cls):
+        PandasTestBase.setUpClass()
         cls.schema = Schema({"_id": int32(), "data": int64()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
@@ -162,10 +168,10 @@ class TestExplicitPandasApi(unittest.TestCase):
         self.assertEqual(mock.call_count, 2)
 
 
-class TestBSONTypes(TestExplicitPandasApi):
+class TestBSONTypes(PandasTestBase):
     @classmethod
     def setUpClass(cls):
-        TestExplicitPandasApi.setUpClass()
+        PandasTestBase.setUpClass()
         cls.schema = Schema({"_id": ObjectIdType(), "decimal128": Decimal128StringType()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
