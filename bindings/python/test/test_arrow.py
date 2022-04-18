@@ -16,8 +16,8 @@ import unittest.mock as mock
 from test import client_context
 from test.utils import AllowListEventListener
 
-import bson
 import pymongo
+from bson import Decimal128, ObjectId
 from pyarrow import Table, binary, bool_, decimal128, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
@@ -283,11 +283,15 @@ class TestBSONTypes(unittest.TestCase):
         )
 
     def test_find_decimal128(self):
-        ctor = bson.Decimal128
-        schema = Schema({"_id": int32(), "data": Decimal128StringType()})
+        oids = list(ObjectId() for i in range(4))
+        decs = [Decimal128(i) for i in ["0.1", "1.0", "1e-5"]]
+        schema = Schema({"_id": ObjectIdType(), "data": Decimal128StringType()})
         expected = Table.from_pydict(
-            {"_id": [1, 2, 3, 4], "data": ["10", "20", "30", None]},
-            ArrowSchema([("_id", int32()), ("data", string())]),
+            {
+                "_id": [i.binary for i in oids],
+                "data": [str(decs[0]), str(decs[1]), str(decs[2]), None],
+            },
+            ArrowSchema([("_id", binary(12)), ("data", string())]),
         )
         coll = self.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
@@ -296,35 +300,10 @@ class TestBSONTypes(unittest.TestCase):
         coll.drop()
         coll.insert_many(
             [
-                {"_id": 1, "data": ctor("10")},
-                {"_id": 2, "data": ctor("20")},
-                {"_id": 3, "data": ctor("30")},
-                {"_id": 4},
-            ]
-        )
-        table = find_arrow_all(coll, {}, schema=schema)
-        self.assertEqual(table, expected)
-
-    def test_find_objectid(self):
-        ctor = bson.ObjectId
-        oids = list(ctor() for i in range(3))
-        schema = Schema({"_id": int32(), "data": ObjectIdType()})
-        exp_oids = [oid.binary for oid in oids] + [None]  # type:ignore
-        expected = Table.from_pydict(
-            {"_id": [1, 2, 3, 4], "data": exp_oids},
-            ArrowSchema([("_id", int32()), ("data", binary(12))]),
-        )
-        coll = self.client.pymongoarrow_test.get_collection(
-            "test", write_concern=WriteConcern(w="majority")
-        )
-
-        coll.drop()
-        coll.insert_many(
-            [
-                {"_id": 1, "data": oids[0]},
-                {"_id": 2, "data": oids[1]},
-                {"_id": 3, "data": oids[2]},
-                {"_id": 4},
+                {"_id": oids[0], "data": decs[0]},
+                {"_id": oids[1], "data": decs[1]},
+                {"_id": oids[2], "data": decs[2]},
+                {"_id": oids[3]},
             ]
         )
         table = find_arrow_all(coll, {}, schema=schema)
