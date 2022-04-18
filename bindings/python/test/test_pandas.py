@@ -192,9 +192,9 @@ class TestBSONTypes(PandasTestBase):
         self.cmd_listener.reset()
         self.getmore_listener.reset()
 
-    def test_find_decimal128_pandas(self):
+    def test_find_decimal128(self):
         decimals = [str(i) for i in self.decimal_128s] + [None]  # type:ignore
-        pd_schema = {"_id": np.string_, "decimal128": np.object_}
+        pd_schema = {"_id": np.object_, "decimal128": np.object_}
         expected = pd.DataFrame(
             data={"_id": [i.binary for i in self.oids], "decimal128": decimals}
         ).astype(pd_schema)
