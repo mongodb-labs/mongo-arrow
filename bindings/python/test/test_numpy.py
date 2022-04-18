@@ -178,6 +178,6 @@ class TestExplicitNumPyApi(unittest.TestCase):
 
     def test_write_dictionaries(self):
         with self.assertRaisesRegex(
-            ValueError, "You passed an invalid tabular data object of type <class 'dict'>"
+            ValueError, "Invalid tabular data object of type <class 'dict'>"
         ):
             write(self.coll, {"foo": 1})
