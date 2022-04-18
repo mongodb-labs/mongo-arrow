@@ -16,8 +16,9 @@ import unittest.mock as mock
 from test import client_context
 from test.utils import AllowListEventListener
 
+import bson
 import pymongo
-from pyarrow import Table, bool_, decimal128, float64, int32, int64
+from pyarrow import Table, binary, bool_, decimal128, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
 from pymongo import DESCENDING, WriteConcern
@@ -25,6 +26,7 @@ from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
+from pymongoarrow.types import Decimal128StringType, ObjectIdType
 
 
 class TestArrowApiMixin:
@@ -267,3 +269,63 @@ class TestArrowPatchedApi(TestArrowApiMixin, unittest.TestCase):
 
     def run_aggregate(self, *args, **kwargs):
         return self.coll.aggregate_arrow_all(*args, **kwargs)
+
+
+class TestBSONTypes(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not client_context.connected:
+            raise unittest.SkipTest("cannot connect to MongoDB")
+        cls.cmd_listener = AllowListEventListener("find", "aggregate")
+        cls.getmore_listener = AllowListEventListener("getMore")
+        cls.client = client_context.get_client(
+            event_listeners=[cls.getmore_listener, cls.cmd_listener]
+        )
+
+    def test_find_decimal128(self):
+        ctor = bson.Decimal128
+        schema = Schema({"_id": int32(), "data": Decimal128StringType()})
+        expected = Table.from_pydict(
+            {"_id": [1, 2, 3, 4], "data": ["10", "20", "30", None]},
+            ArrowSchema([("_id", int32()), ("data", string())]),
+        )
+        coll = self.client.pymongoarrow_test.get_collection(
+            "test", write_concern=WriteConcern(w="majority")
+        )
+
+        coll.drop()
+        coll.insert_many(
+            [
+                {"_id": 1, "data": ctor("10")},
+                {"_id": 2, "data": ctor("20")},
+                {"_id": 3, "data": ctor("30")},
+                {"_id": 4},
+            ]
+        )
+        table = find_arrow_all(coll, {}, schema=schema)
+        self.assertEqual(table, expected)
+
+    def test_find_objectid(self):
+        ctor = bson.ObjectId
+        oids = list(ctor() for i in range(3))
+        schema = Schema({"_id": int32(), "data": ObjectIdType()})
+        exp_oids = [oid.binary for oid in oids] + [None]  # type:ignore
+        expected = Table.from_pydict(
+            {"_id": [1, 2, 3, 4], "data": exp_oids},
+            ArrowSchema([("_id", int32()), ("data", binary(12))]),
+        )
+        coll = self.client.pymongoarrow_test.get_collection(
+            "test", write_concern=WriteConcern(w="majority")
+        )
+
+        coll.drop()
+        coll.insert_many(
+            [
+                {"_id": 1, "data": oids[0]},
+                {"_id": 2, "data": oids[1]},
+                {"_id": 3, "data": oids[2]},
+                {"_id": 4},
+            ]
+        )
+        table = find_arrow_all(coll, {}, schema=schema)
+        self.assertEqual(table, expected)

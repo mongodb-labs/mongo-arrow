@@ -50,7 +50,6 @@ class Decimal128StringType(PyExtensionType):
     _type_marker = _BsonArrowTypes.decimal128_str
 
     def __init__(self):
-        # Delayed to prevent circular import.
         super().__init__(string())
 
     def __reduce__(self):
