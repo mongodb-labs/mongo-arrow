@@ -36,7 +36,6 @@ jobs:
         uses: supercharge/mongodb-github-action@1.3.0
         with:
           mongodb-version: 4.4
-          mongodb-replica-set: test-rs
       - name: Install libbson
         run: |
           LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
