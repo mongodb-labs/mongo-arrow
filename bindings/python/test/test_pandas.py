@@ -19,14 +19,16 @@ from test.utils import AllowListEventListener
 
 import numpy as np
 import pandas as pd
+from bson import Decimal128, ObjectId
 from pyarrow import bool_, decimal256, float64, int32, int64, string, timestamp
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, write
 from pymongoarrow.errors import ArrowWriteError
+from pymongoarrow.types import Decimal128StringType, ObjectIdType
 
 
-class TestExplicitPandasApi(unittest.TestCase):
+class PandasTestBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not client_context.connected:
@@ -36,6 +38,12 @@ class TestExplicitPandasApi(unittest.TestCase):
         cls.client = client_context.get_client(
             event_listeners=[cls.getmore_listener, cls.cmd_listener]
         )
+
+
+class TestExplicitPandasApi(PandasTestBase):
+    @classmethod
+    def setUpClass(cls):
+        PandasTestBase.setUpClass()
         cls.schema = Schema({"_id": int32(), "data": int64()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
@@ -158,3 +166,38 @@ class TestExplicitPandasApi(unittest.TestCase):
             coll=self.coll,
         )
         self.assertEqual(mock.call_count, 2)
+
+
+class TestBSONTypes(PandasTestBase):
+    @classmethod
+    def setUpClass(cls):
+        PandasTestBase.setUpClass()
+        cls.schema = Schema({"_id": ObjectIdType(), "decimal128": Decimal128StringType()})
+        cls.coll = cls.client.pymongoarrow_test.get_collection(
+            "test", write_concern=WriteConcern(w="majority")
+        )
+        cls.oids = [ObjectId() for i in range(4)]
+        cls.decimal_128s = [Decimal128(i) for i in ["1.0", "0.1", "1e-5"]]
+
+    def setUp(self):
+        self.coll.drop()
+        self.coll.insert_many(
+            [
+                {"_id": self.oids[0], "decimal128": self.decimal_128s[0]},
+                {"_id": self.oids[1], "decimal128": self.decimal_128s[1]},
+                {"_id": self.oids[2], "decimal128": self.decimal_128s[2]},
+                {"_id": self.oids[3]},
+            ]
+        )
+        self.cmd_listener.reset()
+        self.getmore_listener.reset()
+
+    def test_find_decimal128(self):
+        decimals = [str(i) for i in self.decimal_128s] + [None]  # type:ignore
+        pd_schema = {"_id": np.object_, "decimal128": np.object_}
+        expected = pd.DataFrame(
+            data={"_id": [i.binary for i in self.oids], "decimal128": decimals}
+        ).astype(pd_schema)
+
+        table = find_pandas_all(self.coll, {}, schema=self.schema)
+        pd.testing.assert_frame_equal(expected, table)

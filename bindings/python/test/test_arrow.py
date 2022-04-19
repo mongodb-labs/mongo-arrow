@@ -18,7 +18,8 @@ from test import client_context
 from test.utils import AllowListEventListener
 
 import pymongo
-from pyarrow import Table, bool_, decimal256, float64, int32, int64
+from bson import Decimal128, ObjectId
+from pyarrow import Table, binary, bool_, decimal256, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
 from pyarrow.parquet import read_table, write_table
@@ -27,6 +28,7 @@ from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
+from pymongoarrow.types import Decimal128StringType, ObjectIdType
 
 
 class TestArrowApiMixin:
@@ -292,3 +294,42 @@ class TestArrowPatchedApi(TestArrowApiMixin, unittest.TestCase):
 
     def run_aggregate(self, *args, **kwargs):
         return self.coll.aggregate_arrow_all(*args, **kwargs)
+
+
+class TestBSONTypes(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not client_context.connected:
+            raise unittest.SkipTest("cannot connect to MongoDB")
+        cls.cmd_listener = AllowListEventListener("find", "aggregate")
+        cls.getmore_listener = AllowListEventListener("getMore")
+        cls.client = client_context.get_client(
+            event_listeners=[cls.getmore_listener, cls.cmd_listener]
+        )
+
+    def test_find_decimal128(self):
+        oids = list(ObjectId() for i in range(4))
+        decs = [Decimal128(i) for i in ["0.1", "1.0", "1e-5"]]
+        schema = Schema({"_id": ObjectIdType(), "data": Decimal128StringType()})
+        expected = Table.from_pydict(
+            {
+                "_id": [i.binary for i in oids],
+                "data": [str(decs[0]), str(decs[1]), str(decs[2]), None],
+            },
+            ArrowSchema([("_id", binary(12)), ("data", string())]),
+        )
+        coll = self.client.pymongoarrow_test.get_collection(
+            "test", write_concern=WriteConcern(w="majority")
+        )
+
+        coll.drop()
+        coll.insert_many(
+            [
+                {"_id": oids[0], "data": decs[0]},
+                {"_id": oids[1], "data": decs[1]},
+                {"_id": oids[2], "data": decs[2]},
+                {"_id": oids[3]},
+            ]
+        )
+        table = find_arrow_all(coll, {}, schema=schema)
+        self.assertEqual(table, expected)

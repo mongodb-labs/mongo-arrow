@@ -14,11 +14,11 @@
 from unittest import TestCase
 
 import pyarrow as pa
-from bson import InvalidBSON, encode
+from bson import Decimal128, Int64, InvalidBSON, encode
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import ObjectId, ObjectIdType, bool_, int64, string
+from pymongoarrow.types import ObjectId, ObjectIdType, int64, string
 
 
 class TestBsonToArrowConversionBase(TestCase):
@@ -147,9 +147,24 @@ class TestSerializeExtensions(TestCase):
         assert result.type._type_marker == ObjectIdType._type_marker
 
 
+class TestInt64Type(TestBsonToArrowConversionBase):
+    def setUp(self):
+        self.schema = Schema({"data": Int64})
+        self.context = PyMongoArrowContext.from_schema(self.schema)
+
+    def test_simple(self):
+        docs = [
+            {"data": Int64(1e15)},
+            {"data": Int64(-1e5)},
+            {"data": Int64(10)},
+        ]
+        as_dict = {"data": [1e15, -1e5, 10]}
+        self._run_test(docs, as_dict)
+
+
 class TestBooleanType(TestBsonToArrowConversionBase):
     def setUp(self):
-        self.schema = Schema({"data": bool_()})
+        self.schema = Schema({"data": bool})
         self.context = PyMongoArrowContext.from_schema(self.schema)
 
     def test_simple(self):
@@ -162,4 +177,33 @@ class TestBooleanType(TestBsonToArrowConversionBase):
             {"data": True},
         ]
         as_dict = {"data": [True, False, None, None, False, True]}
+        self._run_test(docs, as_dict)
+
+
+class TestStringType(TestBsonToArrowConversionBase):
+    def setUp(self):
+        self.schema = Schema({"data": str})
+        self.context = PyMongoArrowContext.from_schema(self.schema)
+
+    def test_simple(self):
+        docs = [
+            {"data": "a"},
+            {"data": "dätá"},
+        ]
+        as_dict = {"data": ["a", "dätá"]}
+        self._run_test(docs, as_dict)
+
+
+class TestDecimal128StringType(TestBsonToArrowConversionBase):
+    def setUp(self):
+        self.schema = Schema({"data": Decimal128})
+        self.context = PyMongoArrowContext.from_schema(self.schema)
+
+    def test_simple(self):
+        docs = [
+            {"data": Decimal128("0.01")},
+            {"data": Decimal128("1e-5")},
+            {"data": Decimal128("1.0e+5")},
+        ]
+        as_dict = {"data": ["0.01", "0.00001", "1.0E+5"]}
         self._run_test(docs, as_dict)

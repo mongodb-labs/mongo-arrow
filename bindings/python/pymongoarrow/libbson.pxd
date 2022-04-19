@@ -124,6 +124,7 @@ cdef extern from "<bson/bson.h>":
 
     const char * bson_iter_utf8(const bson_iter_t *iter, uint32_t *length)
 
+    bint bson_iter_decimal128 (const bson_iter_t *iter, bson_decimal128_t *dec)
 
 # bson_reader_t API
 cdef extern from "<bson/bson.h>":
@@ -133,6 +134,10 @@ cdef extern from "<bson/bson.h>":
 
     void bson_reader_destroy(bson_reader_t *reader)
 
+# bson_decimal128 API
+cdef extern from "<bson/bson.h>":
+    cdef int32_t BSON_DECIMAL128_STRING
+    void bson_decimal128_to_string (const bson_decimal128_t *dec, char *str)
 
 # runtime version checking API
 cdef extern from "<bson/bson.h>":

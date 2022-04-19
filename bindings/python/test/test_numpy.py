@@ -18,14 +18,16 @@ from test.utils import AllowListEventListener
 from unittest import mock
 
 import numpy as np
+from bson import Decimal128, ObjectId
 from pyarrow import bool_, float64, int32, int64, string, timestamp
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all, write
 from pymongoarrow.errors import ArrowWriteError
+from pymongoarrow.types import Decimal128StringType, ObjectIdType
 
 
-class TestExplicitNumPyApi(unittest.TestCase):
+class NumpyTestBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not client_context.connected:
@@ -35,6 +37,22 @@ class TestExplicitNumPyApi(unittest.TestCase):
         cls.client = client_context.get_client(
             event_listeners=[cls.getmore_listener, cls.cmd_listener]
         )
+        cls.schema = {}
+
+    def assert_numpy_equal(self, actual, expected):
+        self.assertIsInstance(actual, dict)
+        for field in expected:
+            # workaround np.nan == np.nan evaluating to False
+            a = np.nan_to_num(actual[field])
+            e = np.nan_to_num(expected[field])
+            np.testing.assert_array_equal(a, e)
+            self.assertEqual(actual[field].dtype, expected[field].dtype)
+
+
+class TestExplicitNumPyApi(NumpyTestBase):
+    @classmethod
+    def setUpClass(cls):
+        NumpyTestBase.setUpClass()
         cls.schema = Schema({"_id": int32(), "data": int64()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
@@ -47,15 +65,6 @@ class TestExplicitNumPyApi(unittest.TestCase):
         )
         self.cmd_listener.reset()
         self.getmore_listener.reset()
-
-    def assert_numpy_equal(self, actual, expected):
-        self.assertIsInstance(actual, dict)
-        for field in expected:
-            # workaround np.nan == np.nan evaluating to False
-            a = np.nan_to_num(actual[field])
-            e = np.nan_to_num(expected[field])
-            np.testing.assert_array_equal(a, e)
-            self.assertEqual(actual[field].dtype, expected[field].dtype)
 
     def test_find_simple(self):
         expected = {
@@ -181,3 +190,37 @@ class TestExplicitNumPyApi(unittest.TestCase):
             ValueError, "Invalid tabular data object of type <class 'dict'>"
         ):
             write(self.coll, {"foo": 1})
+
+
+class TestBSONTypes(NumpyTestBase):
+    @classmethod
+    def setUpClass(cls):
+        NumpyTestBase.setUpClass()
+        cls.schema = Schema({"_id": ObjectIdType(), "decimal128": Decimal128StringType()})
+        cls.coll = cls.client.pymongoarrow_test.get_collection(
+            "test", write_concern=WriteConcern(w="majority")
+        )
+        cls.oids = [ObjectId() for _ in range(4)]
+        cls.decimal_128s = [Decimal128(i) for i in ["1.0", "0.1", "1e-5"]]
+
+    def setUp(self):
+        self.coll.drop()
+        self.coll.insert_many(
+            [
+                {"_id": self.oids[0], "decimal128": self.decimal_128s[0]},
+                {"_id": self.oids[1], "decimal128": self.decimal_128s[1]},
+                {"_id": self.oids[2], "decimal128": self.decimal_128s[2]},
+                {"_id": self.oids[3]},
+            ]
+        )
+        self.cmd_listener.reset()
+        self.getmore_listener.reset()
+
+    def test_find_decimal128(self):
+        decimals = [str(i) for i in self.decimal_128s] + [None]  # type:ignore
+        expected = {
+            "_id": np.array([i.binary for i in self.oids], dtype=np.object_),
+            "decimal128": np.array(decimals),
+        }
+        actual = find_numpy_all(self.coll, {}, schema=self.schema)
+        self.assert_numpy_equal(actual, expected)
