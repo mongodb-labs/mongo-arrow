@@ -57,7 +57,7 @@ jobs:
                   git checkout refs/bm/pr benchmarks/benchmarks.py
               fi
               git show --no-patch --format="%H (%s)"
-              asv run -E existing --set-commit-hash $(git rev-parse HEAD)
+              asv run --strict -E existing --set-commit-hash $(git rev-parse HEAD)
           }
 
           pip install asv virtualenv
