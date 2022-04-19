@@ -73,8 +73,6 @@ pandas_tables[LARGE] = find_pandas_all(db[collection_names[LARGE]], {}, schema=s
 numpy_arrays[SMALL] = find_numpy_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
 numpy_arrays[LARGE] = find_numpy_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
 
-print("done making the arrays")
-
 
 class ProfileInsert:
     """
@@ -84,21 +82,16 @@ class ProfileInsert:
 
     def setup(self):
         db[collection_names[CUR_SIZE]].drop()
-        print("ran setup")
 
     def time_insert_arrow(self):
         write(db[collection_names[CUR_SIZE]], arrow_tables[CUR_SIZE])
-        print("ran arrow")
 
     def time_insert_conventional(self):
         tab = arrow_tables[CUR_SIZE].to_pylist()
         db[collection_names[CUR_SIZE]].insert_many(tab)
-        print("ran conventional")
 
     def time_insert_pandas(self):
         write(db[collection_names[CUR_SIZE]], pandas_tables[CUR_SIZE])
-        print("ran pandas")
 
     def time_insert_numpy(self):
         write(db[collection_names[CUR_SIZE]], numpy_arrays[CUR_SIZE])
-        print("ran numpy")
