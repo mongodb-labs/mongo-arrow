@@ -77,26 +77,7 @@ jobs:
           set -eu
           run_asv () {
               if [ ! -e "asv.conf.json" ] ; then
-                   CONF=$(cat <<-END
-                      {
-                        "version": 1,
-                        "project": "pymongoarrow",
-                        "project_url": "https://mongo-arrow.readthedocs.io/en/latest/",
-                        "repo": "../../",
-                        "repo_subdir": "bindings/python",
-                        "branches": ["main"], // for git
-                        "matrix": {
-                             "req": {
-                                 "pyarrow": ["7.0.0"],
-                                 "pymongo": ["3.11", "4.1.1"],
-                                 "pandas": [""],
-                                 "Cython": []
-                             },
-                             "env": {"BENCHMARK_SIZE": ["LARGE", "SMALL"]},
-                        }
-                  END )
-                  echo $CONF > "asv.conf.json"
-
+                  git checkout refs/bm/pr asv.conf.json
               fi
               git show --no-patch --format="%H (%s)"
               asv run -E existing --set-commit-hash $(git rev-parse HEAD)
