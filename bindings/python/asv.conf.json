@@ -4,7 +4,7 @@
     "project_url": "https://mongo-arrow.readthedocs.io/en/latest/",
     "repo": "../../",
     "repo_subdir": "bindings/python",
-    "branches": ["main"], // for git
+    "branches": ["main"],
     "matrix": {
          "req": {
              "pyarrow": ["7.0.0"],
