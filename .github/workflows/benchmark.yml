@@ -82,7 +82,7 @@ jobs:
 
           pip install asv
           asv machine --yes
-          git fetch upstream main
+          git fetch origin main
           git update-ref refs/bm/pr HEAD
           # We know this is a PR run. The branch is a GitHub refs/pull/*/merge ref, so
           # the current target that this PR will be mergeÅd into is HEAD^1.
