@@ -76,8 +76,8 @@ jobs:
         run: |
           set -eu
           run_asv () {
-              if [ ! -e "$file" ] ; then
-                   echo $(cat <<-END
+              if [ ! -e "asv.conf.json" ] ; then
+                   CONF=$(cat <<-END
                       {
                         "version": 1,
                         "project": "pymongoarrow",
@@ -94,8 +94,8 @@ jobs:
                              },
                              "env": {"BENCHMARK_SIZE": ["LARGE", "SMALL"]},
                         }
-                  END
-                  ) > "asv.conf.json"
+                  END )
+                  echo $CONF > "asv.conf.json"
 
               fi
               git show --no-patch --format="%H (%s)"
