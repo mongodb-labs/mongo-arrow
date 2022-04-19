@@ -33,6 +33,15 @@ def query_pkgconfig(cmd):
     return output
 
 
+def get_min_libbson_version():
+    version_ns = {}
+    here = os.path.dirname(__file__)
+    version_py = os.path.join(here, "pymongoarrow", "version.py")
+    with open(version_py) as f:
+        exec(compile(f.read(), version_py, "exec"), version_ns)
+    return version_ns["_MIN_LIBBSON_VERSION"]
+
+
 def append_libbson_flags(module):
     pc_path = "libbson-1.0"
     install_dir = os.environ.get("LIBBSON_INSTALL_DIR")
@@ -84,10 +93,21 @@ def append_libbson_flags(module):
         # We have added the library file without raising an error, so return.
         return
 
+    # Check for the existence of the library.
     lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
     if not lnames:
         raise ValueError(f'Could not find "{pc_path}" library')
 
+    # Check against the minimum required version.
+    min_version = get_min_libbson_version()
+    mod_version = query_pkgconfig("pkg-config --modversion {}".format(pc_path))
+
+    if mod_version < min_version:
+        raise ValueError(
+            f"Cannot use {pc_path} with version {mod_version}, minimum required version is {min_version}"
+        )
+
+    # Gather the appropriate flags.
     cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path))
 
     if cflags:

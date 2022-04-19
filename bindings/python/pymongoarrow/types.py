@@ -14,6 +14,8 @@
 import enum
 from datetime import datetime
 
+import numpy as np
+import pyarrow as pa
 import pyarrow.types as _atypes
 from bson import Decimal128, Int64, ObjectId
 from pyarrow import DataType as _ArrowDataType
@@ -81,6 +83,24 @@ _TYPE_NORMALIZER_FACTORY = {
 }
 
 
+_TYPE_CHECKER_TO_NUMPY = {
+    _atypes.is_int32: np.int32,
+    _atypes.is_int64: np.int64,
+    _atypes.is_float64: np.float64,
+    _atypes.is_timestamp: "datetime64[ms]",
+    _is_objectid: np.object,
+    _atypes.is_string: np.str_,
+    _atypes.is_boolean: np.bool_,
+}
+
+
+def get_numpy_type(type):
+    for checker, comp_type in _TYPE_CHECKER_TO_NUMPY.items():
+        if checker(type):
+            return comp_type
+    return None
+
+
 _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_int32: _BsonArrowTypes.int32,
     _atypes.is_int64: _BsonArrowTypes.int64,
@@ -123,6 +143,11 @@ def _get_internal_typemap(typemap):
 
 
 def _in_type_map(t):
+    if isinstance(t, np.dtype):
+        try:
+            t = pa.from_numpy_dtype(t)
+        except pa.lib.ArrowNotImplementedError:
+            return False
     for checker in _TYPE_CHECKER_TO_INTERNAL_TYPE.keys():
         if checker(t):
             return True

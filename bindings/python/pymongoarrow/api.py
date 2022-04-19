@@ -13,8 +13,10 @@
 # limitations under the License.
 import warnings
 
+import numpy as np
 from bson import encode
 from bson.raw_bson import RawBSONDocument
+from numpy import ndarray
 from pandas import DataFrame
 from pyarrow import Schema as ArrowSchema
 from pyarrow import Table
@@ -25,7 +27,7 @@ from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import _validate_schema
+from pymongoarrow.types import _validate_schema, get_numpy_type
 
 __all__ = [
     "aggregate_arrow_all",
@@ -188,7 +190,11 @@ def _arrow_to_numpy(arrow_table, schema):
     """
     container = {}
     for fname in schema:
-        container[fname] = arrow_table[fname].to_numpy()
+        dtype = get_numpy_type(schema.typemap[fname])
+        if dtype == np.str_:
+            container[fname] = arrow_table[fname].to_pandas().to_numpy(dtype=dtype)
+        else:
+            container[fname] = arrow_table[fname].to_numpy()
     return container
 
 
@@ -265,8 +271,15 @@ def _tabular_generator(tabular):
             for row in i.to_pylist():
                 yield row
     elif isinstance(tabular, DataFrame):
-        for i in tabular.to_dict("records"):
-            yield i
+        for row in tabular.to_dict("records"):
+            yield row
+    elif isinstance(tabular, dict):
+        iter_dict = {k: np.nditer(v) for k, v in tabular.items()}
+        try:
+            while True:
+                yield {k: next(i).item() for k, i in iter_dict.items()}
+        except StopIteration:
+            return
 
 
 def write(collection, tabular):
@@ -280,17 +293,30 @@ def write(collection, tabular):
     :Returns:
       An instance of :class:`result.ArrowWriteResult`.
     """
-
-    if isinstance(tabular, Table):
-        _validate_schema(tabular.schema.types)
-    elif isinstance(tabular, DataFrame):
-        _validate_schema(ArrowSchema.from_pandas(tabular).types)
     cur_offset = 0
     results = {
         "insertedCount": 0,
     }
-    tabular_gen = _tabular_generator(tabular)
     tab_size = len(tabular)
+    if isinstance(tabular, Table):
+        _validate_schema(tabular.schema.types)
+    elif isinstance(tabular, DataFrame):
+        _validate_schema(ArrowSchema.from_pandas(tabular).types)
+    elif (
+        isinstance(tabular, dict)
+        and len(tabular.values()) >= 1
+        and all([isinstance(i, ndarray) for i in tabular.values()])
+    ):
+        _validate_schema([i.dtype for i in tabular.values()])
+        tab_size = len(next(iter(tabular.values())))
+    else:
+        raise ValueError(
+            f"Invalid tabular data object of type {type(tabular)} \n"
+            "Please ensure that it is one of the supported types: "
+            "DataFrame, Table, or a dictionary containing NumPy arrays."
+        )
+
+    tabular_gen = _tabular_generator(tabular)
     while cur_offset < tab_size:
         cur_size = 0
         cur_batch = []
