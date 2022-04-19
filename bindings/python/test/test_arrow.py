@@ -18,7 +18,7 @@ from test import client_context
 from test.utils import AllowListEventListener
 
 import pymongo
-from pyarrow import Table, bool_, decimal128, float64, int32, int64
+from pyarrow import Table, bool_, decimal256, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
 from pyarrow.parquet import read_table, write_table
@@ -229,7 +229,7 @@ class TestArrowApiMixin:
         )
         self.round_trip(data, Schema(schema))
 
-        schema = {"_id": int32(), "data": decimal128(2)}
+        schema = {"_id": int32(), "data": decimal256(2)}
         data = Table.from_pydict(
             {"_id": [i for i in range(2)], "data": [i for i in range(2)]},
             ArrowSchema(schema),
