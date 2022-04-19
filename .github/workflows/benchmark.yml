@@ -77,8 +77,8 @@ jobs:
           set -eu
           run_asv () {
               if [ ! -e "asv.conf.json" ] ; then
-                  git checkout refs/bm/pr bindings/python/asv.conf.json
-                  git checkout refs/bm/pr bindings/python/benchmarks/*
+                  git checkout refs/bm/pr asv.conf.json
+                  git checkout refs/bm/pr benchmarks/*
               fi
               git show --no-patch --format="%H (%s)"
               asv run -E existing --set-commit-hash $(git rev-parse HEAD)
