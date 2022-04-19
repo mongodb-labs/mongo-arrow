@@ -15,4 +15,5 @@
          },
          "env": {"BENCHMARK_SIZE": ["LARGE", "SMALL"]},
     },
+    "environment_type": "virtualenv",
 }
