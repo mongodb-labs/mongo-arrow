@@ -1,9 +1,0 @@
-{
-    "arch": "x86_64",
-    "cpu": "Intel(R) Core(TM) i7-9750H CPU @ 2.60GHz",
-    "machine": "M-C02G6608MD6M.attlocal.net",
-    "num_cpu": "12",
-    "os": "Darwin 21.4.0",
-    "ram": "17179869184",
-    "version": 1
-}
