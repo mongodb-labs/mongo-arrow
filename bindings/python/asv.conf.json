@@ -7,7 +7,7 @@
     "project": "pymongoarrow",
 
     // The project's homepage
-    "project_url": "http://project-homepage.org/",
+    "project_url": "https://mongo-arrow.readthedocs.io/en/latest/",
 
     // The URL or local path of the source code repository for the
     // project being benchmarked
@@ -88,8 +88,9 @@
          "req": {
              "pyarrow": ["7.0.0"],
              "pymongo": ["3.11", "4.1.1"],
-             "pandas": [""],
-             "Cython": []
+             "pandas": [],
+             "Cython": [],
+             "numpy": []
          },
          "env": {"BENCHMARK_SIZE": ["LARGE", "SMALL"]},
     },

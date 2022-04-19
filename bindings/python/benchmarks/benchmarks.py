@@ -9,7 +9,13 @@ import string
 import pyarrow
 import pymongo
 from bson import BSON
-from pymongoarrow.api import Schema, find_arrow_all, find_pandas_all, write
+from pymongoarrow.api import (
+    Schema,
+    find_arrow_all,
+    find_numpy_all,
+    find_pandas_all,
+    write,
+)
 
 CUR_SIZE = True if os.environ.get("BENCHMARK_SIZE") == "LARGE" else False
 N_LARGE_DOCS = 1000
@@ -23,6 +29,8 @@ schemas = {}
 
 arrow_tables = {}
 pandas_tables = {}
+numpy_arrays = {}
+
 large_doc_keys = None
 
 db = pymongo.MongoClient().pymongoarrow_test
@@ -51,6 +59,8 @@ arrow_tables[SMALL] = find_arrow_all(db[collection_names[SMALL]], {}, schema=sch
 arrow_tables[LARGE] = find_arrow_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
 pandas_tables[SMALL] = find_pandas_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
 pandas_tables[LARGE] = find_pandas_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
+numpy_arrays[SMALL] = find_numpy_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
+numpy_arrays[LARGE] = find_numpy_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
 
 
 class ProfileInsert:
@@ -71,3 +81,6 @@ class ProfileInsert:
 
     def time_insert_pandas(self):
         write(db[collection_names[CUR_SIZE]], pandas_tables[CUR_SIZE])
+
+    def time_insert_numpy(self):
+        write(db[collection_names[CUR_SIZE]], numpy_arrays[CUR_SIZE])
