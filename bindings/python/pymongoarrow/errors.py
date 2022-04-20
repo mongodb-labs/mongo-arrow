@@ -48,7 +48,7 @@ class ArrowWriteError(PyMongoArrowError):
         }
         Details will have the following more general format for other PyMongo errors:
         {
-            'cause': ..., (a PyMongoError subclass object)
+            'cause': ..., (a :class:`~pymongo.errors.PyMongoError` subclass object)
             'index': ... (the index of the start of the batch which caused this error)
         }
         """
