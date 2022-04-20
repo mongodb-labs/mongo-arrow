@@ -202,14 +202,16 @@ class TestArrowApiMixin:
             {"_id": [i for i in range(10001)] * 2, "data": [i * 2 for i in range(10001)] * 2},
             ArrowSchema(schema),
         )
-        with self.assertRaises(ArrowWriteError):
-            try:
-                self.round_trip(data, Schema(schema))
-            except ArrowWriteError as awe:
-                self.assertEqual(
-                    10001, awe.details["writeErrors"][0]["index"], awe.details["nInserted"]
-                )
-                raise awe
+        with self.assertRaises(ArrowWriteError) as awe:
+            self.round_trip(data, Schema(schema))
+        self.assertEqual(
+            10001,
+            awe.exception.details["writeErrors"][0]["index"],
+            awe.exception.details["nInserted"],
+        )
+        self.assertEqual(
+            awe.exception.details.keys(), {"nInserted", "writeConcernErrors", "writeErrors"}
+        )
 
     def test_pymongo_error(self):
         schema = {"_id": int32(), "data": int64()}
