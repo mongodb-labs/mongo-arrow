@@ -13,7 +13,7 @@ exclude asv.conf.json
 
 graft pymongoarrow
 
-recursive-exclude test *
+recursive-include test *
 recursive-exclude docs *
 
 global-exclude *.cpp
