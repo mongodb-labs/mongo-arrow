@@ -14,6 +14,7 @@
 import warnings
 
 import numpy as np
+import pymongo.errors
 from bson import encode
 from bson.raw_bson import RawBSONDocument
 from numpy import ndarray
@@ -336,6 +337,8 @@ def write(collection, tabular):
             collection.insert_many(cur_batch)
         except BulkWriteError as bwe:
             raise ArrowWriteError(_transform_bwe(dict(bwe.details), cur_offset)) from bwe
+        except pymongo.errors.PyMongoError as pme:
+            raise ArrowWriteError({"cause": pme, "index": cur_offset}) from pme
 
         results["insertedCount"] += i
         cur_offset += i
