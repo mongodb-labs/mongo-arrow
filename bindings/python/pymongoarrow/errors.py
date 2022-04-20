@@ -33,9 +33,10 @@ class ArrowWriteError(PyMongoArrowError):
     def details(self):
         """Details for the error.
 
-        It is a dictionary of key-value pairs giving diagnostic information about what went wrong. To see the entire dictionary simply use `print(awe.details)`.
+        It is a dictionary of key-value pairs giving diagnostic information about what went wrong.
+        To see the entire dictionary simply use `print(awe.details)`.
 
-        Details will have the following format for bulk write errors:
+        Details will have the following format:
         {
             'writeErrors': [...],
             'writeConcernErrors': [...],
@@ -45,11 +46,6 @@ class ArrowWriteError(PyMongoArrowError):
             'nModified': ...,
             'nRemoved': ...,
             'upserted': [...]
-        }
-        Details will have the following more general format for other PyMongo errors:
-        {
-            'cause': ..., (a :class:`~pymongo.errors.PyMongoError` subclass object)
-            'index': ... (the index of the start of the batch which caused this error)
         }
         """
         return self._details
