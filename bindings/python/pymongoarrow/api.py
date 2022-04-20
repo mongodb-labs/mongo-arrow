@@ -339,7 +339,7 @@ def write(collection, tabular):
             raise ArrowWriteError(_transform_bwe(dict(bwe.details), cur_offset)) from bwe
         except pymongo.errors.PyMongoError as pme:
             raise ArrowWriteError(
-                {"writeErrors": [{"errmsg": pme._message, "index": cur_offset}]}
+                {"writeErrors": [{"errmsg": str(pme), "index": cur_offset}]}
             ) from pme
 
         results["insertedCount"] += i
