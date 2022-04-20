@@ -1,0 +1,19 @@
+{
+    "version": 1,
+    "project": "pymongoarrow",
+    "project_url": "https://mongo-arrow.readthedocs.io/en/latest/",
+    "repo": "../../",
+    "repo_subdir": "bindings/python",
+    "branches": ["main"],
+    "matrix": {
+         "req": {
+             "pyarrow": ["7.0.0"],
+             "pymongo": ["3.11", "4.1.1"],
+             "pandas": [],
+             "Cython": [],
+             "numpy": []
+         },
+         "env": {"BENCHMARK_SIZE": ["LARGE", "SMALL"]},
+    },
+    "environment_type": "virtualenv",
+}

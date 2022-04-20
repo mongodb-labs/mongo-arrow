@@ -9,6 +9,7 @@ exclude addtags.py
 exclude benchmark.py
 exclude .flake8
 exclude RELEASE.rst
+exclude asv.conf.json
 
 graft pymongoarrow
 
