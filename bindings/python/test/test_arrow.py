@@ -23,7 +23,7 @@ from pyarrow import Table, binary, bool_, decimal256, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
 from pyarrow.parquet import read_table, write_table
-from pymongo import DESCENDING, WriteConcern
+from pymongo import DESCENDING, MongoClient, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
@@ -210,6 +210,24 @@ class TestArrowApiMixin:
                     10001, awe.details["writeErrors"][0]["index"], awe.details["nInserted"]
                 )
                 raise awe
+
+    def test_pymongo_error(self):
+        schema = {"_id": int32(), "data": int64()}
+        data = Table.from_pydict(
+            {"_id": [i for i in range(10001)] * 2, "data": [i * 2 for i in range(10001)] * 2},
+            ArrowSchema(schema),
+        )
+        with self.assertRaises(ArrowWriteError):
+            write(
+                MongoClient(
+                    host="somedomainthatdoesntexist.org",
+                    port=123456789,
+                    serverSelectionTimeoutMS=10,
+                ).pymongoarrow_test.get_collection(
+                    "test", write_concern=WriteConcern(w="majority")
+                ),
+                data,
+            )
 
     def test_write_schema_validation(self):
         schema = {
