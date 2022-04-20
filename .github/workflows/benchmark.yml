@@ -1,7 +1,6 @@
 name: Python Benchmark
 
 on:
-  push:
   pull_request:
 
 concurrency:
