@@ -263,7 +263,11 @@ def _transform_bwe(bwe, offset):
     bwe["nInserted"] += offset
     for i in bwe["writeErrors"]:
         i["index"] += offset
-    return bwe
+    return {
+        "writeErrors": bwe["writeErrors"],
+        "nInserted": bwe["nInserted"],
+        "writeConcernErrors": bwe["writeConcernErrors"],
+    }
 
 
 def _tabular_generator(tabular):
@@ -339,9 +343,12 @@ def write(collection, tabular):
             raise ArrowWriteError(_transform_bwe(dict(bwe.details), cur_offset)) from bwe
         except pymongo.errors.PyMongoError as pme:
             raise ArrowWriteError(
-                {"writeErrors": [{"errmsg": str(pme), "index": cur_offset}]}
+                {
+                    "writeErrors": [{"errmsg": str(pme), "index": cur_offset}],
+                    "nInserted": cur_offset,
+                    "writeConcernErrors": [],
+                }
             ) from pme
-
         results["insertedCount"] += i
         cur_offset += i
 

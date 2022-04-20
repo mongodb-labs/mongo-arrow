@@ -41,11 +41,6 @@ class ArrowWriteError(PyMongoArrowError):
             'writeErrors': [...],
             'writeConcernErrors': [...],
             'nInserted': ...,
-            'nUpserted': ...,
-            'nMatched': ...,
-            'nModified': ...,
-            'nRemoved': ...,
-            'upserted': [...]
         }
         """
         return self._details

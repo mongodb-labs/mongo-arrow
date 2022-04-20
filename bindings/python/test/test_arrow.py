@@ -217,7 +217,8 @@ class TestArrowApiMixin:
             {"_id": [i for i in range(10001)] * 2, "data": [i * 2 for i in range(10001)] * 2},
             ArrowSchema(schema),
         )
-        with self.assertRaises(ArrowWriteError):
+
+        with self.assertRaises(ArrowWriteError) as exc:
             write(
                 MongoClient(
                     host="somedomainthatdoesntexist.org",
@@ -228,6 +229,9 @@ class TestArrowApiMixin:
                 ),
                 data,
             )
+        self.assertEqual(
+            exc.exception.details.keys(), {"nInserted", "writeConcernErrors", "writeErrors"}
+        )
 
     def test_write_schema_validation(self):
         schema = {
