@@ -23,7 +23,7 @@ from pyarrow import Table, binary, bool_, decimal256, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
 from pyarrow.parquet import read_table, write_table
-from pymongo import DESCENDING, WriteConcern
+from pymongo import DESCENDING, MongoClient, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
@@ -202,14 +202,38 @@ class TestArrowApiMixin:
             {"_id": [i for i in range(10001)] * 2, "data": [i * 2 for i in range(10001)] * 2},
             ArrowSchema(schema),
         )
-        with self.assertRaises(ArrowWriteError):
-            try:
-                self.round_trip(data, Schema(schema))
-            except ArrowWriteError as awe:
-                self.assertEqual(
-                    10001, awe.details["writeErrors"][0]["index"], awe.details["nInserted"]
-                )
-                raise awe
+        with self.assertRaises(ArrowWriteError) as awe:
+            self.round_trip(data, Schema(schema))
+        self.assertEqual(
+            10001,
+            awe.exception.details["writeErrors"][0]["index"],
+            awe.exception.details["nInserted"],
+        )
+        self.assertEqual(
+            awe.exception.details.keys(), {"nInserted", "writeConcernErrors", "writeErrors"}
+        )
+
+    def test_pymongo_error(self):
+        schema = {"_id": int32(), "data": int64()}
+        data = Table.from_pydict(
+            {"_id": [i for i in range(10001)] * 2, "data": [i * 2 for i in range(10001)] * 2},
+            ArrowSchema(schema),
+        )
+
+        with self.assertRaises(ArrowWriteError) as exc:
+            write(
+                MongoClient(
+                    host="somedomainthatdoesntexist.org",
+                    port=123456789,
+                    serverSelectionTimeoutMS=10,
+                ).pymongoarrow_test.get_collection(
+                    "test", write_concern=WriteConcern(w="majority")
+                ),
+                data,
+            )
+        self.assertEqual(
+            exc.exception.details.keys(), {"nInserted", "writeConcernErrors", "writeErrors"}
+        )
 
     def test_write_schema_validation(self):
         schema = {

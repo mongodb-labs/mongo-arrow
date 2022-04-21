@@ -33,18 +33,17 @@ class ArrowWriteError(PyMongoArrowError):
     def details(self):
         """Details for the error.
 
-        It is a dictionary of key-value pairs giving diagnostic information about what went wrong. To see the entire dictionary simply use `print(awe.details)`.
+        It is a dictionary of key-value pairs giving diagnostic information about what went wrong.
+        To see the entire dictionary simply use `print(awe.details)`.
 
         Details will have the following format:
         {
             'writeErrors': [...],
             'writeConcernErrors': [...],
             'nInserted': ...,
-            'nUpserted': ...,
-            'nMatched': ...,
-            'nModified': ...,
-            'nRemoved': ...,
-            'upserted': [...]
         }
+
+        If the error was caused by a PyMongo exception, then you can access that exception using the
+        ``__cause__`` attribute.
         """
         return self._details
