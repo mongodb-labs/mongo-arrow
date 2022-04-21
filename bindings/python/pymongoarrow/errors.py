@@ -42,5 +42,8 @@ class ArrowWriteError(PyMongoArrowError):
             'writeConcernErrors': [...],
             'nInserted': ...,
         }
+
+        If the error was caused by a PyMongo exception, then you can access that exception using the
+        ``__cause__`` attribute.
         """
         return self._details
