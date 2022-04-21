@@ -7,4 +7,4 @@ dependencies:
 - libbson
 - pkg-config
 - pandas
-- numpys
+- numpy
