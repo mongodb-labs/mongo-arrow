@@ -79,3 +79,27 @@ jobs:
         run: |
           pip install check-manifest
           check-manifest -v
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          activate-environment: mongo_arrow_documentation
+          environment-file: docs/environment.yml
+      - name: Install lib
+        shell: bash -l {0}
+        run: |
+          pip install .
+      - name: Build docs with warnings
+        shell: bash -l {0}
+        run: |
+          pushd docs
+          make html SPHINXOPTS="-W"
+      - name: Run linkcheck
+        shell: bash -l {0}
+        run: |
+          pushd docs
+          make linkcheck

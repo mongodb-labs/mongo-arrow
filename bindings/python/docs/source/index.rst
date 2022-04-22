@@ -30,7 +30,7 @@ know to use **PyMongoArrow**.
 Getting Help
 ------------
 If you're having trouble or have questions about PyMongoArrow, ask your question on
-our `MongoDB Community Forum <https://developer.mongodb.com/community/forums/tags/c/drivers-odms-connectors/7/python-driver>`_.
+our `MongoDB Community Forum <https://www.mongodb.com/community/forums/tag/python>`_.
 Once you get an answer, it'd be great if you could work it back into this
 documentation and contribute!
 
