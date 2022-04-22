@@ -6,3 +6,5 @@ dependencies:
 - sphinx
 - libbson
 - pkg-config
+- pandas
+- numpy

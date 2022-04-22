@@ -117,3 +117,17 @@ of formats including CSV, and HDF. For example, to write the data frame
 referenced by the variable ``df`` to a CSV file ``out.csv``, run::
 
   df.to_csv('out.csv', index=False)
+
+
+Writing back to MongoDB
+-----------------------
+Result sets that have been loaded as Arrow's :class:`~pyarrow.Table` type, Pandas'
+:class:`~pandas.DataFrame` type, or NumPy's :class:`~numpy.ndarray` type can
+be easily written to your MongoDB database using the :meth:`~pymongoarrow.api.write` function::
+
+  from pymongoarrow.api import write
+  from pymongo import MongoClient
+  coll = MongoClient().db.my_collection
+  write(coll, df)
+  write(coll, arrow_table)
+  write(coll, ndarrays)
