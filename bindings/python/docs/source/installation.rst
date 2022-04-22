@@ -30,8 +30,10 @@ To upgrade using pip::
 
   $ python -m pip install --upgrade pymongoarrow
 
-.. attention:: If the install fails due to an error like ``ValueError: Could not find "libbson-1.0" library`` it means that ``pip`` failed to find a
-suitable wheel for your platform.  We recommend first ensuring you have ``pip`` >= 20.3 installed. To upgrade ``pip`` run::
+.. attention:: If the install fails due to an error like ``ValueError: Could
+  not find "libbson-1.0" library`` it means that ``pip`` failed to find a
+  suitable wheel for your platform.  We recommend first ensuring you have
+  ``pip`` >= 20.3 installed. To upgrade ``pip`` run::
 
      $ python -m pip install --upgrade pip
 
