@@ -191,6 +191,26 @@ class TestExplicitNumPyApi(NumpyTestBase):
         ):
             write(self.coll, {"foo": 1})
 
+    def test_string_bool(self):
+        schema = {
+            "string": "str",
+            "bool": "bool",
+        }
+        data = {
+            "string": [str(i) for i in range(2)],
+            "bool": [True for _ in range(2)],
+        }
+        data = self.schemafied_ndarray_dict(data, schema)
+        self.round_trip(
+            data,
+            Schema(
+                {
+                    "string": str,
+                    "bool": bool,
+                }
+            ),
+        )
+
 
 class TestBSONTypes(NumpyTestBase):
     @classmethod

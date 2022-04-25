@@ -167,6 +167,25 @@ class TestExplicitPandasApi(PandasTestBase):
         )
         self.assertEqual(mock.call_count, 2)
 
+    def test_string_bool(self):
+        schema = {
+            "string": "str",
+            "bool": "bool",
+        }
+        data = pd.DataFrame(
+            data=[{"string": [str(i) for i in range(2)], "bool": [True for _ in range(2)]}],
+        ).astype(schema)
+
+        self.round_trip(
+            data,
+            Schema(
+                {
+                    "string": str,
+                    "bool": bool,
+                }
+            ),
+        )
+
 
 class TestBSONTypes(PandasTestBase):
     @classmethod
