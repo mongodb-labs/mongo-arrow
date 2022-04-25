@@ -20,12 +20,16 @@ from test.utils import AllowListEventListener
 import numpy as np
 import pandas as pd
 from bson import Decimal128, ObjectId
-from pyarrow import bool_, decimal256, float64, int32, int64, string, timestamp
+from pyarrow import decimal256, int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, write
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.types import Decimal128StringType, ObjectIdType
+from pymongoarrow.types import (
+    _TYPE_NORMALIZER_FACTORY,
+    Decimal128StringType,
+    ObjectIdType,
+)
 
 
 class PandasTestBase(unittest.TestCase):
@@ -114,33 +118,27 @@ class TestExplicitPandasApi(PandasTestBase):
                 raise awe
 
     def test_write_schema_validation(self):
-        schema = {
-            "data": "int64",
-            "float": "float64",
-            "datetime": "datetime64[ms]",
-            "string": "object",
-            "bool": "bool",
+        arrow_schema = {
+            k.__name__: v(True)
+            for k, v in _TYPE_NORMALIZER_FACTORY.items()
+            if k.__name__ not in ("ObjectId, Decimal128")
         }
+        schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
+        schema["str"] = "str"
+        schema["datetime"] = "datetime64[ms]"
         data = pd.DataFrame(
             data={
-                "data": [i for i in range(2)],
+                "Int64": [i for i in range(2)],
                 "float": [i for i in range(2)],
+                "int": [i for i in range(2)],
                 "datetime": [i for i in range(2)],
-                "string": [str(i) for i in range(2)],
-                "bool": [True for _ in range(2)],
+                "str": [str(i) for i in range(2)],
+                "bool": [True for i in range(2)],
             }
         ).astype(schema)
         self.round_trip(
             data,
-            Schema(
-                {
-                    "data": int64(),
-                    "float": float64(),
-                    "datetime": timestamp("ms"),
-                    "string": string(),
-                    "bool": bool_(),
-                }
-            ),
+            Schema(arrow_schema),
         )
 
         schema = {"_id": "int32", "data": np.ubyte()}

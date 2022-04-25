@@ -28,7 +28,11 @@ from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
-from pymongoarrow.types import Decimal128StringType, ObjectIdType
+from pymongoarrow.types import (
+    _TYPE_NORMALIZER_FACTORY,
+    Decimal128StringType,
+    ObjectIdType,
+)
 
 
 class TestArrowApiMixin:
@@ -238,19 +242,18 @@ class TestArrowApiMixin:
 
     def test_write_schema_validation(self):
         schema = {
-            "data": int64(),
-            "float": float64(),
-            "datetime": timestamp("ms"),
-            "string": string(),
-            "bool": bool_(),
+            k.__name__: v(True)
+            for k, v in _TYPE_NORMALIZER_FACTORY.items()
+            if k.__name__ not in ("ObjectId, Decimal128")
         }
         data = Table.from_pydict(
             {
-                "data": [i for i in range(2)],
+                "Int64": [i for i in range(2)],
                 "float": [i for i in range(2)],
                 "datetime": [i for i in range(2)],
-                "string": [str(i) for i in range(2)],
-                "bool": [True for _ in range(2)],
+                "str": [str(i) for i in range(2)],
+                "int": [i for i in range(2)],
+                "bool": [True for i in range(2)],
             },
             ArrowSchema(schema),
         )
