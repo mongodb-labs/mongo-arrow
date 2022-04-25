@@ -42,6 +42,7 @@ class TestArrowApiMixin:
             event_listeners=[cls.getmore_listener, cls.cmd_listener]
         )
         cls.schema = Schema({"_id": int32(), "data": int64()})
+
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
         )
@@ -297,6 +298,29 @@ class TestArrowApiMixin:
         data = read_table("test.parquet")
         self.round_trip(data, Schema(schema))
         os.remove("test.parquet")
+
+    def test_string_bool(self):
+        data = Table.from_pydict(
+            {
+                "string": [str(i) for i in range(2)],
+                "bool": [True for _ in range(2)],
+            },
+            ArrowSchema(
+                {
+                    "string": string(),
+                    "bool": bool_(),
+                }
+            ),
+        )
+        self.round_trip(
+            data,
+            Schema(
+                {
+                    "string": str,
+                    "bool": bool,
+                }
+            ),
+        )
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
