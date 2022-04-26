@@ -121,11 +121,12 @@ class TestExplicitPandasApi(PandasTestBase):
         arrow_schema = {
             k.__name__: v(True)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("ObjectId, Decimal128")
+            if k.__name__ not in ("ObjectId", "Decimal128")
         }
         schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
         schema["str"] = "str"
         schema["datetime"] = "datetime64[ms]"
+
         data = pd.DataFrame(
             data={
                 "Int64": [i for i in range(2)],
@@ -133,7 +134,7 @@ class TestExplicitPandasApi(PandasTestBase):
                 "int": [i for i in range(2)],
                 "datetime": [i for i in range(2)],
                 "str": [str(i) for i in range(2)],
-                "bool": [True for i in range(2)],
+                "bool": [True, False],
             }
         ).astype(schema)
         self.round_trip(

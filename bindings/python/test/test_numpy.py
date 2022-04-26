@@ -141,7 +141,7 @@ class TestExplicitNumPyApi(NumpyTestBase):
         arrow_schema = {
             k.__name__: v(True)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("ObjectId, Decimal128")
+            if k.__name__ not in ("ObjectId", "Decimal128")
         }
         schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
         schema["str"] = "str"
@@ -152,7 +152,7 @@ class TestExplicitNumPyApi(NumpyTestBase):
             "datetime": [i for i in range(2)],
             "str": [str(i) for i in range(2)],
             "int": [i for i in range(2)],
-            "bool": [True for i in range(2)],
+            "bool": [True, False],
         }
         data = self.schemafied_ndarray_dict(data, schema)
         self.round_trip(

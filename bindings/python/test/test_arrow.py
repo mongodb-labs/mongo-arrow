@@ -253,7 +253,7 @@ class TestArrowApiMixin:
                 "datetime": [i for i in range(2)],
                 "str": [str(i) for i in range(2)],
                 "int": [i for i in range(2)],
-                "bool": [True for i in range(2)],
+                "bool": [True, False],
             },
             ArrowSchema(schema),
         )
