@@ -19,12 +19,16 @@ from unittest import mock
 
 import numpy as np
 from bson import Decimal128, ObjectId
-from pyarrow import bool_, float64, int32, int64, string, timestamp
+from pyarrow import int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all, write
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.types import Decimal128StringType, ObjectIdType
+from pymongoarrow.types import (
+    _TYPE_NORMALIZER_FACTORY,
+    Decimal128StringType,
+    ObjectIdType,
+)
 
 
 class NumpyTestBase(unittest.TestCase):
@@ -134,32 +138,26 @@ class TestExplicitNumPyApi(NumpyTestBase):
                 raise awe
 
     def test_write_schema_validation(self):
-        schema = {
-            "data": "int64",
-            "float": "float64",
-            "datetime": "datetime64[ms]",
-            "string": "str",
-            "bool": "bool",
+        arrow_schema = {
+            k.__name__: v(True)
+            for k, v in _TYPE_NORMALIZER_FACTORY.items()
+            if k.__name__ not in ("ObjectId", "Decimal128")
         }
+        schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
+        schema["str"] = "str"
+        schema["datetime"] = "datetime64[ms]"
         data = {
-            "data": [i for i in range(2)],
+            "Int64": [i for i in range(2)],
             "float": [i for i in range(2)],
             "datetime": [i for i in range(2)],
-            "string": [str(i) for i in range(2)],
-            "bool": [True for _ in range(2)],
+            "str": [str(i) for i in range(2)],
+            "int": [i for i in range(2)],
+            "bool": [True, False],
         }
         data = self.schemafied_ndarray_dict(data, schema)
         self.round_trip(
             data,
-            Schema(
-                {
-                    "data": int64(),
-                    "float": float64(),
-                    "datetime": timestamp("ms"),
-                    "string": string(),
-                    "bool": bool_(),
-                }
-            ),
+            Schema(arrow_schema),
         )
 
         schema = {"_id": "int32", "data": np.ubyte()}
@@ -190,6 +188,26 @@ class TestExplicitNumPyApi(NumpyTestBase):
             ValueError, "Invalid tabular data object of type <class 'dict'>"
         ):
             write(self.coll, {"foo": 1})
+
+    def test_string_bool(self):
+        schema = {
+            "string": "str",
+            "bool": "bool",
+        }
+        data = {
+            "string": [str(i) for i in range(2)],
+            "bool": [True for _ in range(2)],
+        }
+        data = self.schemafied_ndarray_dict(data, schema)
+        self.round_trip(
+            data,
+            Schema(
+                {
+                    "string": str,
+                    "bool": bool,
+                }
+            ),
+        )
 
 
 class TestBSONTypes(NumpyTestBase):

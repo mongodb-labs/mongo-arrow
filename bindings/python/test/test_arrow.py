@@ -28,7 +28,11 @@ from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
-from pymongoarrow.types import Decimal128StringType, ObjectIdType
+from pymongoarrow.types import (
+    _TYPE_NORMALIZER_FACTORY,
+    Decimal128StringType,
+    ObjectIdType,
+)
 
 
 class TestArrowApiMixin:
@@ -42,6 +46,7 @@ class TestArrowApiMixin:
             event_listeners=[cls.getmore_listener, cls.cmd_listener]
         )
         cls.schema = Schema({"_id": int32(), "data": int64()})
+
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
         )
@@ -237,19 +242,18 @@ class TestArrowApiMixin:
 
     def test_write_schema_validation(self):
         schema = {
-            "data": int64(),
-            "float": float64(),
-            "datetime": timestamp("ms"),
-            "string": string(),
-            "bool": bool_(),
+            k.__name__: v(True)
+            for k, v in _TYPE_NORMALIZER_FACTORY.items()
+            if k.__name__ not in ("ObjectId", "Decimal128")
         }
         data = Table.from_pydict(
             {
-                "data": [i for i in range(2)],
+                "Int64": [i for i in range(2)],
                 "float": [i for i in range(2)],
                 "datetime": [i for i in range(2)],
-                "string": [str(i) for i in range(2)],
-                "bool": [True for _ in range(2)],
+                "str": [str(i) for i in range(2)],
+                "int": [i for i in range(2)],
+                "bool": [True, False],
             },
             ArrowSchema(schema),
         )
@@ -297,6 +301,29 @@ class TestArrowApiMixin:
         data = read_table("test.parquet")
         self.round_trip(data, Schema(schema))
         os.remove("test.parquet")
+
+    def test_string_bool(self):
+        data = Table.from_pydict(
+            {
+                "string": [str(i) for i in range(2)],
+                "bool": [True for _ in range(2)],
+            },
+            ArrowSchema(
+                {
+                    "string": string(),
+                    "bool": bool_(),
+                }
+            ),
+        )
+        self.round_trip(
+            data,
+            Schema(
+                {
+                    "string": str,
+                    "bool": bool,
+                }
+            ),
+        )
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
