@@ -6,7 +6,8 @@ Changes in Version 0.4.0
 - Support for :class:`~bson.decimal128.Decimal128` type.
 - Support for macOS arm64 architecture on Python 3.9+.
 - Support for writing tabular datasets (materialized as
-  PyArrow Tables, Pandas DataFrames, or NumPy arrays) to MongoDB.
+  PyArrow Tables, Pandas DataFrames, or NumPy arrays) to MongoDB
+  using the :meth:`~pymongoarrow.api.write` function.
   See the :doc:`quickstart` guide for more info.
 
 Changes in Version 0.3.0
