@@ -15,12 +15,13 @@
 import unittest
 import unittest.mock as mock
 from test import client_context
+from test.test_arrow import TestNulls as TestNullsBase
 from test.utils import AllowListEventListener
 
 import numpy as np
 import pandas as pd
 from bson import Decimal128, ObjectId
-from pyarrow import decimal256, int32, int64, string, bool_
+from pyarrow import decimal256, int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, write
@@ -29,10 +30,7 @@ from pymongoarrow.types import (
     _TYPE_NORMALIZER_FACTORY,
     Decimal128StringType,
     ObjectIdType,
-
 )
-
-from test.test_arrow import TestNulls as TestNullsBase
 
 
 class PandasTestBase(unittest.TestCase):

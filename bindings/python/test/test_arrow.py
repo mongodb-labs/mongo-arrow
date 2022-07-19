@@ -15,12 +15,13 @@ import os
 import unittest
 import unittest.mock as mock
 from test import client_context
-
-import pyarrow
 from test.utils import AllowListEventListener
 
+import numpy as np
+import pyarrow
 import pymongo
 from bson import Decimal128, ObjectId
+from pandas import isna
 from pyarrow import Table, binary, bool_, decimal256, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
@@ -36,8 +37,6 @@ from pymongoarrow.types import (
     ObjectIdType,
 )
 
-import numpy as np
-from pandas import isna
 
 class TestArrowApiMixin:
     @classmethod
@@ -405,23 +404,19 @@ class TestNulls(unittest.TestCase):
 
         # Default integral types
         cls.int_schema = Schema({"_id": ObjectIdType(), "int64": int64()})
-        cls.int64s = [(i if (i % 2 == 0) else None) for i in range(len(
-            cls.oids))]
+        cls.int64s = [(i if (i % 2 == 0) else None) for i in range(len(cls.oids))]
 
         cls.other_schema = Schema({"_id": ObjectIdType(), "other": string()})
-        cls.others = [str(i) if (i % 2 == 0) else None for i in range(
-            len(cls.oids))]
+        cls.others = [str(i) if (i % 2 == 0) else None for i in range(len(cls.oids))]
 
         cls.bool_schema = Schema({"_id": ObjectIdType(), "bool_": bool_()})
-        cls.bools = [True if (i % 2 == 0) else None for i in range(
-            len(cls.oids))]
+        cls.bools = [True if (i % 2 == 0) else None for i in range(len(cls.oids))]
 
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
         )
 
-        cls.find_fn = lambda s, a1, a2, schema=None: find_fn(a1, a2,
-                                                             schema=schema)
+        cls.find_fn = lambda s, a1, a2, schema=None: find_fn(a1, a2, schema=schema)
 
     def setUp(self):
         self.coll.drop()
@@ -435,11 +430,9 @@ class TestNulls(unittest.TestCase):
         else:
             self.assertEqual(obj1.dtype, np.dtype(np_type))
 
-
     def test_int_handling(self):
         self.coll.insert_many(
-            [{"_id": self.oids[i], "int64": self.int64s[i]} for i in range(
-                len(self.oids))]
+            [{"_id": self.oids[i], "int64": self.int64s[i]} for i in range(len(self.oids))]
         )
 
         table = self.find_fn(self.coll, {}, schema=self.int_schema)
@@ -449,13 +442,11 @@ class TestNulls(unittest.TestCase):
         self.assertType(table["int64"], "float64", int64())
 
         # Does it contain NAs where we expect?
-        self.assertTrue(np.all(np.equal(isna(self.int64s),
-                               isna(table["int64"]))))
+        self.assertTrue(np.all(np.equal(isna(self.int64s), isna(table["int64"]))))
 
     def test_other_handling(self, na_safe=True, dtype="O"):
         self.coll.insert_many(
-           [{"_id": self.oids[i], "other": self.others[i]} for i in range(len(
-               self.oids))]
+            [{"_id": self.oids[i], "other": self.others[i]} for i in range(len(self.oids))]
         )
 
         table = self.find_fn(self.coll, {}, schema=self.other_schema)
@@ -463,13 +454,11 @@ class TestNulls(unittest.TestCase):
         # Resulting datatype should be str in this case
         self.assertType(table["other"], dtype, string())
 
-        self.assertEqual(na_safe, np.all(np.equal(isna(self.others),
-                               isna(table["other"]))))
+        self.assertEqual(na_safe, np.all(np.equal(isna(self.others), isna(table["other"]))))
 
     def test_bool_handling(self):
         self.coll.insert_many(
-           [{"_id": self.oids[i], "bool_": self.bools[i]} for i in range(len(
-               self.oids))]
+            [{"_id": self.oids[i], "bool_": self.bools[i]} for i in range(len(self.oids))]
         )
 
         table = self.find_fn(self.coll, {}, schema=self.bool_schema)
@@ -478,5 +467,4 @@ class TestNulls(unittest.TestCase):
         self.assertType(table["bool_"], "O", bool_())
 
         # Does it contain Nones where expected?
-        self.assertTrue(np.all(np.equal(isna(self.bools),
-                                        isna(table["bool_"]))))
+        self.assertTrue(np.all(np.equal(isna(self.bools), isna(table["bool_"]))))

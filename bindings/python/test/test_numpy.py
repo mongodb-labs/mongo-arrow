@@ -14,12 +14,13 @@
 # from datetime import datetime, timedelta
 import unittest
 from test import client_context
+from test.test_arrow import TestNulls as TestNullsBase
 from test.utils import AllowListEventListener
 from unittest import mock
 
 import numpy as np
 from bson import Decimal128, ObjectId
-from pyarrow import int32, int64, string, bool_
+from pyarrow import int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all, write
@@ -29,8 +30,6 @@ from pymongoarrow.types import (
     Decimal128StringType,
     ObjectIdType,
 )
-
-from test.test_arrow import TestNulls as TestNullsBase
 
 
 class NumpyTestBase(unittest.TestCase):
