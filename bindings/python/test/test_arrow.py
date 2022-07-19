@@ -15,6 +15,8 @@ import os
 import unittest
 import unittest.mock as mock
 from test import client_context
+
+import pyarrow
 from test.utils import AllowListEventListener
 
 import pymongo
@@ -34,6 +36,8 @@ from pymongoarrow.types import (
     ObjectIdType,
 )
 
+import numpy as np
+from pandas import isna
 
 class TestArrowApiMixin:
     @classmethod
@@ -384,3 +388,95 @@ class TestBSONTypes(unittest.TestCase):
         )
         table = find_arrow_all(coll, {}, schema=schema)
         self.assertEqual(table, expected)
+
+
+class TestNulls(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls, find_fn=find_arrow_all):
+        if not client_context.connected:
+            raise unittest.SkipTest("cannot connect to MongoDB")
+        cls.cmd_listener = AllowListEventListener("find", "aggregate")
+        cls.getmore_listener = AllowListEventListener("getMore")
+        cls.client = client_context.get_client(
+            event_listeners=[cls.getmore_listener, cls.cmd_listener]
+        )
+
+        cls.oids = [ObjectId() for _ in range(4)]
+
+        # Default integral types
+        cls.int_schema = Schema({"_id": ObjectIdType(), "int64": int64()})
+        cls.int64s = [(i if (i % 2 == 0) else None) for i in range(len(
+            cls.oids))]
+
+        cls.other_schema = Schema({"_id": ObjectIdType(), "other": string()})
+        cls.others = [str(i) if (i % 2 == 0) else None for i in range(
+            len(cls.oids))]
+
+        cls.bool_schema = Schema({"_id": ObjectIdType(), "bool_": bool_()})
+        cls.bools = [True if (i % 2 == 0) else None for i in range(
+            len(cls.oids))]
+
+        cls.coll = cls.client.pymongoarrow_test.get_collection(
+            "test", write_concern=WriteConcern(w="majority")
+        )
+
+        cls.find_fn = lambda s, a1, a2, schema=None: find_fn(a1, a2,
+                                                             schema=schema)
+
+    def setUp(self):
+        self.coll.drop()
+
+        self.cmd_listener.reset()
+        self.getmore_listener.reset()
+
+    def assertType(self, obj1, np_type, arrow_type):
+        if isinstance(obj1, pyarrow.ChunkedArray):
+            self.assertEqual(obj1.type, arrow_type)
+        else:
+            self.assertEqual(obj1.dtype, np.dtype(np_type))
+
+
+    def test_int_handling(self):
+        self.coll.insert_many(
+            [{"_id": self.oids[i], "int64": self.int64s[i]} for i in range(
+                len(self.oids))]
+        )
+
+        table = self.find_fn(self.coll, {}, schema=self.int_schema)
+
+        # Resulting datatype should be float64 according to the spec for numpy
+        # and pandas.
+        self.assertType(table["int64"], "float64", int64())
+
+        # Does it contain NAs where we expect?
+        self.assertTrue(np.all(np.equal(isna(self.int64s),
+                               isna(table["int64"]))))
+
+    def test_other_handling(self, na_safe=True, dtype="O"):
+        self.coll.insert_many(
+           [{"_id": self.oids[i], "other": self.others[i]} for i in range(len(
+               self.oids))]
+        )
+
+        table = self.find_fn(self.coll, {}, schema=self.other_schema)
+
+        # Resulting datatype should be str in this case
+        self.assertType(table["other"], dtype, string())
+
+        self.assertEqual(na_safe, np.all(np.equal(isna(self.others),
+                               isna(table["other"]))))
+
+    def test_bool_handling(self):
+        self.coll.insert_many(
+           [{"_id": self.oids[i], "bool_": self.bools[i]} for i in range(len(
+               self.oids))]
+        )
+
+        table = self.find_fn(self.coll, {}, schema=self.bool_schema)
+
+        # Resulting datatype should be object
+        self.assertType(table["bool_"], "O", bool_())
+
+        # Does it contain Nones where expected?
+        self.assertTrue(np.all(np.equal(isna(self.bools),
+                                        isna(table["bool_"]))))

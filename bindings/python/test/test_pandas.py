@@ -32,6 +32,8 @@ from pymongoarrow.types import (
 
 )
 
+from test.test_arrow import TestNulls as TestNullsBase
+
 
 class PandasTestBase(unittest.TestCase):
     @classmethod
@@ -222,72 +224,7 @@ class TestBSONTypes(PandasTestBase):
         pd.testing.assert_frame_equal(expected, table)
 
 
-class TestNulls(PandasTestBase):
+class TestNulls(TestNullsBase):
     @classmethod
-    def setUpClass(cls):
-        PandasTestBase.setUpClass()
-
-        cls.coll = cls.client.pymongoarrow_test.get_collection(
-            "test", write_concern=WriteConcern(w="majority")
-        )
-        cls.oids = [ObjectId() for i in range(4)]
-
-
-    def setUp(self):
-        self.coll.drop()
-
-        self.cmd_listener.reset()
-        self.getmore_listener.reset()
-
-    def test_int_handling(self):
-        self.schema = Schema({"_id": ObjectIdType(), "int32": int32()})
-        self.int32s = [(i if (i % 2 == 0) else None) for i in range(len(
-            self.oids))]
-        self.coll.insert_many(
-            [{"_id": self.oids[i], "int32": self.int32s[i]} for i in range(
-                len(self.oids))]
-        )
-
-        table = find_pandas_all(self.coll, {}, schema=self.schema)
-
-        # Resulting datatype should be float64 according to the spec
-        self.assertEqual(table["int32"].dtype, np.dtype("float64"))
-
-        # Does it contain NAs where we expect?
-        self.assertTrue(np.all(np.equal(pd.isna(self.int32s),
-                               pd.isna(table["int32"]))))
-
-    def test_bool_handling(self):
-        self.schema = Schema({"_id": ObjectIdType(), "bool_": bool_()})
-        self.bools = [True if (i % 2 == 0) else None for i in range(
-            len(self.oids))]
-        self.coll.insert_many(
-           [{"_id": self.oids[i], "bool_": self.bools[i]} for i in range(len(
-               self.oids))]
-        )
-
-        table = find_pandas_all(self.coll, {}, schema=self.schema)
-
-        # Resulting datatype should be object
-        self.assertEqual(table["bool_"].dtype, np.dtype("O"))
-
-        # Does it contain Nones where expected?
-        self.assertTrue(np.all(np.equal(pd.isna(self.bools),
-                                        pd.isna(table["bool_"]))))
-
-    def test_other_handling(self):
-        self.schema = Schema({"_id": ObjectIdType(), "other": string()})
-        self.others = [str(i) if (i % 2 == 0) else None for i in range(
-            len(self.oids))]
-        self.coll.insert_many(
-           [{"_id": self.oids[i], "other": self.others[i]} for i in range(len(
-               self.oids))]
-        )
-
-        table = find_pandas_all(self.coll, {}, schema=self.schema)
-
-        # Resulting datatype should be str in this case
-        self.assertEqual(table["other"].dtype, np.dtype("O"))
-
-        self.assertTrue(np.all(np.equal(pd.isna(self.others),
-                               pd.isna(table["other"]))))
+    def setUpClass(cls, find_fn=find_pandas_all):
+        super().setUpClass(find_fn)
