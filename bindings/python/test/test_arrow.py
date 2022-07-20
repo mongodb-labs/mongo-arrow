@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import datetime
 import os
 import unittest
 import unittest.mock as mock
@@ -401,17 +402,6 @@ class TestNulls(unittest.TestCase):
         )
 
         cls.oids = [ObjectId() for _ in range(4)]
-
-        # Default integral types
-        cls.int_schema = Schema({"_id": ObjectIdType(), "int64": int64()})
-        cls.int64s = [(i if (i % 2 == 0) else None) for i in range(len(cls.oids))]
-
-        cls.other_schema = Schema({"_id": ObjectIdType(), "other": string()})
-        cls.others = [str(i) if (i % 2 == 0) else None for i in range(len(cls.oids))]
-
-        cls.bool_schema = Schema({"_id": ObjectIdType(), "bool_": bool_()})
-        cls.bools = [True if (i % 2 == 0) else None for i in range(len(cls.oids))]
-
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
         )
@@ -426,45 +416,74 @@ class TestNulls(unittest.TestCase):
 
     def assertType(self, obj1, np_type, arrow_type):
         if isinstance(obj1, pyarrow.ChunkedArray):
-            self.assertEqual(obj1.type, arrow_type)
+            if "storage_type" in dir(arrow_type):
+                self.assertEqual(obj1.type, arrow_type.storage_type)
+            else:
+                self.assertEqual(obj1.type, arrow_type)
         else:
             self.assertEqual(obj1.dtype, np.dtype(np_type))
 
     def test_int_handling(self):
+        # Default integral types
+        int_schema = Schema({"_id": ObjectIdType(), "int64": int64()})
+        int64s = [(i if (i % 2 == 0) else None) for i in range(len(
+            self.oids))]
         self.coll.insert_many(
-            [{"_id": self.oids[i], "int64": self.int64s[i]} for i in range(len(self.oids))]
+            [{"_id": self.oids[i], "int64": int64s[i]} for i in range(len(self.oids))]
         )
 
-        table = self.find_fn(self.coll, {}, schema=self.int_schema)
+        table = self.find_fn(self.coll, {}, schema=int_schema)
 
         # Resulting datatype should be float64 according to the spec for numpy
         # and pandas.
         self.assertType(table["int64"], "float64", int64())
 
         # Does it contain NAs where we expect?
-        self.assertTrue(np.all(np.equal(isna(self.int64s), isna(table["int64"]))))
+        self.assertTrue(np.all(np.equal(isna(int64s), isna(table["int64"]))))
 
     def test_other_handling(self, na_safe=True, dtype="O"):
-        self.coll.insert_many(
-            [{"_id": self.oids[i], "other": self.others[i]} for i in range(len(self.oids))]
-        )
+        # generating fn, arrow type, numpy dtype
+        other_pairs = [(str, string(), "O"),
+                       (int, int32(), ">i4"),
+                       (float, float64(), "d"),
+                       (lambda x: datetime.datetime(x + 1, 1, 1),
+                        timestamp("ms"),
+                        "datetime64[ms]"),
+                       (lambda _: ObjectId(), ObjectIdType(),
+                        "O"),
+                       (lambda x: Decimal128(str(x)), Decimal128StringType(),
+                        "O")]
 
-        table = self.find_fn(self.coll, {}, schema=self.other_schema)
+        for gen, atype, dtype in other_pairs:
+            other_schema = Schema({"_id": ObjectIdType(), "other": atype})
+            others = [gen(i) if (i % 2 == 0) else None for i in range(len(
+                self.oids))]
 
-        # Resulting datatype should be str in this case
-        self.assertType(table["other"], dtype, string())
+            self.setUp()
 
-        self.assertEqual(na_safe, np.all(np.equal(isna(self.others), isna(table["other"]))))
+            self.coll.insert_many(
+                [{"_id": self.oids[i], "other": others[i]} for i in range(len(self.oids))]
+            )
+
+            table = self.find_fn(self.coll, {}, schema=other_schema)
+
+            # Resulting datatype should be str in this case
+            self.assertType(table["other"], dtype, atype)
+
+            self.assertEqual(na_safe, np.all(np.equal(isna(others), isna(table["other"]))))
 
     def test_bool_handling(self):
+        bool_schema = Schema({"_id": ObjectIdType(), "bool_": bool_()})
+        bools = [True if (i % 2 == 0) else None for i in range(len(self.oids))]
+
         self.coll.insert_many(
-            [{"_id": self.oids[i], "bool_": self.bools[i]} for i in range(len(self.oids))]
+            [{"_id": self.oids[i], "bool_": bools[i]} for i in range(len(self.oids))]
         )
 
-        table = self.find_fn(self.coll, {}, schema=self.bool_schema)
+        table = self.find_fn(self.coll, {}, schema=bool_schema)
 
         # Resulting datatype should be object
         self.assertType(table["bool_"], "O", bool_())
 
         # Does it contain Nones where expected?
-        self.assertTrue(np.all(np.equal(isna(self.bools), isna(table["bool_"]))))
+        self.assertTrue(np.all(np.equal(isna(bools), isna(table["bool_"]))))
