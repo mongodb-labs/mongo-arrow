@@ -17,6 +17,7 @@ import unittest
 import unittest.mock as mock
 from test import client_context
 from test.utils import AllowListEventListener
+from typing import Callable
 
 import numpy as np
 import pyarrow
@@ -426,9 +427,9 @@ class TestNulls(unittest.TestCase):
     def test_int_handling(self):
         # Default integral types
         int_schema = Schema({"_id": ObjectIdType(), "int64": int64()})
-        int64s = [(i if (i % 2 == 0) else None) for i in range(len(self.oids))]
+        int64_arr = [(i if (i % 2 == 0) else None) for i in range(len(self.oids))]
         self.coll.insert_many(
-            [{"_id": self.oids[i], "int64": int64s[i]} for i in range(len(self.oids))]
+            [{"_id": self.oids[i], "int64": int64_arr[i]} for i in range(len(self.oids))]
         )
 
         table = self.find_fn(self.coll, {}, schema=int_schema)
@@ -438,20 +439,24 @@ class TestNulls(unittest.TestCase):
         self.assertType(table["int64"], "float64", int64())
 
         # Does it contain NAs where we expect?
-        self.assertTrue(np.all(np.equal(isna(int64s), isna(table["int64"]))))
+        self.assertTrue(np.all(np.equal(isna(int64_arr), isna(table["int64"]))))
 
-    def test_other_handling(self, na_safe=True, dtype="O"):
+    def test_other_handling(self, na_safe: Callable[[object], bool] = lambda _: True, **kwargs):
         # generating fn, arrow type, numpy dtype
         other_pairs = [
-            (str, string(), "O"),
-            (int, int32(), ">i4"),
+            (str, string(), kwargs.get("str_dtype", "O")),
+            (int, int32(), "float64"),
             (float, float64(), "d"),
-            (lambda x: datetime.datetime(x + 1, 1, 1), timestamp("ms"), "datetime64[ms]"),
-            (lambda _: ObjectId(), ObjectIdType(), "O"),
-            (lambda x: Decimal128(str(x)), Decimal128StringType(), "O"),
+            (
+                lambda x: datetime.datetime(x + 1970, 1, 1),
+                timestamp("ms"),
+                kwargs.get("dt_dtype", "datetime64[ms]"),
+            ),
+            (lambda _: ObjectId(), ObjectIdType(), kwargs.get("oid_dtype", "O")),
+            (lambda x: Decimal128(str(x)), Decimal128StringType(), kwargs.get("d128_dtype", "O")),
         ]
 
-        for gen, atype, dtype in other_pairs:
+        for gen, atype, dtype_t in other_pairs:
             other_schema = Schema({"_id": ObjectIdType(), "other": atype})
             others = [gen(i) if (i % 2 == 0) else None for i in range(len(self.oids))]
 
@@ -464,9 +469,9 @@ class TestNulls(unittest.TestCase):
             table = self.find_fn(self.coll, {}, schema=other_schema)
 
             # Resulting datatype should be str in this case
-            self.assertType(table["other"], dtype, atype)
+            self.assertType(table["other"], dtype_t, atype)
 
-            self.assertEqual(na_safe, np.all(np.equal(isna(others), isna(table["other"]))))
+            self.assertEqual(na_safe(atype), np.all(np.equal(isna(others), isna(table["other"]))))
 
     def test_bool_handling(self):
         bool_schema = Schema({"_id": ObjectIdType(), "bool_": bool_()})

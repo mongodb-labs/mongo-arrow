@@ -226,3 +226,6 @@ class TestNulls(TestNullsBase):
     @classmethod
     def setUpClass(cls, find_fn=find_pandas_all):
         super().setUpClass(find_fn)
+
+    def test_other_handling(self):
+        super().test_other_handling(dt_dtype="<M8[ns]")

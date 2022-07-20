@@ -20,7 +20,7 @@ from unittest import mock
 
 import numpy as np
 from bson import Decimal128, ObjectId
-from pyarrow import int32, int64
+from pyarrow import int32, int64, string
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all, write
@@ -252,5 +252,11 @@ class TestNulls(TestNullsBase):
     def setUpClass(cls, find_fn=find_numpy_all):
         super().setUpClass(find_fn)
 
-    def test_other_handling(self, na_safe=False, dtype="<U4"):
-        super().test_other_handling(na_safe, dtype)
+    @staticmethod
+    def _other_na_safe(atype):
+        return atype != string()
+
+    def test_other_handling(self, na_safe=_other_na_safe):
+        super().test_other_handling(
+            na_safe, str_dtype="<U4", oid_dtype="O", d128_dtype="O", dt_dtype="<M8[ms]"
+        )
