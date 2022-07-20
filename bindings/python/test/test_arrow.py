@@ -426,8 +426,7 @@ class TestNulls(unittest.TestCase):
     def test_int_handling(self):
         # Default integral types
         int_schema = Schema({"_id": ObjectIdType(), "int64": int64()})
-        int64s = [(i if (i % 2 == 0) else None) for i in range(len(
-            self.oids))]
+        int64s = [(i if (i % 2 == 0) else None) for i in range(len(self.oids))]
         self.coll.insert_many(
             [{"_id": self.oids[i], "int64": int64s[i]} for i in range(len(self.oids))]
         )
@@ -443,21 +442,18 @@ class TestNulls(unittest.TestCase):
 
     def test_other_handling(self, na_safe=True, dtype="O"):
         # generating fn, arrow type, numpy dtype
-        other_pairs = [(str, string(), "O"),
-                       (int, int32(), ">i4"),
-                       (float, float64(), "d"),
-                       (lambda x: datetime.datetime(x + 1, 1, 1),
-                        timestamp("ms"),
-                        "datetime64[ms]"),
-                       (lambda _: ObjectId(), ObjectIdType(),
-                        "O"),
-                       (lambda x: Decimal128(str(x)), Decimal128StringType(),
-                        "O")]
+        other_pairs = [
+            (str, string(), "O"),
+            (int, int32(), ">i4"),
+            (float, float64(), "d"),
+            (lambda x: datetime.datetime(x + 1, 1, 1), timestamp("ms"), "datetime64[ms]"),
+            (lambda _: ObjectId(), ObjectIdType(), "O"),
+            (lambda x: Decimal128(str(x)), Decimal128StringType(), "O"),
+        ]
 
         for gen, atype, dtype in other_pairs:
             other_schema = Schema({"_id": ObjectIdType(), "other": atype})
-            others = [gen(i) if (i % 2 == 0) else None for i in range(len(
-                self.oids))]
+            others = [gen(i) if (i % 2 == 0) else None for i in range(len(self.oids))]
 
             self.setUp()
 
