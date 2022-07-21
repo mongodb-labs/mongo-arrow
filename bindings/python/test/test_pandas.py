@@ -20,6 +20,7 @@ from test.utils import AllowListEventListener
 
 import numpy as np
 import pandas as pd
+import pandas.testing
 from bson import Decimal128, ObjectId
 from pyarrow import decimal256, int32, int64
 from pymongo import DESCENDING, WriteConcern
@@ -223,9 +224,14 @@ class TestBSONTypes(PandasTestBase):
 
 
 class TestNulls(TestNullsBase):
+    def assert_pandas_equal(self, left, right):
+        pandas.testing.assert_frame_equal(left, right, check_dtype=False)
+
     @classmethod
-    def setUpClass(cls, find_fn=find_pandas_all):
-        super().setUpClass(find_fn)
+    def setUpClass(
+        cls, find_fn=find_pandas_all, equal_fn=assert_pandas_equal, table_from_dict=pandas.DataFrame
+    ):
+        super().setUpClass(find_fn, equal_fn, table_from_dict)
 
     def test_other_handling(self):
         super().test_other_handling(dt_dtype="<M8[ns]")

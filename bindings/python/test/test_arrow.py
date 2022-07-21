@@ -393,7 +393,12 @@ class TestBSONTypes(unittest.TestCase):
 
 class TestNulls(unittest.TestCase):
     @classmethod
-    def setUpClass(cls, find_fn=find_arrow_all):
+    def setUpClass(
+        cls,
+        find_fn=find_arrow_all,
+        equal_fn=unittest.TestCase.assertEqual,
+        table_from_dict=pyarrow.Table.from_pydict,
+    ):
         if not client_context.connected:
             raise unittest.SkipTest("cannot connect to MongoDB")
         cls.cmd_listener = AllowListEventListener("find", "aggregate")
@@ -408,6 +413,8 @@ class TestNulls(unittest.TestCase):
         )
 
         cls.find_fn = lambda s, a1, a2, schema=None: find_fn(a1, a2, schema=schema)
+        cls.equal_fn = equal_fn
+        cls.table_from_dict = lambda s, d: table_from_dict(d)
 
     def setUp(self):
         self.coll.drop()
@@ -441,8 +448,26 @@ class TestNulls(unittest.TestCase):
         # Does it contain NAs where we expect?
         self.assertTrue(np.all(np.equal(isna(int64_arr), isna(table["int64"]))))
 
+        # Write
+        self.coll.drop()
+        table_write = self.table_from_dict({"int64": int64_arr})
+        if type(table_write) == pyarrow.Table:
+            table_write_schema = Schema({"int64": int64()})
+        else:
+            table_write_schema = Schema({"int64": float64()})
+
+        write(self.coll, table_write)
+        res_table = self.find_fn(self.coll, {}, schema=table_write_schema)
+        self.equal_fn(res_table, table_write)
+        self.assertType(res_table["int64"], "float64", int64())
+
     def test_other_handling(self, na_safe: Callable[[object], bool] = lambda _: True, **kwargs):
-        # generating fn, arrow type, numpy dtype
+        # Table of: generating fn, arrow type, numpy dtype
+
+        # Leftmost column is a callable that must generate values that vary
+        # with a parameter. Other two columns don't completely map in
+        # _TYPE_NORMALIZER_FACTORY and _TYPE_CHECKER_TO_NUMPY.
+
         other_pairs = [
             (str, string(), kwargs.get("str_dtype", "O")),
             (int, int32(), "float64"),
@@ -461,11 +486,9 @@ class TestNulls(unittest.TestCase):
             others = [gen(i) if (i % 2 == 0) else None for i in range(len(self.oids))]
 
             self.setUp()
-
             self.coll.insert_many(
                 [{"_id": self.oids[i], "other": others[i]} for i in range(len(self.oids))]
             )
-
             table = self.find_fn(self.coll, {}, schema=other_schema)
 
             # Resulting datatype should be str in this case

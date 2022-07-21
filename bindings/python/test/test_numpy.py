@@ -248,9 +248,18 @@ class TestBSONTypes(NumpyTestBase):
 # The spec for pyarrow says to_numpy is experimental, so we should expect
 # this to change in the future.
 class TestNulls(TestNullsBase):
+    @staticmethod
+    def numpy_dict(d):
+        return {k: np.array(v, dtype=np.float_) for k, v in d.items()}
+
     @classmethod
-    def setUpClass(cls, find_fn=find_numpy_all):
-        super().setUpClass(find_fn)
+    def setUpClass(
+        cls,
+        find_fn=find_numpy_all,
+        equal_fn=NumpyTestBase.assert_numpy_equal,
+        table_from_dict=numpy_dict,
+    ):
+        super().setUpClass(find_fn, equal_fn, table_from_dict)
 
     @staticmethod
     def _other_na_safe(atype):
