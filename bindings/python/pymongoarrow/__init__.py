@@ -29,8 +29,10 @@ except ImportError:
 
 try:
     from pymongoarrow.lib import libbson_version
-except ImportError:
-    warnings.warn("This library has not been compiled")
+except ImportError as e:
+    warnings.warn(
+        f"Could not find compiled pymongoarrow.lib extension, please install from source or report the following traceback on the issue tracker:\n{e}"
+    )
     libbson_version = None
 
 if libbson_version is not None:
