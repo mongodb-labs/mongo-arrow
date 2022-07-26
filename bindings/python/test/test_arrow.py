@@ -519,7 +519,8 @@ class TestNulls(unittest.TestCase):
                 self.na_safe(atype), np.all(np.equal(isna(others), isna(table["other"])))
             )
 
-            if gen in [ObjectId, Decimal128]:
+            # These are generally not writable with regular items or nulls.
+            if gen in [ObjectId, Decimal128, datetime.datetime]:
                 continue
 
             # Write
