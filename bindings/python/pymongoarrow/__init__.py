@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import traceback
 import warnings
 
 # We must import pyarrow before attempting to load the Cython module.
@@ -29,10 +30,12 @@ except ImportError:
 
 try:
     from pymongoarrow.lib import libbson_version
-except ImportError as e:
+except ImportError:
     warnings.warn(
-        f"Could not find compiled pymongoarrow.lib extension, please install from source or report the following traceback on the issue tracker:\n{e}"
+        "Could not find compiled pymongoarrow.lib extension, please install "
+        "from source or report the following traceback on the issue tracker"
     )
+    warnings.warn(traceback.print_exc())  # type: ignore[arg-type]
     libbson_version = None
 
 if libbson_version is not None:
