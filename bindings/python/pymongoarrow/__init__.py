@@ -33,9 +33,9 @@ try:
 except ImportError:
     warnings.warn(
         "Could not find compiled pymongoarrow.lib extension, please install "
-        "from source or report the following traceback on the issue tracker"
+        "from source or report the following traceback on the issue tracker:\n"
+        f"{traceback.format_exc()}"
     )
-    warnings.warn(traceback.print_exc())  # type: ignore[arg-type]
     libbson_version = None
 
 if libbson_version is not None:
