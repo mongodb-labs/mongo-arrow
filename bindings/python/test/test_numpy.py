@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from datetime import datetime, timedelta
+import datetime
 import unittest
 from test import client_context
 from test.test_arrow import TestNulls as TestNullsBase
@@ -20,7 +21,7 @@ from unittest import mock
 
 import numpy as np
 from bson import Decimal128, ObjectId
-from pyarrow import int32, int64, string
+from pyarrow import int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all, write
@@ -247,25 +248,30 @@ class TestBSONTypes(NumpyTestBase):
 
 # The spec for pyarrow says to_numpy is experimental, so we should expect
 # this to change in the future.
-class TestNulls(TestNullsBase):
-    @staticmethod
-    def numpy_dict(d):
+class TestNulls(TestNullsBase, NumpyTestBase):
+    def table_from_dict(self, d, schema=None):
         return {k: np.array(v, dtype=np.float_) for k, v in d.items()}
 
-    @classmethod
-    def setUpClass(
-        cls,
-        find_fn=find_numpy_all,
-        equal_fn=NumpyTestBase.assert_numpy_equal,
-        table_from_dict=numpy_dict,
-    ):
-        super().setUpClass(find_fn, equal_fn, table_from_dict)
+    def equal_fn(self, left, right):
+        left = np.nan_to_num(left)
+        right = np.nan_to_num(left)
+        self.assertTrue(np.all(np.equal(left, right)))
 
-    @staticmethod
-    def _other_na_safe(atype):
-        return atype != string()
+    def find_fn(self, coll, query, schema=None):
+        return find_numpy_all(coll, query, schema=schema)
 
-    def test_other_handling(self, na_safe=_other_na_safe):
-        super().test_other_handling(
-            na_safe, str_dtype="<U4", oid_dtype="O", d128_dtype="O", dt_dtype="<M8[ms]"
-        )
+    def assert_in_idx(self, table, col_name):
+        self.assertTrue(col_name in table)
+
+    pytype_tab_map = {
+        str: "str128",
+        int: ["int64", "float64"],
+        float: "float64",
+        datetime.datetime: "datetime64[ms]",
+        ObjectId: "object",
+        Decimal128: "object",
+        bool: "object",
+    }
+
+    def na_safe(self, atype):
+        return atype != TestNulls.pytype_tab_map[str]

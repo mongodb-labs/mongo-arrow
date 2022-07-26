@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from datetime import datetime, timedelta
+import datetime
 import unittest
 import unittest.mock as mock
 from test import client_context
@@ -224,14 +225,29 @@ class TestBSONTypes(PandasTestBase):
 
 
 class TestNulls(TestNullsBase):
-    def assert_pandas_equal(self, left, right):
-        pandas.testing.assert_frame_equal(left, right, check_dtype=False)
+    def find_fn(self, coll, query, schema):
+        return find_pandas_all(coll, query, schema=schema)
 
-    @classmethod
-    def setUpClass(
-        cls, find_fn=find_pandas_all, equal_fn=assert_pandas_equal, table_from_dict=pandas.DataFrame
-    ):
-        super().setUpClass(find_fn, equal_fn, table_from_dict)
+    def equal_fn(self, left, right):
+        left = left.fillna(0)
+        right = right.fillna(0)
+        if type(left) == pandas.DataFrame:
+            pandas.testing.assert_frame_equal(left, right, check_dtype=False)
+        else:
+            pandas.testing.assert_series_equal(left, right, check_dtype=False)
 
-    def test_other_handling(self):
-        super().test_other_handling(dt_dtype="<M8[ns]")
+    def table_from_dict(self, dict, schema=None):
+        return pandas.DataFrame(dict)
+
+    def assert_in_idx(self, table, col_name):
+        self.assertTrue(col_name in table.columns)
+
+    pytype_tab_map = {
+        str: "object",
+        int: ["int64", "float64"],
+        float: "float64",
+        datetime.datetime: "datetime64[ns]",
+        ObjectId: "object",
+        Decimal128: "object",
+        bool: "object",
+    }

@@ -17,7 +17,6 @@ import unittest
 import unittest.mock as mock
 from test import client_context
 from test.utils import AllowListEventListener
-from typing import Callable
 
 import numpy as np
 import pyarrow
@@ -392,13 +391,44 @@ class TestBSONTypes(unittest.TestCase):
 
 
 class TestNulls(unittest.TestCase):
+    def find_fn(self, coll, query, schema):
+        return find_arrow_all(coll, query, schema=schema)
+
+    def equal_fn(self, left, right):
+        self.assertEqual(left, right)
+
+    def table_from_dict(self, dict, schema=None):
+        return pyarrow.Table.from_pydict(dict, schema)
+
+    def assert_in_idx(self, table, col_name):
+        self.assertTrue(col_name in table.column_names)
+
+    def na_safe(self, atype):
+        return True
+
+    # Map Python types to constructors
+    pytype_cons_map = {
+        str: str,
+        int: int,
+        float: float,
+        datetime.datetime: lambda x: datetime.datetime(x + 1970, 1, 1),
+        ObjectId: lambda _: ObjectId(),
+        Decimal128: lambda x: Decimal128(str(x)),
+    }
+
+    # Map Python types to types for table we are comparing.
+    pytype_tab_map = {
+        str: string(),
+        int: int64(),
+        float: float64(),
+        datetime.datetime: timestamp("ms"),
+        ObjectId: ObjectIdType(),
+        Decimal128: Decimal128StringType(),
+        bool: bool_(),
+    }
+
     @classmethod
-    def setUpClass(
-        cls,
-        find_fn=find_arrow_all,
-        equal_fn=unittest.TestCase.assertEqual,
-        table_from_dict=pyarrow.Table.from_pydict,
-    ):
+    def setUpClass(cls):
         if not client_context.connected:
             raise unittest.SkipTest("cannot connect to MongoDB")
         cls.cmd_listener = AllowListEventListener("find", "aggregate")
@@ -412,27 +442,27 @@ class TestNulls(unittest.TestCase):
             "test", write_concern=WriteConcern(w="majority")
         )
 
-        cls.find_fn = lambda s, a1, a2, schema=None: find_fn(a1, a2, schema=schema)
-        cls.equal_fn = equal_fn
-        cls.table_from_dict = lambda s, d: table_from_dict(d)
-
     def setUp(self):
         self.coll.drop()
 
         self.cmd_listener.reset()
         self.getmore_listener.reset()
 
-    def assertType(self, obj1, np_type, arrow_type):
+    def assertType(self, obj1, arrow_type):
         if isinstance(obj1, pyarrow.ChunkedArray):
             if "storage_type" in dir(arrow_type):
                 self.assertEqual(obj1.type, arrow_type.storage_type)
             else:
                 self.assertEqual(obj1.type, arrow_type)
         else:
-            self.assertEqual(obj1.dtype, np.dtype(np_type))
+            if isinstance(arrow_type, list):
+                self.assertTrue(obj1.dtype.name in arrow_type)
+            else:
+                self.assertEqual(obj1.dtype.name, arrow_type)
 
     def test_int_handling(self):
         # Default integral types
+
         int_schema = Schema({"_id": ObjectIdType(), "int64": int64()})
         int64_arr = [(i if (i % 2 == 0) else None) for i in range(len(self.oids))]
         self.coll.insert_many(
@@ -443,7 +473,8 @@ class TestNulls(unittest.TestCase):
 
         # Resulting datatype should be float64 according to the spec for numpy
         # and pandas.
-        self.assertType(table["int64"], "float64", int64())
+        atype = type(self).pytype_tab_map[int]
+        self.assertType(table["int64"], atype)
 
         # Does it contain NAs where we expect?
         self.assertTrue(np.all(np.equal(isna(int64_arr), isna(table["int64"]))))
@@ -451,39 +482,29 @@ class TestNulls(unittest.TestCase):
         # Write
         self.coll.drop()
         table_write = self.table_from_dict({"int64": int64_arr})
-        if type(table_write) == pyarrow.Table:
-            table_write_schema = Schema({"int64": int64()})
-        else:
-            table_write_schema = Schema({"int64": float64()})
 
         write(self.coll, table_write)
-        res_table = self.find_fn(self.coll, {}, schema=table_write_schema)
-        self.equal_fn(res_table, table_write)
-        self.assertType(res_table["int64"], "float64", int64())
+        res_table = self.find_fn(self.coll, {}, schema=int_schema)
 
-    def test_other_handling(self, na_safe: Callable[[object], bool] = lambda _: True, **kwargs):
+        self.equal_fn(res_table["int64"], table_write["int64"])
+        self.assert_in_idx(res_table, "_id")
+        self.assertType(res_table["int64"], atype)
+
+    def test_other_handling(self):
         # Table of: generating fn, arrow type, numpy dtype
 
         # Leftmost column is a callable that must generate values that vary
         # with a parameter. Other two columns don't completely map in
         # _TYPE_NORMALIZER_FACTORY and _TYPE_CHECKER_TO_NUMPY.
 
-        other_pairs = [
-            (str, string(), kwargs.get("str_dtype", "O")),
-            (int, int32(), "float64"),
-            (float, float64(), "d"),
-            (
-                lambda x: datetime.datetime(x + 1970, 1, 1),
-                timestamp("ms"),
-                kwargs.get("dt_dtype", "datetime64[ms]"),
-            ),
-            (lambda _: ObjectId(), ObjectIdType(), kwargs.get("oid_dtype", "O")),
-            (lambda x: Decimal128(str(x)), Decimal128StringType(), kwargs.get("d128_dtype", "O")),
-        ]
-
-        for gen, atype, dtype_t in other_pairs:
-            other_schema = Schema({"_id": ObjectIdType(), "other": atype})
-            others = [gen(i) if (i % 2 == 0) else None for i in range(len(self.oids))]
+        for gen in [str, float, datetime.datetime, ObjectId, Decimal128]:
+            atype = type(self).pytype_tab_map[gen]
+            pytype = TestNulls.pytype_tab_map[gen]
+            other_schema = Schema({"_id": ObjectIdType(), "other": pytype})
+            others = [
+                type(self).pytype_cons_map[gen](i) if (i % 2 == 0) else None
+                for i in range(len(self.oids))
+            ]
 
             self.setUp()
             self.coll.insert_many(
@@ -492,11 +513,34 @@ class TestNulls(unittest.TestCase):
             table = self.find_fn(self.coll, {}, schema=other_schema)
 
             # Resulting datatype should be str in this case
-            self.assertType(table["other"], dtype_t, atype)
 
-            self.assertEqual(na_safe(atype), np.all(np.equal(isna(others), isna(table["other"]))))
+            self.assertType(table["other"], atype)
+            self.assertEqual(
+                self.na_safe(atype), np.all(np.equal(isna(others), isna(table["other"])))
+            )
+
+            if gen in [ObjectId, Decimal128]:
+                continue
+
+            # Write
+            self.coll.drop()
+            table_write_schema = Schema({"other": pytype})
+            table_write_schema_arrow = (
+                pyarrow.schema([("other", pytype)])
+                if (gen in [str, float, datetime.datetime])
+                else None
+            )
+
+            table_write = self.table_from_dict({"other": others}, schema=table_write_schema_arrow)
+
+            write(self.coll, table_write)
+            res_table = self.find_fn(self.coll, {}, schema=table_write_schema)
+            self.equal_fn(res_table, table_write)
+
+            self.assertType(res_table["other"], atype)
 
     def test_bool_handling(self):
+        atype = type(self).pytype_tab_map[bool]
         bool_schema = Schema({"_id": ObjectIdType(), "bool_": bool_()})
         bools = [True if (i % 2 == 0) else None for i in range(len(self.oids))]
 
@@ -507,7 +551,7 @@ class TestNulls(unittest.TestCase):
         table = self.find_fn(self.coll, {}, schema=bool_schema)
 
         # Resulting datatype should be object
-        self.assertType(table["bool_"], "O", bool_())
+        self.assertType(table["bool_"], atype)
 
         # Does it contain Nones where expected?
         self.assertTrue(np.all(np.equal(isna(bools), isna(table["bool_"]))))
