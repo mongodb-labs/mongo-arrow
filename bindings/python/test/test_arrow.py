@@ -427,6 +427,16 @@ class TestNulls(unittest.TestCase):
         bool: bool_(),
     }
 
+    pytype_writeback_exc_map = {
+        str: None,
+        int: None,
+        float: None,
+        datetime.datetime: None,
+        ObjectId: pyarrow.lib.ArrowInvalid,
+        Decimal128: pyarrow.lib.ArrowInvalid,
+        bool: None,
+    }
+
     @classmethod
     def setUpClass(cls):
         if not client_context.connected:
@@ -462,7 +472,6 @@ class TestNulls(unittest.TestCase):
 
     def test_int_handling(self):
         # Default integral types
-
         int_schema = Schema({"_id": ObjectIdType(), "int64": int64()})
         int64_arr = [(i if (i % 2 == 0) else None) for i in range(len(self.oids))]
         self.coll.insert_many(
@@ -491,15 +500,12 @@ class TestNulls(unittest.TestCase):
         self.assertType(res_table["int64"], atype)
 
     def test_other_handling(self):
-        # Table of: generating fn, arrow type, numpy dtype
-
-        # Leftmost column is a callable that must generate values that vary
-        # with a parameter. Other two columns don't completely map in
-        # _TYPE_NORMALIZER_FACTORY and _TYPE_CHECKER_TO_NUMPY.
-
+        # Tests other types, which are treated differently in
+        # arrow/pandas/numpy.
         for gen in [str, float, datetime.datetime, ObjectId, Decimal128]:
-            atype = type(self).pytype_tab_map[gen]
-            pytype = TestNulls.pytype_tab_map[gen]
+            con_type = type(self).pytype_tab_map[gen]  # Arrow/Pandas/Numpy
+            pytype = TestNulls.pytype_tab_map[gen]  # Arrow type specifically
+
             other_schema = Schema({"_id": ObjectIdType(), "other": pytype})
             others = [
                 type(self).pytype_cons_map[gen](i) if (i % 2 == 0) else None
@@ -514,31 +520,37 @@ class TestNulls(unittest.TestCase):
 
             # Resulting datatype should be str in this case
 
-            self.assertType(table["other"], atype)
+            self.assertType(table["other"], con_type)
             self.assertEqual(
-                self.na_safe(atype), np.all(np.equal(isna(others), isna(table["other"])))
+                self.na_safe(con_type), np.all(np.equal(isna(others), isna(table["other"])))
             )
 
-            # These are generally not writable with regular items or nulls.
-            if gen in [ObjectId, Decimal128, datetime.datetime]:
-                continue
+            def writeback():
+                # Write
+                self.coll.drop()
+                table_write_schema = Schema({"other": pytype})
+                table_write_schema_arrow = (
+                    pyarrow.schema([("other", pytype)])
+                    if (gen in [str, float, datetime.datetime])
+                    else None
+                )
 
-            # Write
-            self.coll.drop()
-            table_write_schema = Schema({"other": pytype})
-            table_write_schema_arrow = (
-                pyarrow.schema([("other", pytype)])
-                if (gen in [str, float, datetime.datetime])
-                else None
-            )
+                table_write = self.table_from_dict(
+                    {"other": others}, schema=table_write_schema_arrow
+                )
 
-            table_write = self.table_from_dict({"other": others}, schema=table_write_schema_arrow)
+                write(self.coll, table_write)
+                res_table = self.find_fn(self.coll, {}, schema=table_write_schema)
+                self.equal_fn(res_table, table_write)
+                self.assertType(res_table["other"], con_type)
 
-            write(self.coll, table_write)
-            res_table = self.find_fn(self.coll, {}, schema=table_write_schema)
-            self.equal_fn(res_table, table_write)
-
-            self.assertType(res_table["other"], atype)
+            # Do we expect an exception to be raised?
+            if type(self).pytype_writeback_exc_map[gen] is not None:
+                expected_exc = type(self).pytype_writeback_exc_map[gen]
+                with self.assertRaises(expected_exc):
+                    writeback()
+            else:
+                writeback()
 
     def test_bool_handling(self):
         atype = type(self).pytype_tab_map[bool]

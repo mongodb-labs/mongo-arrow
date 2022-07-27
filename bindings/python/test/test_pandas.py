@@ -22,6 +22,7 @@ from test.utils import AllowListEventListener
 import numpy as np
 import pandas as pd
 import pandas.testing
+import pyarrow
 from bson import Decimal128, ObjectId
 from pyarrow import decimal256, int32, int64
 from pymongo import DESCENDING, WriteConcern
@@ -250,4 +251,14 @@ class TestNulls(TestNullsBase):
         ObjectId: "object",
         Decimal128: "object",
         bool: "object",
+    }
+
+    pytype_writeback_exc_map = {
+        str: None,
+        int: None,
+        float: None,
+        datetime.datetime: ValueError,
+        ObjectId: ValueError,
+        Decimal128: pyarrow.lib.ArrowInvalid,
+        bool: None,
     }

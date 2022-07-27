@@ -250,7 +250,13 @@ class TestBSONTypes(NumpyTestBase):
 # this to change in the future.
 class TestNulls(TestNullsBase, NumpyTestBase):
     def table_from_dict(self, d, schema=None):
-        return {k: np.array(v, dtype=np.float_) for k, v in d.items()}
+        out = {}
+        for k, v in d.items():
+            if any(isinstance(x, int) for x in v) and None in v:
+                out[k] = np.array(v, dtype=np.float_)
+            else:
+                out[k] = np.array(v, dtype=np.dtype(type(v[0])))  # Infer
+        return out
 
     def equal_fn(self, left, right):
         left = np.nan_to_num(left)
@@ -271,6 +277,16 @@ class TestNulls(TestNullsBase, NumpyTestBase):
         ObjectId: "object",
         Decimal128: "object",
         bool: "object",
+    }
+
+    pytype_writeback_exc_map = {
+        str: None,
+        int: None,
+        float: None,
+        datetime.datetime: ValueError,  # TypeError,
+        ObjectId: ValueError,  # TypeError,
+        Decimal128: ValueError,  # TypeError,
+        bool: None,
     }
 
     def na_safe(self, atype):
