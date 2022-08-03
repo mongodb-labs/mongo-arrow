@@ -16,7 +16,6 @@ import datetime
 import unittest
 import unittest.mock as mock
 from test import client_context
-from test.test_arrow import TestNulls as TestNullsBase
 from test.utils import AllowListEventListener
 
 import numpy as np
@@ -34,6 +33,8 @@ from pymongoarrow.types import (
     Decimal128StringType,
     ObjectIdType,
 )
+
+from .utils import TestNullsBase
 
 
 class PandasTestBase(unittest.TestCase):
@@ -262,3 +263,6 @@ class TestNulls(TestNullsBase):
         Decimal128: pyarrow.lib.ArrowInvalid,
         bool: None,
     }
+
+    def na_safe(self, atype):
+        return True
