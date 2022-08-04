@@ -15,7 +15,7 @@ import os
 import unittest
 import unittest.mock as mock
 from test import client_context
-from test.utils import AllowListEventListener
+from test.utils import AllowListEventListener, TestNullsBase
 
 import pyarrow
 import pymongo
@@ -34,8 +34,6 @@ from pymongoarrow.types import (
     Decimal128StringType,
     ObjectIdType,
 )
-
-from .utils import TestNullsBase
 
 
 class TestArrowApiMixin:

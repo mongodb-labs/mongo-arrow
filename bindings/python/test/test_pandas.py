@@ -16,7 +16,7 @@ import datetime
 import unittest
 import unittest.mock as mock
 from test import client_context
-from test.utils import AllowListEventListener
+from test.utils import AllowListEventListener, TestNullsBase
 
 import numpy as np
 import pandas as pd
@@ -33,8 +33,6 @@ from pymongoarrow.types import (
     Decimal128StringType,
     ObjectIdType,
 )
-
-from .utils import TestNullsBase
 
 
 class PandasTestBase(unittest.TestCase):
