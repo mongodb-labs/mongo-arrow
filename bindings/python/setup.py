@@ -158,6 +158,8 @@ def append_arrow_flags(module):
         pass
 
     # Find the appropriate library file and optionally copy it locally.
+    # Explicitly handle "parquet" library as a workaround for
+    # https://issues.apache.org/jira/browse/ARROW-17327
     for name in pa.get_libraries() + ["parquet"]:
         if IS_WIN:
             if COPY_LIBARROW:
