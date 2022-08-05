@@ -158,11 +158,11 @@ def append_arrow_flags(module):
         pass
 
     # Find the appropriate library file and optionally copy it locally.
-    for name in pa.get_libraries():
+    for name in pa.get_libraries() + ["parquet"]:
         if IS_WIN:
             if COPY_LIBARROW:
                 lib_file = os.path.join(arrow_lib, f"{name}.dll")
-                if not os.path.exists(lib_file):
+                if not os.path.exists(lib_file) and name != "parquet":
                     raise ValueError("Could not find compiled arrow library")
                 shutil.copy(lib_file, BUILD_DIR)
             lib_file = os.path.join(arrow_lib, f"{name}.lib")
