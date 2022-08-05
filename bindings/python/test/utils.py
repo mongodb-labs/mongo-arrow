@@ -162,7 +162,7 @@ class TestNullsBase(unittest.TestCase):
 
         # Resulting datatype should be float64 according to the spec for numpy
         # and pandas.
-        atype = type(self).pytype_tab_map[int]
+        atype = self.pytype_tab_map[int]
         self.assertType(table["int64"], atype)
 
         # Does it contain NAs where we expect?
@@ -183,12 +183,12 @@ class TestNullsBase(unittest.TestCase):
         # Tests other types, which are treated differently in
         # arrow/pandas/numpy.
         for gen in [str, float, datetime.datetime, ObjectId, Decimal128]:
-            con_type = type(self).pytype_tab_map[gen]  # Arrow/Pandas/Numpy
+            con_type = self.pytype_tab_map[gen]  # Arrow/Pandas/Numpy
             pytype = TestNullsBase.pytype_tab_map[gen]  # Arrow type specifically
 
             other_schema = Schema({"_id": ObjectIdType(), "other": pytype})
             others = [
-                type(self).pytype_cons_map[gen](i) if (i % 2 == 0) else None
+                self.pytype_cons_map[gen](i) if (i % 2 == 0) else None
                 for i in range(len(self.oids))
             ]
 
@@ -225,15 +225,15 @@ class TestNullsBase(unittest.TestCase):
                 self.assertType(res_table["other"], con_type)
 
             # Do we expect an exception to be raised?
-            if type(self).pytype_writeback_exc_map[gen] is not None:
-                expected_exc = type(self).pytype_writeback_exc_map[gen]
+            if self.pytype_writeback_exc_map[gen] is not None:
+                expected_exc = self.pytype_writeback_exc_map[gen]
                 with self.assertRaises(expected_exc):
                     writeback()
             else:
                 writeback()
 
     def test_bool_handling(self):
-        atype = type(self).pytype_tab_map[bool]
+        atype = self.pytype_tab_map[bool]
         bool_schema = Schema({"_id": ObjectIdType(), "bool_": bool_()})
         bools = [True if (i % 2 == 0) else None for i in range(len(self.oids))]
 
