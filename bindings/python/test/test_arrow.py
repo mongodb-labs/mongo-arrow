@@ -14,11 +14,12 @@
 import os
 import unittest
 import unittest.mock as mock
+from datetime import datetime
 from test import client_context
 from test.utils import AllowListEventListener
 
 import pymongo
-from bson import Decimal128, ObjectId
+from bson import CodecOptions, Decimal128, ObjectId
 from pyarrow import Table, binary, bool_, decimal256, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
@@ -33,6 +34,7 @@ from pymongoarrow.types import (
     Decimal128StringType,
     ObjectIdType,
 )
+from pytz import timezone
 
 
 class TestArrowApiMixin:
@@ -324,6 +326,65 @@ class TestArrowApiMixin:
                 }
             ),
         )
+
+    def test_auto_schema(self):
+        # Create table with random data of various types.
+        data = Table.from_pydict(
+            {
+                "string": [None] + [str(i) for i in range(2)],
+                "bool": [True for _ in range(3)],
+                "dt": [datetime(1970 + i, 1, 1) for i in range(3)],
+            },
+            # Ordering of output auto-schema will be the first fields detected.
+            # Test will fail if not ordered correctly.
+            ArrowSchema(
+                {
+                    "bool": bool_(),
+                    "dt": timestamp("ms"),
+                    "string": string(),
+                }
+            ),
+        )
+
+        # Write this table.if coll is None:
+        coll = self.coll
+        self.coll.drop()
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        out = find_arrow_all(coll, {}, schema=None).drop(["_id"])
+        self.assertEqual(data, out)
+        # Find it, no schema.
+
+    def test_auto_schema_tz(self):
+        # Create table with random data of various types.
+        data = Table.from_pydict(
+            {
+                "string": [None] + [str(i) for i in range(2)],
+                "bool": [True for _ in range(3)],
+                "dt": [datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)],
+            },
+            # Ordering of output auto-schema will be the first fields detected.
+            # Test will fail if not ordered correctly.
+            ArrowSchema(
+                {
+                    "bool": bool_(),
+                    "dt": timestamp("ms"),
+                    "string": string(),
+                }
+            ),
+        )
+
+        # Write this table.
+        coll = self.coll
+        self.coll.drop()
+        codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
+        res = write(self.coll.with_options(codec_options=codec_options), data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        out = find_arrow_all(coll.with_options(codec_options=codec_options), {}, schema=None).drop(
+            ["_id"]
+        )
+        self.assertEqual(data, out)
+        # Find it, no schema.
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):

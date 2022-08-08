@@ -53,6 +53,15 @@ cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? N
         raise InvalidBSON("Could not read BSON document stream")
     return doc
 
+_builder_type_map = {
+    0x10: Int32Builder,
+    0x12: Int64Builder,
+    0x01: DoubleBuilder,
+    0x09: DatetimeBuilder,
+    0x07: ObjectIdBuilder,
+    0x02: StringBuilder,
+    0x08: BoolBuilder
+}
 
 def process_bson_stream(bson_stream, context):
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
@@ -94,6 +103,18 @@ def process_bson_stream(bson_stream, context):
             while bson_iter_next(&doc_iter):
                 key = bson_iter_key(&doc_iter)
                 builder = builder_map.get(key)
+                if builder is None and context.schema is None:
+                    # Only run if there is no schema.
+                    ftype = bson_iter_type(&doc_iter)
+                    if ftype not in _builder_type_map:
+                        continue
+                    if _builder_type_map[ftype] == DatetimeBuilder and context.tzinfo is not None:
+                        arrow_type = timestamp(arrow_type.unit, tz=context.tzinfo)
+                        builder_map[key] = _builder_type_map[ftype](dtype=arrow_type)
+                    else:
+                        builder_map[key] = _builder_type_map[ftype]()
+                    builder = builder_map[key]
+                    builder.append_values([None] * count)
                 if builder is not None:
                     ftype = builder.type_marker
                     value_t = bson_iter_type(&doc_iter)
