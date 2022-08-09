@@ -24,7 +24,12 @@ from pyarrow import bool_, float64, int64, string, timestamp
 from pymongo import WriteConcern, monitoring
 from pymongoarrow.api import write
 from pymongoarrow.schema import Schema
-from pymongoarrow.types import Decimal128StringType, ObjectIdType
+from pymongoarrow.types import (
+    _TYPE_NORMALIZER_FACTORY,
+    Decimal128StringType,
+    ObjectIdType,
+    _in_type_map,
+)
 
 
 class EventListener(monitoring.CommandListener):
@@ -178,6 +183,10 @@ class TestNullsBase(unittest.TestCase):
         self.equal_fn(res_table["int64"], table_write["int64"])
         self.assert_in_idx(res_table, "_id")
         self.assertType(res_table["int64"], atype)
+
+    def test_all_types(self):
+        for t in self.pytype_tab_map.keys():
+            self.assertTrue(_in_type_map(_TYPE_NORMALIZER_FACTORY[t](0)))
 
     def test_other_handling(self):
         # Tests other types, which are treated differently in
