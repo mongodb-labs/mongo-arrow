@@ -347,21 +347,19 @@ class TestArrowApiMixin:
         )
 
         # Write this table.if coll is None:
-        coll = self.coll
         self.coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
-        out = find_arrow_all(coll, {}, schema=None).drop(["_id"])
+        out = find_arrow_all(self.coll, {}).drop(["_id"])
         self.assertEqual(data, out)
-        # Find it, no schema.
 
     def test_auto_schema_tz(self):
         # Create table with random data of various types.
         data = Table.from_pydict(
             {
-                "string": [None] + [str(i) for i in range(2)],
                 "bool": [True for _ in range(3)],
                 "dt": [datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)],
+                "string": [None] + [str(i) for i in range(2)],
             },
             # Ordering of output auto-schema will be the first fields detected.
             # Test will fail if not ordered correctly.
@@ -375,16 +373,12 @@ class TestArrowApiMixin:
         )
 
         # Write this table.
-        coll = self.coll
         self.coll.drop()
         codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
         res = write(self.coll.with_options(codec_options=codec_options), data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
-        out = find_arrow_all(coll.with_options(codec_options=codec_options), {}, schema=None).drop(
-            ["_id"]
-        )
+        out = find_arrow_all(self.coll.with_options(codec_options=codec_options), {}).drop(["_id"])
         self.assertEqual(data, out)
-        # Find it, no schema.
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):

@@ -58,7 +58,7 @@ _MAX_MESSAGE_SIZE = 48000000 - 16 * 1024
 _MAX_WRITE_BATCH_SIZE = max(100000, MAX_WRITE_BATCH_SIZE)
 
 
-def find_arrow_all(collection, query, *, schema, **kwargs):
+def find_arrow_all(collection, query, *, schema=None, **kwargs):
     """Method that returns the results of a find query as a
     :class:`pyarrow.Table` instance.
 
@@ -94,7 +94,7 @@ def find_arrow_all(collection, query, *, schema, **kwargs):
     return context.finish()
 
 
-def aggregate_arrow_all(collection, pipeline, *, schema, **kwargs):
+def aggregate_arrow_all(collection, pipeline, *, schema=None, **kwargs):
     """Method that returns the results of an aggregation pipeline as a
     :class:`pyarrow.Table` instance.
 
@@ -145,7 +145,7 @@ def _arrow_to_pandas(arrow_table):
     return arrow_table.to_pandas(split_blocks=True, self_destruct=True)
 
 
-def find_pandas_all(collection, query, *, schema, **kwargs):
+def find_pandas_all(collection, query, *, schema=None, **kwargs):
     """Method that returns the results of a find query as a
     :class:`pandas.DataFrame` instance.
 
@@ -164,7 +164,7 @@ def find_pandas_all(collection, query, *, schema, **kwargs):
     return _arrow_to_pandas(find_arrow_all(collection, query, schema=schema, **kwargs))
 
 
-def aggregate_pandas_all(collection, pipeline, *, schema, **kwargs):
+def aggregate_pandas_all(collection, pipeline, *, schema=None, **kwargs):
     """Method that returns the results of an aggregation pipeline as a
     :class:`pandas.DataFrame` instance.
 
@@ -183,7 +183,7 @@ def aggregate_pandas_all(collection, pipeline, *, schema, **kwargs):
     return _arrow_to_pandas(aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs))
 
 
-def _arrow_to_numpy(arrow_table, schema):
+def _arrow_to_numpy(arrow_table, schema=None):
     """Helper function that converts an Arrow Table to a dictionary
     containing NumPy arrays. The memory buffers backing the given Arrow Table
     may be destroyed after conversion if the resulting Numpy array(s) is not a
@@ -192,16 +192,20 @@ def _arrow_to_numpy(arrow_table, schema):
     See https://arrow.apache.org/docs/python/numpy.html for details.
     """
     container = {}
-    for fname in schema:
-        dtype = get_numpy_type(schema.typemap[fname])
-        if dtype == np.str_:
-            container[fname] = arrow_table[fname].to_pandas().to_numpy(dtype=dtype)
-        else:
-            container[fname] = arrow_table[fname].to_numpy()
+    if schema:
+        for fname in schema:
+            dtype = get_numpy_type(schema.typemap[fname])
+            if dtype == np.str_:
+                container[fname] = arrow_table[fname].to_pandas().to_numpy(dtype=dtype)
+            else:
+                container[fname] = arrow_table[fname].to_numpy()
+    else:
+        for col in arrow_table.column_names:
+            container[col] = arrow_table[col].to_numpy()
     return container
 
 
-def find_numpy_all(collection, query, *, schema, **kwargs):
+def find_numpy_all(collection, query, *, schema=None, **kwargs):
     """Method that returns the results of a find query as a
     :class:`dict` instance whose keys are field names and values are
     :class:`~numpy.ndarray` instances bearing the appropriate dtype.
@@ -230,7 +234,7 @@ def find_numpy_all(collection, query, *, schema, **kwargs):
     return _arrow_to_numpy(find_arrow_all(collection, query, schema=schema, **kwargs), schema)
 
 
-def aggregate_numpy_all(collection, pipeline, *, schema, **kwargs):
+def aggregate_numpy_all(collection, pipeline, *, schema=None, **kwargs):
     """Method that returns the results of an aggregation pipeline as a
     :class:`dict` instance whose keys are field names and values are
     :class:`~numpy.ndarray` instances bearing the appropriate dtype.

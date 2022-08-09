@@ -108,13 +108,17 @@ def process_bson_stream(bson_stream, context):
                     ftype = bson_iter_type(&doc_iter)
                     if ftype not in _builder_type_map:
                         continue
-                    if _builder_type_map[ftype] == DatetimeBuilder and context.tzinfo is not None:
+
+                    builder_type = _builder_type_map[ftype]
+                    if builder_type == DatetimeBuilder and context.tzinfo is not None:
                         arrow_type = timestamp(arrow_type.unit, tz=context.tzinfo)
-                        builder_map[key] = _builder_type_map[ftype](dtype=arrow_type)
+                        print(context.tzinfo)
+                        builder_map[key] = builder_type(dtype=arrow_type)
                     else:
-                        builder_map[key] = _builder_type_map[ftype]()
+                        builder_map[key] = builder_type()
                     builder = builder_map[key]
-                    builder.append_values([None] * count)
+                    for _ in range(count):
+                        builder.append_null()
                 if builder is not None:
                     ftype = builder.type_marker
                     value_t = bson_iter_type(&doc_iter)

@@ -13,12 +13,13 @@
 # limitations under the License.
 # from datetime import datetime, timedelta
 import unittest
+from datetime import datetime
 from test import client_context
 from test.utils import AllowListEventListener
 from unittest import mock
 
 import numpy as np
-from bson import Decimal128, ObjectId
+from bson import CodecOptions, Decimal128, ObjectId
 from pyarrow import int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
@@ -29,6 +30,7 @@ from pymongoarrow.types import (
     Decimal128StringType,
     ObjectIdType,
 )
+from pytz import timezone
 
 
 class NumpyTestBase(unittest.TestCase):
@@ -43,14 +45,15 @@ class NumpyTestBase(unittest.TestCase):
         )
         cls.schema = {}
 
-    def assert_numpy_equal(self, actual, expected):
+    def assert_numpy_equal(self, actual, expected, check_dtype=True):
         self.assertIsInstance(actual, dict)
         for field in expected:
             # workaround np.nan == np.nan evaluating to False
             a = np.nan_to_num(actual[field])
             e = np.nan_to_num(expected[field])
             np.testing.assert_array_equal(a, e)
-            self.assertEqual(actual[field].dtype, expected[field].dtype)
+            if check_dtype:
+                self.assertEqual(actual[field].dtype, expected[field].dtype)
 
 
 class TestExplicitNumPyApi(NumpyTestBase):
@@ -208,6 +211,55 @@ class TestExplicitNumPyApi(NumpyTestBase):
                 }
             ),
         )
+
+    def test_auto_schema(self):
+        # Create table with random data of various types.
+        data = self.schemafied_ndarray_dict(
+            {
+                "string": [None] + [str(i) for i in range(2)],
+                "bool": [True for _ in range(3)],
+                "dt": [datetime(1970 + i, 1, 1) for i in range(3)],
+            },
+            # Ordering of output auto-schema will be the first fields detected.
+            # Test will fail if not ordered correctly.
+            {
+                "bool": "bool",
+                "dt": "datetime64[ms]",
+                "string": "str",
+            },
+        )
+
+        self.coll.drop()
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        out = find_numpy_all(self.coll, {})
+        del out["_id"]
+        self.assert_numpy_equal(data, out, check_dtype=False)
+
+    def test_auto_schema_tz(self):
+        # Create table with random data of various types.
+        data = self.schemafied_ndarray_dict(
+            {
+                "string": [None] + [str(i) for i in range(2)],
+                "bool": [True for _ in range(3)],
+                "dt": [datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)],
+            },
+            # Ordering of output auto-schema will be the first fields detected.
+            # Test will fail if not ordered correctly.
+            {
+                "bool": "bool",
+                "dt": "datetime64[ms]",
+                "string": "str",
+            },
+        )
+
+        self.coll.drop()
+        codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
+        res = write(self.coll.with_options(codec_options=codec_options), data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        out = find_numpy_all(self.coll.with_options(codec_options=codec_options), {})
+        del out["_id"]
+        self.assert_numpy_equal(data, out, check_dtype=False)
 
 
 class TestBSONTypes(NumpyTestBase):

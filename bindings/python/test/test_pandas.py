@@ -14,12 +14,13 @@
 # from datetime import datetime, timedelta
 import unittest
 import unittest.mock as mock
+from datetime import datetime
 from test import client_context
 from test.utils import AllowListEventListener
 
 import numpy as np
 import pandas as pd
-from bson import Decimal128, ObjectId
+from bson import CodecOptions, Decimal128, ObjectId
 from pyarrow import decimal256, int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
@@ -30,6 +31,7 @@ from pymongoarrow.types import (
     Decimal128StringType,
     ObjectIdType,
 )
+from pytz import timezone
 
 
 class PandasTestBase(unittest.TestCase):
@@ -184,6 +186,43 @@ class TestExplicitPandasApi(PandasTestBase):
                 }
             ),
         )
+
+    def test_auto_schema(self):
+        # Create table with random data of various types.
+        data = pd.DataFrame(
+            {
+                "string": [None] + [str(i) for i in range(2)],
+                "bool": [True for _ in range(3)],
+                "dt": [datetime(1970 + i, 1, 1) for i in range(3)],
+            }
+        )
+
+        # Write this table.if coll is None:
+        self.coll.drop()
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        out = find_pandas_all(self.coll, {}).drop(["_id"], axis=1)
+        pd.testing.assert_frame_equal(data, out)
+
+    def test_auto_schema_tz(self):
+        # Create table with random data of various types.
+        data = pd.DataFrame(
+            {
+                "bool": [True for _ in range(3)],
+                "dt": [datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)],
+                "string": [None] + [str(i) for i in range(2)],
+            }
+        )
+
+        # Write this table.
+        self.coll.drop()
+        codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
+        res = write(self.coll.with_options(codec_options=codec_options), data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        out = find_pandas_all(self.coll.with_options(codec_options=codec_options), {}).drop(
+            ["_id"], axis=1
+        )
+        pd.testing.assert_frame_equal(data, out)
 
 
 class TestBSONTypes(PandasTestBase):
