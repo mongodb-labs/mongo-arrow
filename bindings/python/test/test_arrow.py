@@ -353,6 +353,16 @@ class TestArrowApiMixin:
         out = find_arrow_all(self.coll, {}).drop(["_id"])
         self.assertEqual(data, out)
 
+    def test_auto_schema_heterogeneous(self):
+        vals = [1, "2", True, 4]
+        data = [{"a": v} for v in vals]
+
+        # Write this table.if coll is None:
+        self.coll.drop()
+        self.coll.insert_many(data)
+        out = find_arrow_all(self.coll, {}).drop(["_id"])
+        self.assertEqual(out["a"].to_pylist(), [1, None, None, 4])
+
     def test_auto_schema_tz(self):
         # Create table with random data of various types.
         data = Table.from_pydict(
