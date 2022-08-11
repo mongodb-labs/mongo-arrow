@@ -50,6 +50,7 @@ class NumpyTestBase(unittest.TestCase):
             a = np.nan_to_num(actual[field])
             e = np.nan_to_num(expected[field])
             np.testing.assert_array_equal(a, e)
+            self.assertEqual(actual[field].dtype, expected[field].dtype)
 
 
 class TestExplicitNumPyApi(NumpyTestBase):
