@@ -14,12 +14,13 @@
 import os
 import unittest
 import unittest.mock as mock
+from datetime import datetime
 from test import client_context
 from test.utils import AllowListEventListener, TestNullsBase
 
 import pyarrow
 import pymongo
-from bson import Decimal128, ObjectId
+from bson import CodecOptions, Decimal128, ObjectId
 from pyarrow import Table, binary, bool_, decimal256, float64, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, timestamp
@@ -34,6 +35,7 @@ from pymongoarrow.types import (
     Decimal128StringType,
     ObjectIdType,
 )
+from pytz import timezone
 
 
 class TestArrowApiMixin:
@@ -325,6 +327,62 @@ class TestArrowApiMixin:
                 }
             ),
         )
+
+    def test_auto_schema(self):
+        # Create table with random data of various types.
+        data = Table.from_pydict(
+            {
+                "string": [None] + [str(i) for i in range(2)],
+                "bool": [True for _ in range(3)],
+                "dt": [datetime(1970 + i, 1, 1) for i in range(3)],
+            },
+            ArrowSchema(
+                {
+                    "bool": bool_(),
+                    "dt": timestamp("ms"),
+                    "string": string(),
+                }
+            ),
+        )
+
+        self.coll.drop()
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        out = find_arrow_all(self.coll, {}).drop(["_id"])
+        self.assertEqual(data, out)
+
+    def test_auto_schema_heterogeneous(self):
+        vals = [1, "2", True, 4]
+        data = [{"a": v} for v in vals]
+
+        self.coll.drop()
+        self.coll.insert_many(data)
+        out = find_arrow_all(self.coll, {}).drop(["_id"])
+        self.assertEqual(out["a"].to_pylist(), [1, None, None, 4])
+
+    def test_auto_schema_tz(self):
+        # Create table with random data of various types.
+        data = Table.from_pydict(
+            {
+                "bool": [True for _ in range(3)],
+                "dt": [datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)],
+                "string": [None] + [str(i) for i in range(2)],
+            },
+            ArrowSchema(
+                {
+                    "bool": bool_(),
+                    "dt": timestamp("ms"),
+                    "string": string(),
+                }
+            ),
+        )
+
+        self.coll.drop()
+        codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
+        res = write(self.coll.with_options(codec_options=codec_options), data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        out = find_arrow_all(self.coll.with_options(codec_options=codec_options), {}).drop(["_id"])
+        self.assertEqual(data, out)
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):

@@ -39,7 +39,7 @@ _TYPE_TO_BUILDER_CLS = {
 class PyMongoArrowContext:
     """A context for converting BSON-formatted data to an Arrow Table."""
 
-    def __init__(self, schema, builder_map):
+    def __init__(self, schema, builder_map, codec_options=None):
         """Initialize the context.
 
         :Parameters:
@@ -49,6 +49,10 @@ class PyMongoArrowContext:
         """
         self.schema = schema
         self.builder_map = builder_map
+        if self.schema is None and codec_options is not None:
+            self.tzinfo = codec_options.tzinfo
+        else:
+            self.tzinfo = None
 
     @classmethod
     def from_schema(cls, schema, codec_options=DEFAULT_CODEC_OPTIONS):
@@ -60,6 +64,9 @@ class PyMongoArrowContext:
           - `codec_options` (optional): An instance of
             :class:`~bson.codec_options.CodecOptions`.
         """
+        if schema is None:
+            return cls(schema, {})
+
         builder_map = {}
         str_type_map = _get_internal_typemap(schema.typemap)
         for fname, ftype in str_type_map.items():
