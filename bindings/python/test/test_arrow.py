@@ -15,8 +15,9 @@ import os
 import unittest
 import unittest.mock as mock
 from test import client_context
-from test.utils import AllowListEventListener
+from test.utils import AllowListEventListener, TestNullsBase
 
+import pyarrow
 import pymongo
 from bson import Decimal128, ObjectId
 from pyarrow import Table, binary, bool_, decimal256, float64, int32, int64
@@ -384,3 +385,20 @@ class TestBSONTypes(unittest.TestCase):
         )
         table = find_arrow_all(coll, {}, schema=schema)
         self.assertEqual(table, expected)
+
+
+class TestNulls(TestNullsBase):
+    def find_fn(self, coll, query, schema):
+        return find_arrow_all(coll, query, schema=schema)
+
+    def equal_fn(self, left, right):
+        self.assertEqual(left, right)
+
+    def table_from_dict(self, dict, schema=None):
+        return pyarrow.Table.from_pydict(dict, schema)
+
+    def assert_in_idx(self, table, col_name):
+        self.assertTrue(col_name in table.column_names)
+
+    def na_safe(self, atype):
+        return True

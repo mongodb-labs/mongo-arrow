@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from datetime import datetime, timedelta
+import datetime
 import unittest
 import unittest.mock as mock
 from test import client_context
-from test.utils import AllowListEventListener
+from test.utils import AllowListEventListener, TestNullsBase
 
 import numpy as np
 import pandas as pd
+import pandas.testing
+import pyarrow
 from bson import Decimal128, ObjectId
 from pyarrow import decimal256, int32, int64
 from pymongo import DESCENDING, WriteConcern
@@ -219,3 +222,45 @@ class TestBSONTypes(PandasTestBase):
 
         table = find_pandas_all(self.coll, {}, schema=self.schema)
         pd.testing.assert_frame_equal(expected, table)
+
+
+class TestNulls(TestNullsBase):
+    def find_fn(self, coll, query, schema):
+        return find_pandas_all(coll, query, schema=schema)
+
+    def equal_fn(self, left, right):
+        left = left.fillna(0).replace(-0b1 << 63, 0)  # NaN is sometimes this
+        right = right.fillna(0).replace(-0b1 << 63, 0)
+        if type(left) == pandas.DataFrame:
+            pandas.testing.assert_frame_equal(left, right, check_dtype=False)
+        else:
+            pandas.testing.assert_series_equal(left, right, check_dtype=False)
+
+    def table_from_dict(self, dict, schema=None):
+        return pandas.DataFrame(dict)
+
+    def assert_in_idx(self, table, col_name):
+        self.assertTrue(col_name in table.columns)
+
+    pytype_tab_map = {
+        str: "object",
+        int: ["int64", "float64"],
+        float: "float64",
+        datetime.datetime: "datetime64[ns]",
+        ObjectId: "object",
+        Decimal128: "object",
+        bool: "object",
+    }
+
+    pytype_writeback_exc_map = {
+        str: None,
+        int: None,
+        float: None,
+        datetime.datetime: ValueError,
+        ObjectId: ValueError,
+        Decimal128: pyarrow.lib.ArrowInvalid,
+        bool: None,
+    }
+
+    def na_safe(self, atype):
+        return True

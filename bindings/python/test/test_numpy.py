@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from datetime import datetime, timedelta
+import datetime
 import unittest
 from test import client_context
-from test.utils import AllowListEventListener
+from test.utils import AllowListEventListener, TestNullsBase
 from unittest import mock
 
 import numpy as np
@@ -242,3 +243,50 @@ class TestBSONTypes(NumpyTestBase):
         }
         actual = find_numpy_all(self.coll, {}, schema=self.schema)
         self.assert_numpy_equal(actual, expected)
+
+
+# The spec for pyarrow says to_numpy is experimental, so we should expect
+# this to change in the future.
+class TestNulls(TestNullsBase, NumpyTestBase):
+    def table_from_dict(self, d, schema=None):
+        out = {}
+        for k, v in d.items():
+            if any(isinstance(x, int) for x in v) and None in v:
+                out[k] = np.array(v, dtype=np.float_)
+            else:
+                out[k] = np.array(v, dtype=np.dtype(type(v[0])))  # Infer
+        return out
+
+    def equal_fn(self, left, right):
+        left = np.nan_to_num(left)
+        right = np.nan_to_num(left)
+        self.assertTrue(np.all(np.equal(left, right)))
+
+    def find_fn(self, coll, query, schema=None):
+        return find_numpy_all(coll, query, schema=schema)
+
+    def assert_in_idx(self, table, col_name):
+        self.assertTrue(col_name in table)
+
+    pytype_tab_map = {
+        str: "str128",
+        int: ["int64", "float64"],
+        float: "float64",
+        datetime.datetime: "datetime64[ms]",
+        ObjectId: "object",
+        Decimal128: "object",
+        bool: "object",
+    }
+
+    pytype_writeback_exc_map = {
+        str: None,
+        int: None,
+        float: None,
+        datetime.datetime: ValueError,  # TypeError,
+        ObjectId: ValueError,  # TypeError,
+        Decimal128: ValueError,  # TypeError,
+        bool: None,
+    }
+
+    def na_safe(self, atype):
+        return atype != TestNulls.pytype_tab_map[str]
