@@ -66,7 +66,7 @@ def find_arrow_all(collection, query, *, schema=None, **kwargs):
       - `collection`: Instance of :class:`~pymongo.collection.Collection`.
         against which to run the ``find`` operation.
       - `query`: A mapping containing the query to use for the find operation.
-      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+      - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -102,7 +102,7 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, **kwargs):
       - `collection`: Instance of :class:`~pymongo.collection.Collection`.
         against which to run the ``aggregate`` operation.
       - `pipeline`: A list of aggregation pipeline stages.
-      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+      - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -153,7 +153,7 @@ def find_pandas_all(collection, query, *, schema=None, **kwargs):
       - `collection`: Instance of :class:`~pymongo.collection.Collection`.
         against which to run the ``find`` operation.
       - `query`: A mapping containing the query to use for the find operation.
-      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+      - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -172,7 +172,7 @@ def aggregate_pandas_all(collection, pipeline, *, schema=None, **kwargs):
       - `collection`: Instance of :class:`~pymongo.collection.Collection`.
         against which to run the ``find`` operation.
       - `pipeline`: A list of aggregation pipeline stages.
-      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+      - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -192,16 +192,15 @@ def _arrow_to_numpy(arrow_table, schema=None):
     See https://arrow.apache.org/docs/python/numpy.html for details.
     """
     container = {}
-    if schema:
-        for fname in schema:
-            dtype = get_numpy_type(schema.typemap[fname])
-            if dtype == np.str_:
-                container[fname] = arrow_table[fname].to_pandas().to_numpy(dtype=dtype)
-            else:
-                container[fname] = arrow_table[fname].to_numpy()
-    else:
-        for col in arrow_table.column_names:
-            container[col] = arrow_table[col].to_numpy()
+    if not schema:
+        schema = arrow_table.schema
+
+    for fname in schema:
+        dtype = get_numpy_type(schema.typemap[fname])
+        if dtype == np.str_:
+            container[fname] = arrow_table[fname].to_pandas().to_numpy(dtype=dtype)
+        else:
+            container[fname] = arrow_table[fname].to_numpy()
     return container
 
 
@@ -214,7 +213,7 @@ def find_numpy_all(collection, query, *, schema=None, **kwargs):
       - `collection`: Instance of :class:`~pymongo.collection.Collection`.
         against which to run the ``find`` operation.
       - `query`: A mapping containing the query to use for the find operation.
-      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+      - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -243,7 +242,7 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, **kwargs):
       - `collection`: Instance of :class:`~pymongo.collection.Collection`.
         against which to run the ``find`` operation.
       - `query`: A mapping containing the query to use for the find operation.
-      - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
+      - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.

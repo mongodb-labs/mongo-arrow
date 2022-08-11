@@ -43,15 +43,13 @@ class NumpyTestBase(unittest.TestCase):
         )
         cls.schema = {}
 
-    def assert_numpy_equal(self, actual, expected, check_dtype=True):
+    def assert_numpy_equal(self, actual, expected):
         self.assertIsInstance(actual, dict)
         for field in expected:
             # workaround np.nan == np.nan evaluating to False
             a = np.nan_to_num(actual[field])
             e = np.nan_to_num(expected[field])
             np.testing.assert_array_equal(a, e)
-            if check_dtype:
-                self.assertEqual(actual[field].dtype, expected[field].dtype)
 
 
 class TestExplicitNumPyApi(NumpyTestBase):

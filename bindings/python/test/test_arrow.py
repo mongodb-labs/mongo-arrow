@@ -335,8 +335,6 @@ class TestArrowApiMixin:
                 "bool": [True for _ in range(3)],
                 "dt": [datetime(1970 + i, 1, 1) for i in range(3)],
             },
-            # Ordering of output auto-schema will be the first fields detected.
-            # Test will fail if not ordered correctly.
             ArrowSchema(
                 {
                     "bool": bool_(),
@@ -346,7 +344,6 @@ class TestArrowApiMixin:
             ),
         )
 
-        # Write this table.if coll is None:
         self.coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
@@ -357,7 +354,6 @@ class TestArrowApiMixin:
         vals = [1, "2", True, 4]
         data = [{"a": v} for v in vals]
 
-        # Write this table.if coll is None:
         self.coll.drop()
         self.coll.insert_many(data)
         out = find_arrow_all(self.coll, {}).drop(["_id"])
@@ -371,8 +367,6 @@ class TestArrowApiMixin:
                 "dt": [datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)],
                 "string": [None] + [str(i) for i in range(2)],
             },
-            # Ordering of output auto-schema will be the first fields detected.
-            # Test will fail if not ordered correctly.
             ArrowSchema(
                 {
                     "bool": bool_(),
@@ -382,7 +376,6 @@ class TestArrowApiMixin:
             ),
         )
 
-        # Write this table.
         self.coll.drop()
         codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
         res = write(self.coll.with_options(codec_options=codec_options), data)
