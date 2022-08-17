@@ -3,9 +3,11 @@ Changelog
 
 Changes in Version 0.5.0
 ------------------------
-- Support auto-discovery of schemas.
+- Support auto-discovery of schemas in ``find/aggregate_*_all`` methods.
+  If the schema is not given, it will be inferred using the first
+  document in the result set.
 - Support PyArrow 9.0.
-- Improve Error Message for Lib ImportError.
+- Improve error message for lib ImportError.
 
 Changes in Version 0.4.0
 ------------------------
