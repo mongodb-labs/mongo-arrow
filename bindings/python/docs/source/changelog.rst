@@ -1,6 +1,14 @@
 Changelog
 =========
 
+Changes in Version 0.5.0
+------------------------
+- Support auto-discovery of schemas in ``find/aggregate_*_all`` methods.
+  If the schema is not given, it will be inferred using the first
+  document in the result set.
+- Support PyArrow 9.0.
+- Improve error message for lib ImportError.
+
 Changes in Version 0.4.0
 ------------------------
 - Support for :class:`~bson.decimal128.Decimal128` type.
