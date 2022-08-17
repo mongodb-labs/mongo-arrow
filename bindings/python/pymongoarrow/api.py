@@ -25,7 +25,7 @@ from pymongo.bulk import BulkWriteError
 from pymongo.common import MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.lib import process_bson_stream
+from pymongoarrow.lib import process_bson_stream, process_bson_stream_raw
 from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import _validate_schema, get_numpy_type
@@ -87,9 +87,10 @@ def find_arrow_all(collection, query, *, schema=None, **kwargs):
     if schema:
         kwargs.setdefault("projection", schema._get_projection())
 
+    kwargs["inflate_response"] = False
     raw_batch_cursor = collection.find_raw_batches(query, **kwargs)
     for batch in raw_batch_cursor:
-        process_bson_stream(batch, context)
+        process_bson_stream_raw(batch, context)
 
     return context.finish()
 
@@ -127,6 +128,7 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, **kwargs):
             )
 
     pipeline.append({"$project": schema._get_projection()})
+    kwargs["inflate_response"] = False
     raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
     for batch in raw_batch_cursor:
         process_bson_stream(batch, context)
