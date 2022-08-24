@@ -27,7 +27,7 @@ from pymongo.common import MAX_WRITE_BATCH_SIZE
 from pymongo.cursor import RawBatchCursor
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.lib import process_bson_stream_raw
+from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import _validate_schema, get_numpy_type
@@ -73,7 +73,7 @@ class Unpacker:
         cursor = raw_data[0]["cursor"]
         firstBatch = []
         nextBatch = []
-        id_val, ns, cursor_key, cursor_len = process_bson_stream_raw(cursor.raw, self.context)
+        id_val, ns, cursor_key, cursor_len = process_bson_stream(cursor.raw, self.context)
         if cursor_key == b"firstBatch":
             firstBatch = range(cursor_len)
         else:

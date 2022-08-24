@@ -64,8 +64,8 @@ _builder_type_map = {
 }
 
 
-def process_bson_stream_raw(bson_stream, context):
-    """Extract a list of bson documents from an OpMsg reply."""
+def process_bson_stream(bson_stream, context):
+    """Extract relevant information from an OpMsg cursor document."""
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
     cdef size_t length = <size_t>PyBytes_Size(bson_stream)
     cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
