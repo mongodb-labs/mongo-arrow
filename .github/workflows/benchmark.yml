@@ -42,6 +42,7 @@ jobs:
         run: |
           # Install the library
           LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
+          pip install https://github.com/blink1073/mongo-python-driver/archive/refs/heads/PYTHON-2722.zip
       - name: Run tests
         run: |
           set -eu

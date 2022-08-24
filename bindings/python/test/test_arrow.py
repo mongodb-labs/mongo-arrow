@@ -119,21 +119,12 @@ class TestArrowApiMixin:
             self.assertIsNotNone(session.operation_time)
 
     def test_find_multiple_batches(self):
-        orig_method = self.coll.find_raw_batches
-
-        def mock_find_raw_batches(*args, **kwargs):
-            kwargs["batch_size"] = 2
-            return orig_method(*args, **kwargs)
-
-        with mock.patch.object(
-            pymongo.collection.Collection, "find_raw_batches", wraps=mock_find_raw_batches
-        ):
-            expected = Table.from_pydict(
-                {"_id": [1, 2, 3, 4], "data": [10, 20, 30, None]},
-                ArrowSchema([("_id", int32()), ("data", int64())]),
-            )
-            table = self.run_find({}, schema=self.schema)
-            self.assertEqual(table, expected)
+        expected = Table.from_pydict(
+            {"_id": [1, 2, 3, 4], "data": [10, 20, 30, None]},
+            ArrowSchema([("_id", int32()), ("data", int64())]),
+        )
+        table = self.run_find({}, schema=self.schema, batch_size=2)
+        self.assertEqual(table, expected)
         self.assertGreater(len(self.getmore_listener.results["started"]), 1)
 
     def test_find_omits_id_if_not_in_schema(self):
