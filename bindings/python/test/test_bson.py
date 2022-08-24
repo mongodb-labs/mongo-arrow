@@ -28,10 +28,7 @@ class TestBsonToArrowConversionBase(TestCase):
 
     @staticmethod
     def _generate_payload(doclist):
-        payload = b""
-        for doc in doclist:
-            payload += encode(doc)
-        return payload
+        return encode(dict(firstBatch=doclist))
 
     def _run_test(self, doclist, as_dict):
         payload = type(self)._generate_payload(doclist)
