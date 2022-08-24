@@ -22,6 +22,7 @@ import pymongo
 from bson import BSON
 from pymongoarrow.api import (
     Schema,
+    aggregate_arrow_all,
     find_arrow_all,
     find_numpy_all,
     find_pandas_all,
@@ -95,3 +96,21 @@ class ProfileInsert:
 
     def time_insert_numpy(self):
         write(db[collection_names[CUR_SIZE]], numpy_arrays[CUR_SIZE])
+
+
+class ProfileRead:
+    """A benchmark that times the performance of reading tabular data."""
+
+    def setup(self):
+        db[collection_names[CUR_SIZE]].drop()
+
+    def time_aggregate_all(self):
+        c = db[collection_names[CUR_SIZE]]
+        schema = schemas[CUR_SIZE]
+        pipeline = [{"$count": "total_docs"}]
+        aggregate_arrow_all(c, pipeline, schema=schema)
+
+    def time_find_arrow_all(self):
+        c = db[collection_names[CUR_SIZE]]
+        schema = schemas[CUR_SIZE]
+        find_arrow_all(c, {}, schema=schema)
