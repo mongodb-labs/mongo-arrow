@@ -22,10 +22,11 @@ from pandas import DataFrame
 from pyarrow import Schema as ArrowSchema
 from pyarrow import Table
 from pymongo.bulk import BulkWriteError
+from pymongo.command_cursor import RawBatchCommandCursor
 from pymongo.common import MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.lib import process_bson_stream, process_bson_stream_raw
+from pymongoarrow.lib import process_bson_stream_raw
 from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import _validate_schema, get_numpy_type
@@ -58,6 +59,19 @@ _MAX_MESSAGE_SIZE = 48000000 - 16 * 1024
 _MAX_WRITE_BATCH_SIZE = max(100000, MAX_WRITE_BATCH_SIZE)
 
 
+class Inflator:
+    def __init__(self, context):
+        self.context = context
+
+    def __call__(self, raw_data):
+        top = raw_data[0]
+        cursor = raw_data[0]["cursor"]
+        id_val, ns = process_bson_stream_raw(cursor.raw, self.context)
+        data = dict(id=id_val, ns=ns.decode("utf8"), firstBatch=[], nextBatch=[])
+        top.update(cursor=data)
+        return [top]
+
+
 def find_arrow_all(collection, query, *, schema=None, **kwargs):
     """Method that returns the results of a find query as a
     :class:`pyarrow.Table` instance.
@@ -87,11 +101,9 @@ def find_arrow_all(collection, query, *, schema=None, **kwargs):
     if schema:
         kwargs.setdefault("projection", schema._get_projection())
 
-    kwargs["inflate_response"] = False
+    kwargs["inflator"] = Inflator(context)
     raw_batch_cursor = collection.find_raw_batches(query, **kwargs)
-    for batch in raw_batch_cursor:
-        process_bson_stream_raw(batch, context)
-
+    list(raw_batch_cursor)
     return context.finish()
 
 
@@ -128,11 +140,20 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, **kwargs):
             )
 
     pipeline.append({"$project": schema._get_projection()})
-    kwargs["inflate_response"] = False
-    raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
-    for batch in raw_batch_cursor:
-        process_bson_stream(batch, context)
 
+    # Override the _unpack_response method with a custom inflator.
+    inflator = Inflator(context)
+
+    def _unpack_response(
+        self, response, cursor_id, codec_options, user_fields=None, legacy_response=False
+    ):
+        raw_response = response.raw_response(cursor_id, user_fields=user_fields)
+        return inflator(raw_response)
+
+    data = dict(_unpack_response=_unpack_response)
+    kwargs["cursor_class"] = type("PyMongoArrowCommandCursor", (RawBatchCommandCursor,), data)
+    raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
+    list(raw_batch_cursor)
     return context.finish()
 
 

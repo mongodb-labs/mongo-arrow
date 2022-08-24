@@ -63,6 +63,33 @@ _builder_type_map = {
     0x08: BoolBuilder
 }
 
+
+def extract_cursor_info_from_stream(bson_stream):
+    cdef const uint8_t* docstream = <const uint8_t *>bson_stream
+    cdef size_t length = <size_t>PyBytes_Size(bson_stream)
+    cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
+    cdef const bson_t * doc = NULL
+    cdef bson_iter_t doc_iter
+    cdef bson_type_t value_t
+    cdef int64_t id_val = 0
+    cdef const char * str_val
+    cdef uint32_t str_len = 0
+
+    doc = bson_reader_read_safe(stream_reader)
+    if doc == NULL:
+        raise InvalidBSON("Not a valid OpMsg stream")
+    if not bson_iter_init(&doc_iter, doc):
+        raise InvalidBSON("Could not read BSON document")
+    while bson_iter_next(&doc_iter):
+        key = bson_iter_key(&doc_iter)
+        value_t = bson_iter_type(&doc_iter)
+        if key == b'id':
+            id_val = bson_iter_as_int64(&doc_iter)
+        elif key == b'ns':
+            str_val = bson_iter_utf8(&doc_iter, &str_len)
+    return id_val, <bytes>(str_val)[:str_len]
+
+
 def process_bson_stream_raw(bson_stream, context):
     """Extract a list of bson documents from an OpMsg reply."""
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
@@ -80,6 +107,10 @@ def process_bson_stream_raw(bson_stream, context):
     cdef uint32_t arr_len
     cdef char *decimal128_str = <char *> malloc(
         BSON_DECIMAL128_STRING * sizeof(char))
+
+    cdef int64_t id_val = 0
+    cdef const char * ns_val
+    cdef uint32_t ns_len = 0
 
     cdef const uint8_t *arr_buf = NULL
     cdef uint32_t arr_buf_len = 0;
@@ -119,7 +150,12 @@ def process_bson_stream_raw(bson_stream, context):
         if key in [b'firstBatch', b'nextBatch']:
             bson_iter_array(&outer_iter, &arr_buf_len, &arr_buf)
             bson_init_static (&arr_doc, arr_buf, arr_buf_len)
-            break
+        elif key == b'id':
+            value_t = bson_iter_type(&outer_iter)
+            id_val = bson_iter_as_int64(&outer_iter)
+        elif key == b'ns':
+            value_t = bson_iter_type(&outer_iter)
+            ns_val = bson_iter_utf8(&outer_iter, &ns_len)
 
     # Iterate over all the documents in the array.
     if not bson_iter_init(&arr_iter, &arr_doc):
@@ -207,6 +243,8 @@ def process_bson_stream_raw(bson_stream, context):
     finally:
         bson_reader_destroy(stream_reader)
         free(decimal128_str)
+
+    return id_val, <bytes>(ns_val)[:ns_len]
 
 
 def process_bson_stream(bson_stream, context):
