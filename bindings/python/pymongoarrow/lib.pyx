@@ -99,10 +99,12 @@ def process_bson_stream_raw(bson_stream, context):
     cdef bson_iter_t outer_iter
 
     cdef bson_decimal128_t dec128
+    cdef const char* cursor_key
     cdef const char* key
     cdef bson_type_t value_t
     cdef Py_ssize_t count = 0
     cdef const char * bson_str
+    cdef uint32_t doc_count = 0
     cdef uint32_t str_len
     cdef uint32_t arr_len
     cdef char *decimal128_str = <char *> malloc(
@@ -150,6 +152,7 @@ def process_bson_stream_raw(bson_stream, context):
         if key in [b'firstBatch', b'nextBatch']:
             bson_iter_array(&outer_iter, &arr_buf_len, &arr_buf)
             bson_init_static (&arr_doc, arr_buf, arr_buf_len)
+            cursor_key = key
         elif key == b'id':
             value_t = bson_iter_type(&outer_iter)
             id_val = bson_iter_as_int64(&outer_iter)
@@ -162,6 +165,7 @@ def process_bson_stream_raw(bson_stream, context):
         raise InvalidBSON("Could not read BSON document")
     try:
         while bson_iter_next(&arr_iter):
+            doc_count += 1
             bson_iter_document(&arr_iter, &doc_buf_len, &doc_buf)
             bson_init_static (&doc, doc_buf, doc_buf_len)
             if not bson_iter_init(&doc_iter, &doc):
@@ -244,7 +248,7 @@ def process_bson_stream_raw(bson_stream, context):
         bson_reader_destroy(stream_reader)
         free(decimal128_str)
 
-    return id_val, <bytes>(ns_val)[:ns_len]
+    return id_val, <bytes>(ns_val)[:ns_len], cursor_key, doc_count
 
 
 def process_bson_stream(bson_stream, context):

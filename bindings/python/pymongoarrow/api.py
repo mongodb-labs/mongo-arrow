@@ -66,8 +66,14 @@ class Inflator:
     def __call__(self, raw_data):
         top = raw_data[0]
         cursor = raw_data[0]["cursor"]
-        id_val, ns = process_bson_stream_raw(cursor.raw, self.context)
-        data = dict(id=id_val, ns=ns.decode("utf8"), firstBatch=[], nextBatch=[])
+        firstBatch = []
+        nextBatch = []
+        id_val, ns, cursor_key, cursor_len = process_bson_stream_raw(cursor.raw, self.context)
+        if cursor_key == b"firstBatch":
+            firstBatch = range(cursor_len)
+        else:
+            nextBatch = range(cursor_len)
+        data = dict(id=id_val, ns=ns.decode("utf8"), firstBatch=firstBatch, nextBatch=nextBatch)
         top.update(cursor=data)
         return [top]
 
