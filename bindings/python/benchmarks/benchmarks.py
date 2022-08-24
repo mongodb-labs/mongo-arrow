@@ -75,10 +75,10 @@ numpy_arrays[SMALL] = find_numpy_all(db[collection_names[SMALL]], {}, schema=sch
 numpy_arrays[LARGE] = find_numpy_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
 
 
-class ProfileInsert:
+class ProfilePyMongoArrow:
     """
     A benchmark that times the performance of various kinds
-    of inserting tabular data.
+    of tabular data interaction.
     """
 
     def setup(self):
@@ -96,13 +96,6 @@ class ProfileInsert:
 
     def time_insert_numpy(self):
         write(db[collection_names[CUR_SIZE]], numpy_arrays[CUR_SIZE])
-
-
-class ProfileRead:
-    """A benchmark that times the performance of reading tabular data."""
-
-    def setup(self):
-        db[collection_names[CUR_SIZE]].drop()
 
     def time_aggregate_all(self):
         c = db[collection_names[CUR_SIZE]]
