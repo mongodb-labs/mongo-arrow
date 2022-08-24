@@ -74,9 +74,7 @@ jobs:
           LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
       - name: Run tests
         run: |
-          git config --global user.name "Jane Doe"
-          git config --global user.email "example@example.com"
-          pip install git+https://github.com/blink1073/python-mongo-driver.git@PYTHON-2722
+          pip install https://github.com/blink1073/mongo-python-driver/archive/refs/heads/PYTHON-2722.zip
           LD_LIBRARY_PATH=$(pwd)/libbson/lib python -m unittest discover test -v
       - name: Check the manifest
         run: |
