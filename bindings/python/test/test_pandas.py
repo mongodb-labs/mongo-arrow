@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 import pandas.testing
 import pyarrow
-from bson import Decimal128, ObjectId
+from bson import CodecOptions, Decimal128, ObjectId
 from pyarrow import decimal256, int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
@@ -33,6 +33,7 @@ from pymongoarrow.types import (
     Decimal128StringType,
     ObjectIdType,
 )
+from pytz import timezone
 
 
 class PandasTestBase(unittest.TestCase):
@@ -187,6 +188,64 @@ class TestExplicitPandasApi(PandasTestBase):
                 }
             ),
         )
+
+    def test_auto_schema(self):
+        schema = {
+            "bool": "bool",
+            "dt": "datetime64[ns]",
+            "string": "str",
+        }
+        data = pd.DataFrame(
+            data={
+                "string": [None] + [str(i) for i in range(2)],
+                "bool": [True for _ in range(3)],
+                "dt": [datetime.datetime(1970 + i, 1, 1) for i in range(3)],
+            },
+        ).astype(schema)
+
+        self.coll.drop()
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        for func in [find_pandas_all, aggregate_pandas_all]:
+            out = func(self.coll, {} if func == find_pandas_all else []).drop(columns=["_id"])
+            pd.testing.assert_frame_equal(data, out)
+
+    def test_auto_schema_heterogeneous(self):
+        vals = [1, "2", True, 4]
+        data = [{"a": v} for v in vals]
+
+        self.coll.drop()
+        self.coll.insert_many(data)
+        for func in [find_pandas_all, aggregate_pandas_all]:
+            out = func(self.coll, {} if func == find_pandas_all else []).drop(columns=["_id"])
+            np.equal(out["a"], [1.0, np.nan, np.nan, 4.0])
+
+    def test_auto_schema_tz(self):
+        schema = {
+            "bool": "bool",
+            "dt": "datetime64[ns]",
+            "string": "str",
+        }
+        data = pd.DataFrame(
+            data={
+                "string": [None] + [str(i) for i in range(2)],
+                "bool": [True for _ in range(3)],
+                "dt": [
+                    datetime.datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern"))
+                    for i in range(3)
+                ],
+            },
+        ).astype(schema)
+        self.coll.drop()
+        codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
+        res = write(self.coll.with_options(codec_options=codec_options), data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        for func in [find_pandas_all, aggregate_pandas_all]:
+            out = func(
+                self.coll.with_options(codec_options=codec_options),
+                {} if func == find_pandas_all else [],
+            ).drop(columns=["_id"])
+            pd.testing.assert_frame_equal(data, out)
 
 
 class TestBSONTypes(PandasTestBase):

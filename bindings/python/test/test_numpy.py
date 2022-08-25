@@ -19,7 +19,7 @@ from test.utils import AllowListEventListener, TestNullsBase
 from unittest import mock
 
 import numpy as np
-from bson import Decimal128, ObjectId
+from bson import CodecOptions, Decimal128, ObjectId
 from pyarrow import int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
@@ -30,6 +30,7 @@ from pymongoarrow.types import (
     Decimal128StringType,
     ObjectIdType,
 )
+from pytz import timezone
 
 
 class NumpyTestBase(unittest.TestCase):
@@ -209,6 +210,67 @@ class TestExplicitNumPyApi(NumpyTestBase):
                 }
             ),
         )
+
+    def test_auto_schema(self):
+        schema = {
+            "bool": "bool",
+            "dt": "datetime64[ms]",
+            "string": "str",
+        }
+        data = {
+            "string": [None] + [str(i) for i in range(2)],
+            "bool": [True for _ in range(3)],
+            "dt": [datetime.datetime(1970 + i, 1, 1) for i in range(3)],
+        }
+        data = self.schemafied_ndarray_dict(data, schema)
+
+        self.coll.drop()
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        for func in [find_numpy_all, aggregate_numpy_all]:
+            with self.subTest(func.__name__):
+                out = func(self.coll, {} if func == find_numpy_all else [])
+                del out["_id"]
+                self.assert_numpy_equal(data, out)
+
+    def test_auto_schema_heterogeneous(self):
+        vals = [1, "2", True, 4]
+        data = [{"a": v} for v in vals]
+
+        self.coll.drop()
+        self.coll.insert_many(data)
+        for func in [find_numpy_all, aggregate_numpy_all]:
+            with self.subTest(func.__name__):
+                out = func(self.coll, {} if func == find_numpy_all else [])
+                del out["_id"]
+                np.equal(out, [1.0, np.nan, np.nan, 4.0])
+
+    def test_auto_schema_tz(self):
+        schema = {
+            "bool": "bool",
+            "dt": "datetime64[ms]",
+            "string": "str",
+        }
+        data = {
+            "string": [str(i) for i in range(3)],
+            "bool": [True for _ in range(3)],
+            "dt": [
+                datetime.datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)
+            ],
+        }
+        data = self.schemafied_ndarray_dict(data, schema)
+        self.coll.drop()
+        codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
+        res = write(self.coll.with_options(codec_options=codec_options), data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        for func in [find_numpy_all, aggregate_numpy_all]:
+            with self.subTest(func.__name__):
+                out = func(
+                    self.coll.with_options(codec_options=codec_options),
+                    {} if func == find_numpy_all else [],
+                )
+                del out["_id"]
+                self.assert_numpy_equal(data, out)
 
 
 class TestBSONTypes(NumpyTestBase):
