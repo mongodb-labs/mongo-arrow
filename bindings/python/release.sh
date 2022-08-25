@@ -10,6 +10,9 @@ then
   exit 1
 fi
 
+# Clean up
+rm -rf dist wheelhouse build pymongoarrow/*.so pymongoarrow/*.dll pymongoarrow/*.dylib
+
 # Platform-dependent actions:
 PYTHON=${PYTHON_BINARY:-"python"}
 if [ "Linux" = "$(uname -s)" ]
