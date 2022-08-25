@@ -38,11 +38,6 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install -U pip
-      - name: Install pymongoarrow
-        run: |
-          # Install the library
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
-          pip install https://github.com/blink1073/mongo-python-driver/archive/refs/heads/PYTHON-2722.zip
       - name: Run tests
         run: |
           set -eu
@@ -63,13 +58,17 @@ jobs:
           # We know this is a PR run. The branch is a GitHub refs/pull/*/merge ref, so
           # the current target that this PR will be merged into is HEAD^1.
           git update-ref refs/bm/merge-target $(git log -n 1 --pretty=format:"%H" main --)
+
+          # Install the library
           git checkout --force refs/bm/pr --
-          pip uninstall -y pymongo
-          pip install pymongo
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
+          pip install https://github.com/blink1073/mongo-python-driver/archive/refs/heads/PYTHON-2722.zip
           run_asv
 
-
+          # Re-Install the library
           git checkout --force refs/bm/merge-target --
+          pip uninstall -y pymongo
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
           run_asv
 
           asv compare refs/bm/merge-target refs/bm/pr --
