@@ -10,7 +10,7 @@ concurrency:
 defaults:
   run:
     working-directory: ./bindings/python
-    shell: bash
+    shell: bash -eux {0}
 
 jobs:
   build:
@@ -49,9 +49,9 @@ jobs:
           run_asv () {
               if [ ! -e "asv.conf.json" ] ; then
                   git checkout refs/bm/pr asv.conf.json
+                  git checkout refs/bm/pr benchmarks/__init__.py
+                  git checkout refs/bm/pr benchmarks/benchmarks.py
               fi
-              git checkout refs/bm/pr benchmarks/__init__.py
-              git checkout refs/bm/pr benchmarks/benchmarks.py
               git show --no-patch --format="%H (%s)"
               asv run --strict --verbose --show-stderr -E existing --set-commit-hash $(git rev-parse HEAD)
           }
@@ -64,6 +64,8 @@ jobs:
           # the current target that this PR will be merged into is HEAD^1.
           git update-ref refs/bm/merge-target $(git log -n 1 --pretty=format:"%H" main --)
           git checkout --force refs/bm/pr --
+          pip uninstall -y pymongo
+          pip install pymongo
           run_asv
 
 
