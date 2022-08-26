@@ -28,7 +28,7 @@ export LD_LIBRARY_PATH="$ARROW_LIB:$LD_LIBRARY_PATH"
 
 
 # Build libbson with the appropriate arch.
-./build-libbson.sh
+source ./build-libbson.sh
 
 
 echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
