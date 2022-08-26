@@ -1,11 +1,12 @@
 import glob
 import os
+import site
 import sys
 from subprocess import run
 
 import pyarrow as pa
 
-HERE = os.path.abspath(os.path.basename(__file__))
+HERE = os.path.abspath(os.path.dirname(__file__))
 wheel_dir, wheel_file, delocate_args = sys.argv[1:]
 wheel_dir = wheel_dir.replace(os.sep, "/")
 wheel_file = wheel_file.replace(os.sep, "/")
@@ -26,10 +27,16 @@ if os.name == "nt":
     run(["delvewheel", "repair", "--no-mangle", "ucrtbased.dll", "-w", wheel_dir, wheel_file])
 
 elif sys.platform == "darwin":
+    # FIXME: We should not have to do this:
+    site_pkgs = site.getsitepackages()[0]
+    dylib = os.path.join(os.path.dirname(site_pkgs), "lib-dynload")
+    extra_path = f"{dylib}:{extra_path}"
+
     if os.environ.get("DYLD_LIBRARY_PATH"):
         os.environ["DYLD_LIBRARY_PATH"] = os.environ["DYLD_LIBRARY_PATH"] + ":" + extra_path
     else:
         os.environ["DYLD_LIBRARY_PATH"] = extra_path
+
     print("DYLD_LIBRARY_PATH:", os.environ["DYLD_LIBRARY_PATH"])
     run([sys.executable, "-m", "pip", "install", "delocate"])
     run(["delocate-wheel", "--require-archs", delocate_args, "-w", wheel_dir, wheel_file])
