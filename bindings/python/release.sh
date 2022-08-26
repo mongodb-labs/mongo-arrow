@@ -42,4 +42,5 @@ then
   $PYTHON addtags.py dist/*.whl "$PLAT" ./wheelhouse
 fi
 
-python repair_wheel.py "./wheelhouse" dist/*.whl universal2
+MACHINE=$(python -c "import platform;print(platform.machine())")
+python repair_wheel.py "./wheelhouse" dist/*.whl $MACHINE

@@ -39,7 +39,18 @@ elif sys.platform == "darwin":
 
     print("DYLD_LIBRARY_PATH:", os.environ["DYLD_LIBRARY_PATH"])
     run([sys.executable, "-m", "pip", "install", "delocate"])
-    run(["delocate-wheel", "--require-archs", delocate_args, "-w", wheel_dir, wheel_file])
+    run(
+        [
+            sys.executable,
+            "-m",
+            "delocate.cmd.delocate_wheel",
+            "--require-archs",
+            delocate_args,
+            "-w",
+            wheel_dir,
+            wheel_file,
+        ]
+    )
 else:
     if os.environ.get("LD_LIBRARY_PATH"):
         os.environ["LD_LIBRARY_PATH"] = os.environ["LD_LIBRARY_PATH"] + ":" + extra_path
