@@ -22,7 +22,7 @@ then
   pip install --platform $platform --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
 fi
 
-pip install pyarrow
+pip install --user pyarrow
 ARROW_LIB=$(python -c "import pyarrow;print(':'.join(pyarrow.get_library_dirs()))")
 ls $ARROW_LIB
 export LD_LIBRARY_PATH="$ARROW_LIB:$LD_LIBRARY_PATH"
