@@ -19,7 +19,7 @@ then
   fi
 
   # Install pyarrow with the appropriate platform.
-  pip install --platform $platform --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
+  pip install --platform $platform --upgrade --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
 fi
 
 # Build libbson with the appropriate arch.

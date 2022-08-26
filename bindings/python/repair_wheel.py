@@ -9,23 +9,7 @@ wheel_dir = wheel_dir.replace(os.sep, "/")
 wheel_file = wheel_file.replace(os.sep, "/")
 
 # Ensure pyarrow
-if "universal2" in wheel_file:
-    run(
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--platform=macosx_10_13_universal2",
-            "--no-deps",
-            "--only-binary=:all:",
-            "--target",
-            os.path.expanduser("~/wheels"),
-            "pyarrow",
-        ]
-    )
-else:
-    run([sys.executable, "-m", "pip", "install", "pyarrow"])
+run([sys.executable, "-m", "pip", "install", "pyarrow"])
 import pyarrow as pa  # noqa
 
 libbson = os.environ.get("LIBBSON_INSTALL_DIR", os.path.join(HERE, "libbson"))
