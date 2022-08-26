@@ -26,6 +26,7 @@ repair-wheel-command = [
 [tool.cibuildwheel.windows]
 repair-wheel-command = [
     "pip install delvewheel",
+    "export PATH=$(python -c \"import pyarrow;print(':'.join(pyarrow.get_library_dirs()))\"):$PATH",
     "delvewheel repair -w {dest_dir} {wheel}"
 ]
 
