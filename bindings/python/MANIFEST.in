@@ -7,6 +7,7 @@ exclude THIRD-PARTY-NOTICES
 exclude release.sh
 exclude addtags.py
 exclude benchmark.py
+exclude repair_wheel.py
 exclude .flake8
 exclude RELEASE.rst
 exclude asv.conf.json
