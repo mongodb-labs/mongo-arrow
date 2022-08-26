@@ -41,3 +41,5 @@ then
   $PYTHON -m pip install auditwheel
   $PYTHON addtags.py dist/*.whl "$PLAT" ./wheelhouse
 fi
+
+python repair_wheel.py "./wheelhouse" dist/*.whl universal2

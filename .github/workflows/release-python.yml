@@ -11,7 +11,6 @@ concurrency:
 defaults:
   run:
     working-directory: ./bindings/python
-    shell: bash
 
 jobs:
   build_wheels:
