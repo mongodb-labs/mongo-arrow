@@ -10,8 +10,8 @@ wheel_file = wheel_file.replace(os.sep, "/")
 
 # Ensure pyarrow
 if "universal2" in wheel_file:
-    platform = "macosx_10_13_universal2"
-    target = os.path.expanduser("~/wheels")
+    macos_ver = os.environ.get("MACOSX_DEPLOYMENT_TARGET", "10.3")
+    macos_ver = macos_ver.replace(".", "_")
     run(
         [
             sys.executable,
@@ -19,11 +19,10 @@ if "universal2" in wheel_file:
             "pip",
             "install",
             "--platform",
-            platform,
+            f"macosx_{macos_ver}_universal2",
             "--upgrade",
             "--target",
-            target,
-            "--no-deps",
+            os.path.expanduser("~/wheels"),
             "--only-binary=:all:",
             "pyarrow",
         ]
