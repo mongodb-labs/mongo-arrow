@@ -23,7 +23,7 @@ if os.name == "nt":
     run([sys.executable, "-m", "pip", "install", "delvewheel"])
     os.environ["PATH"] = extra_path + os.path.pathsep + os.environ["PATH"]
     print("PATH:", os.environ["PATH"])
-    run(["delvewheel", "repair", "-w", wheel_dir, wheel_file])
+    run(["delvewheel", "repair", "--no-mangle", "ucrtbased.dll", "-w", wheel_dir, wheel_file])
 
 elif sys.platform == "darwin":
     if os.environ.get("DYLD_LIBRARY_PATH"):
@@ -32,7 +32,6 @@ elif sys.platform == "darwin":
         os.environ["DYLD_LIBRARY_PATH"] = extra_path
     print("DYLD_LIBRARY_PATH:", os.environ["DYLD_LIBRARY_PATH"])
     run([sys.executable, "-m", "pip", "install", "delocate"])
-    run(["delocate-listdeps", wheel_dir])
     run(["delocate-wheel", "--require-archs", delocate_args, "-w", wheel_dir, wheel_file])
 else:
     if os.environ.get("LD_LIBRARY_PATH"):
