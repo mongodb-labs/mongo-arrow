@@ -32,6 +32,7 @@ elif sys.platform == "darwin":
     # FIXME: We should not have to do this:
     site_pkgs = site.getsitepackages()[0]
     dylib = os.path.join(os.path.dirname(site_pkgs), "lib-dynload")
+    print(os.listdir(dylib))
     extra_path = f"{dylib}:{extra_path}"
 
     if os.environ.get("DYLD_LIBRARY_PATH"):
