@@ -4,12 +4,14 @@ import site
 import sys
 from subprocess import run
 
-import pyarrow as pa
-
 HERE = os.path.abspath(os.path.dirname(__file__))
 wheel_dir, wheel_file, delocate_args = sys.argv[1:]
 wheel_dir = wheel_dir.replace(os.sep, "/")
 wheel_file = wheel_file.replace(os.sep, "/")
+
+# Ensure pyarrow
+run([sys.executable, "-m", "pip", "install", "pyarrow"])
+import pyarrow as pa  # noqa
 
 libbson = os.environ.get("LIBBSON_INSTALL_DIR", os.path.join(HERE, "libbson"))
 libbson = os.path.abspath(libbson)
@@ -19,8 +21,6 @@ else:
     libbson_lib = glob.glob(os.path.join(libbson, "lib*"))
 extra_path = pa.get_library_dirs() + libbson_lib
 extra_path = os.path.pathsep.join([a.replace(os.sep, "/") for a in extra_path])
-
-run([sys.executable, "-m", "pip", "install", "pyarrow"])
 
 if os.name == "nt":
     run([sys.executable, "-m", "pip", "install", "delvewheel"])
