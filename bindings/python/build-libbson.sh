@@ -59,3 +59,5 @@ pushd "$WORKDIR"
     cmake --build . --target install
   popd
 popd
+
+export LD_LIBRARY_PATH="${LIBBSON_INSTALL_DIR}/lib:$LD_LIBRARY_PATH"

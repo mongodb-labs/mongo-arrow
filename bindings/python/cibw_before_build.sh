@@ -20,7 +20,12 @@ then
 
   # Install pyarrow with the appropriate platform.
   pip install --platform $platform --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
+else
+  pip install --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
 fi
+
+ARROW_LIB=$(python -c "import pyarrow;print(':'.join(pyarrow.get_library_dirs()))")
+export LD_LIBRARY_PATH="$ARROW_LIB:$LD_LIBRARY_PATH"
 
 
 # Build libbson with the appropriate arch.
