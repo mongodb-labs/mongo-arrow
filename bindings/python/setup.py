@@ -1,5 +1,6 @@
 import glob
 import os
+import shutil
 import subprocess
 import warnings
 from sys import platform
@@ -9,6 +10,10 @@ from setuptools import setup
 HERE = os.path.abspath(os.path.dirname(__file__))
 BUILD_DIR = os.path.join(HERE, "pymongoarrow")
 IS_WIN = platform == "win32"
+
+# Find and copy the binary libbson file, unless
+# MONGO_NO_COPY_LIBBSON is set (for instance in a conda build).
+COPY_LIBBSON = not os.environ.get("MONGO_NO_COPY_LIBBSON", False)
 
 
 def query_pkgconfig(cmd):
@@ -33,6 +38,21 @@ def append_libbson_flags(module):
     install_dir = os.environ.get("LIBBSON_INSTALL_DIR")
     if install_dir:
         install_dir = os.path.abspath(install_dir)
+
+        # Handle the copy-able library file if applicable.
+        if COPY_LIBBSON:
+            if platform == "darwin":
+                lib_file = "libbson-1.0.0.dylib"
+            elif platform == "linux":
+                lib_file = "libbson-1.0.so.0"
+            else:  # windows
+                lib_file = "bson-1.0.dll"
+            lib_dir = "bin" if IS_WIN else "lib*"
+            lib_dir = glob.glob(os.path.join(install_dir, lib_dir))
+            if lib_dir:
+                lib_file = os.path.join(lib_dir[0], lib_file)
+                if os.path.exists(lib_file):
+                    shutil.copy(lib_file, BUILD_DIR)
 
         # Find the linkable library file, and explicity add it to the linker if on Windows.
         lib_dirs = glob.glob(os.path.join(install_dir, "lib*"))
@@ -109,6 +129,10 @@ def append_arrow_flags(ext):
     ext.library_dirs.extend(pa.get_library_dirs())
 
     if os.name != "nt":
+        # On Linux and MacOS, we must run pyarrow.create_library_symlinks()
+        # as a user with write access to the directory where pyarrow is
+        # installed.
+        # See https://arrow.apache.org/docs/python/integration/extending.html#building-extensions-against-pypi-wheels.
         pa.create_library_symlinks()
 
     if os.name == "posix":

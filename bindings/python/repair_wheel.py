@@ -8,10 +8,11 @@ wheel_dir, wheel_file, delocate_args = sys.argv[1:]
 wheel_dir = wheel_dir.replace(os.sep, "/")
 wheel_file = wheel_file.replace(os.sep, "/")
 
-# Ensure pyarrow
+# Ensure pyarrow.
 if "universal2" in wheel_file:
     macos_ver = os.environ.get("MACOSX_DEPLOYMENT_TARGET", "10.3")
     macos_ver = macos_ver.replace(".", "_")
+    target = os.path.expanduser("~/wheels")
     run(
         [
             sys.executable,
@@ -22,11 +23,13 @@ if "universal2" in wheel_file:
             f"macosx_{macos_ver}_universal2",
             "--upgrade",
             "--target",
-            os.path.expanduser("~/wheels"),
+            target,
             "--only-binary=:all:",
             "pyarrow",
         ]
     )
+    # Allow the installed pyarrow library to be imported.
+    sys.path.insert(0, target)
 else:
     run([sys.executable, "-m", "pip", "install", "pyarrow"])
 import pyarrow as pa  # noqa
