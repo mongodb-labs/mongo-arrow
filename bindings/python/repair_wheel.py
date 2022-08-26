@@ -20,6 +20,8 @@ else:
 extra_path = pa.get_library_dirs() + libbson_lib
 extra_path = os.path.pathsep.join([a.replace(os.sep, "/") for a in extra_path])
 
+run([sys.executable, "-m", "pip", "install", "pyarrow"])
+
 if os.name == "nt":
     run([sys.executable, "-m", "pip", "install", "delvewheel"])
     os.environ["PATH"] = extra_path + os.path.pathsep + os.environ["PATH"]
