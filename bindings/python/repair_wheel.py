@@ -17,6 +17,7 @@ extra_path = os.path.pathsep.join(pa.get_library_dirs() + libbson_lib)
 if os.name == "nt":
     run([sys.executable, "-m", "pip", "install", "delvewheel"])
     os.environ["PATH"] = extra_path + os.path.pathsep + os.environ["PATH"]
+    print("PATH:", os.environ["PATH"])
     run(["delvewheel", "repair", "-w", wheel_dir, wheel_file])
 
 elif sys.platform == "darwin":
@@ -24,6 +25,7 @@ elif sys.platform == "darwin":
         os.environ["DYLD_LIBRARY_PATH"] = extra_path + ":" + os.environ["DYLD_LIBRARY_PATH"]
     else:
         os.environ["DYLD_LIBRARY_PATH"] = extra_path
+    print("DYLD_LIBRARY_PATH:", os.environ["DYLD_LIBRARY_PATH"])
     run([sys.executable, "-m", "pip", "install", "delocate"])
     run(["delocate-listdeps", wheel_dir])
     run(["delocate-wheel", "--require-archs", delocate_args, "-w", wheel_dir, wheel_file])
@@ -32,5 +34,6 @@ else:
         os.environ["LD_LIBRARY_PATH"] = extra_path + ":" + os.environ["LD_LIBRARY_PATH"]
     else:
         os.environ["LD_LIBRARY_PATH"] = extra_path
+    print("LD_LIBRARY_PATH:", os.environ["LD_LIBRARY_PATH"])
     run([sys.executable, "-m", "pip", "install", "auditwheel"])
     run(["auditwheel", "repair", "-w", wheel_dir, wheel_file])
