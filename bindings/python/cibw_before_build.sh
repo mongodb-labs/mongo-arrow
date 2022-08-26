@@ -19,6 +19,7 @@ then
   fi
 
   # Install pyarrow with the appropriate platform.
+  rm -rf $HOME/wheels/pyarrow*
   pip install --platform $platform --upgrade --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
 fi
 
