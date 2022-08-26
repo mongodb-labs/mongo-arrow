@@ -18,6 +18,10 @@ LIBBSON_INSTALL_DIR = "./libbson"
 
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux2014"
+repair-wheel-command = [
+    "source get_ld_path.sh",
+    "auditwheel repair -w {dest_dir} {wheel}"
+]
 
 [tool.cibuildwheel.macos]
 archs = "x86_64 universal2"
