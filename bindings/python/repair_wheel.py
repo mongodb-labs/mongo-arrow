@@ -1,6 +1,5 @@
 import glob
 import os
-import site
 import sys
 from subprocess import run
 
@@ -30,9 +29,8 @@ if os.name == "nt":
 
 elif sys.platform == "darwin":
     # FIXME: We should not have to do this:
-    site_pkgs = site.getsitepackages()[0]
-    dylib = os.path.join(os.path.dirname(site_pkgs), "lib-dynload")
-    print(os.listdir(dylib))
+    site_pkgs = sys.base_prefix
+    dylib = glob.glob(f"{sys.base_prefix}/lib/python*/lib-dynload")[0]
     extra_path = f"{dylib}:{extra_path}"
 
     if os.environ.get("DYLD_LIBRARY_PATH"):
@@ -44,9 +42,7 @@ elif sys.platform == "darwin":
     run([sys.executable, "-m", "pip", "install", "delocate"])
     run(
         [
-            sys.executable,
-            "-m",
-            "delocate.cmd.delocate_wheel",
+            "delocate-wheel",
             "--require-archs",
             delocate_args,
             "-w",
