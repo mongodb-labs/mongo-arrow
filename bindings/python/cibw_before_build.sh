@@ -22,7 +22,7 @@ then
   pip install --platform $platform --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
 fi
 
-pip install --user pyarrow
+pip install pyarrow
 ARROW_LIB=$(python -c "import pyarrow;print(':'.join(pyarrow.get_library_dirs()))")
 ls -ltr $ARROW_LIB
 export LD_LIBRARY_PATH="$ARROW_LIB:$LD_LIBRARY_PATH"
@@ -32,4 +32,5 @@ export LD_LIBRARY_PATH="$ARROW_LIB:$LD_LIBRARY_PATH"
 source ./build-libbson.sh
 
 
+export REPAIR_LIBRARY_PATH=$LD_LIBRARY_PATH
 echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
