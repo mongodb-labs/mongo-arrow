@@ -27,7 +27,7 @@ if os.name == "nt":
 
 elif sys.platform == "darwin":
     if os.environ.get("DYLD_LIBRARY_PATH"):
-        os.environ["DYLD_LIBRARY_PATH"] = extra_path + ":" + os.environ["DYLD_LIBRARY_PATH"]
+        os.environ["DYLD_LIBRARY_PATH"] = os.environ["DYLD_LIBRARY_PATH"] + ":" + extra_path
     else:
         os.environ["DYLD_LIBRARY_PATH"] = extra_path
     print("DYLD_LIBRARY_PATH:", os.environ["DYLD_LIBRARY_PATH"])
@@ -35,7 +35,7 @@ elif sys.platform == "darwin":
     run(["delocate-wheel", "--require-archs", delocate_args, "-w", wheel_dir, wheel_file])
 else:
     if os.environ.get("LD_LIBRARY_PATH"):
-        os.environ["LD_LIBRARY_PATH"] = extra_path + ":" + os.environ["LD_LIBRARY_PATH"]
+        os.environ["LD_LIBRARY_PATH"] = os.environ["LD_LIBRARY_PATH"] + ":" + extra_path
     else:
         os.environ["LD_LIBRARY_PATH"] = extra_path
     print("LD_LIBRARY_PATH:", os.environ["LD_LIBRARY_PATH"])
