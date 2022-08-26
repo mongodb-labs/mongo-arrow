@@ -11,8 +11,13 @@ wheel_dir = wheel_dir.replace(os.sep, "/")
 wheel_file = wheel_file.replace(os.sep, "/")
 
 libbson = os.environ.get("LIBBSON_INSTALL_DIR", os.path.join(HERE, "libbson"))
-libbson_lib = glob.glob(os.path.join(libbson, "lib*"))
-extra_path = os.path.pathsep.join(pa.get_library_dirs() + libbson_lib)
+libbson = os.path.abspath(libbson)
+if os.name == "nt":
+    libbson_lib = glob.glob(os.path.join(libbson, "bin"))
+else:
+    libbson_lib = glob.glob(os.path.join(libbson, "lib*"))
+extra_path = pa.get_library_dirs() + libbson_lib
+extra_path = os.path.pathsep.join([a.replace(os.sep, "/") for a in extra_path])
 
 if os.name == "nt":
     run([sys.executable, "-m", "pip", "install", "delvewheel"])
