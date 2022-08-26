@@ -19,16 +19,13 @@ LIBBSON_INSTALL_DIR = "./libbson"
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux2014"
 repair-wheel-command = [
-    "source ./bindings/python/get_ld_path.sh",
+    "source ./get_ld_path.sh",
     "auditwheel repair -w {dest_dir} {wheel}"
 ]
 
 [tool.cibuildwheel.windows]
 repair-wheel-command = [
     "pip install delvewheel",
-    "pwd",
-    "ls",
-    "source ./get_ld_path.sh",
     "delvewheel repair -w {dest_dir} {wheel}"
 ]
 
@@ -36,8 +33,6 @@ repair-wheel-command = [
 archs = "x86_64 universal2"
 test-skip = "*universal2:arm64"
 repair-wheel-command = [
-    "pwd",
-    "ls",
     "source ./get_ld_path.sh",
     "echo $REPAIR_LIBRARY_PATH",
     "DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-listdeps {wheel}",

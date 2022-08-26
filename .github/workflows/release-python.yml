@@ -8,6 +8,11 @@ concurrency:
   group: wheels-${{ github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    working-directory: ./bindings/python
+    shell: bash
+
 jobs:
   build_wheels:
     name: Build wheel for ${{ matrix.python }}-${{ matrix.buildplat[1] }}
@@ -37,8 +42,6 @@ jobs:
 
       - name: Build MacOS Py38 Wheel
         if: ${{ matrix.python == 'cp38' && matrix.buildplat[0] == 'macos-10.15' }}
-        working-directory: ./bindings/python
-        shell: bash
         env:
           CIBW_BUILD: cp38-macosx_x86_64
           MACOSX_DEPLOYMENT_TARGET: "10.13"
@@ -46,8 +49,6 @@ jobs:
 
       - name: Build wheels
         if: ${{ matrix.python != 'cp38' || matrix.buildplat[0] != 'macos-10.15' }}
-        working-directory: ./bindings/python
-        shell: bash
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
           MACOSX_DEPLOYMENT_TARGET: "10.13"
