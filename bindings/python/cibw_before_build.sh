@@ -24,7 +24,7 @@ fi
 
 pip install --user pyarrow
 ARROW_LIB=$(python -c "import pyarrow;print(':'.join(pyarrow.get_library_dirs()))")
-ls $ARROW_LIB
+ls -ltr $ARROW_LIB
 export LD_LIBRARY_PATH="$ARROW_LIB:$LD_LIBRARY_PATH"
 
 
