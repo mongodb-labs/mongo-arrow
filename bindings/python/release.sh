@@ -42,5 +42,6 @@ then
   $PYTHON addtags.py dist/*.whl "$PLAT" ./wheelhouse
 fi
 
+# Repair the wheel, copying shared libraries as needed
 MACHINE=$(python -c "import platform;print(platform.machine())")
 python repair_wheel.py "./wheelhouse" dist/*.whl $MACHINE

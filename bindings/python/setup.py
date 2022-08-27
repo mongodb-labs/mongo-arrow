@@ -54,6 +54,14 @@ def append_libbson_flags(module):
                 if os.path.exists(lib_file):
                     shutil.copy(lib_file, BUILD_DIR)
 
+            # Ensure our Cython extension can dynamically link to libraries
+            # - https://blog.krzyzanowskim.com/2018/12/05/rpath-what/
+            # - https://nehckl0.medium.com/creating-relocatable-linux-executables-by-setting-rpath-with-origin-45de573a2e98
+            if platform == "darwin":
+                module.extra_link_args += ["-rpath", "@loader_path"]
+            elif platform == "linux":
+                module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
+
         # Find the linkable library file, and explicity add it to the linker if on Windows.
         lib_dirs = glob.glob(os.path.join(install_dir, "lib*"))
         if len(lib_dirs) != 1:
