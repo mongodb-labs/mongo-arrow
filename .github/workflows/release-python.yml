@@ -92,7 +92,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: "sdist"
-          path: ./bindings/python/dist/*.tar.gz
+          path: ./bindings/python/wheelhouse/*.tar.gz
 
   collect-dist:
     runs-on: ubuntu-latest
@@ -102,6 +102,7 @@ jobs:
       - name: Download all workflow run artifacts
         uses: actions/download-artifact@v2
       - name: Flatten directory
+        working-directory: .
         run: |
           find . -mindepth 2 -type f -exec mv {} . \;
           find . -type d -empty -delete
