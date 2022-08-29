@@ -44,10 +44,11 @@ extra_path = pa.get_library_dirs() + libbson_lib
 extra_path = os.path.pathsep.join([a.replace(os.sep, "/") for a in extra_path])
 
 if os.name == "nt":
-    run([sys.executable, "-m", "pip", "install", "delvewheel"])
-    os.environ["PATH"] = extra_path + os.path.pathsep + os.environ["PATH"]
-    print("PATH:", os.environ["PATH"])
-    run(["delvewheel", "repair", "--no-mangle", "ucrtbased.dll", "-w", wheel_dir, wheel_file])
+    # run([sys.executable, "-m", "pip", "install", "delvewheel"])
+    # os.environ["PATH"] = extra_path + os.path.pathsep + os.environ["PATH"]
+    # print("PATH:", os.environ["PATH"])
+    # run(["delvewheel", "repair", "--no-mangle", "ucrtbased.dll", "-w", wheel_dir, wheel_file])
+    pass
 
 elif sys.platform == "darwin":
     # FIXME: We should not have to do this:
