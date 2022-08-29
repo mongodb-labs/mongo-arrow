@@ -129,8 +129,9 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, **kwargs):
                 UserWarning,
                 stacklevel=2,
             )
+    if schema:
+        pipeline.append({"$project": schema._get_projection()})
 
-    pipeline.append({"$project": schema._get_projection()})
     raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
     for batch in raw_batch_cursor:
         process_bson_stream(batch, context)
@@ -201,10 +202,12 @@ def _arrow_to_numpy(arrow_table, schema=None):
     """
     container = {}
     if not schema:
-        schema = arrow_table.schema
+        schema = {i.name: i.type for i in arrow_table.schema}
+    else:
+        schema = schema.typemap
 
     for fname in schema:
-        dtype = get_numpy_type(schema.typemap[fname])
+        dtype = get_numpy_type(schema[fname])
         if dtype == np.str_:
             container[fname] = arrow_table[fname].to_pandas().to_numpy(dtype=dtype)
         else:

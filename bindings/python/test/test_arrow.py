@@ -348,8 +348,9 @@ class TestArrowApiMixin:
         self.coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
-        out = find_arrow_all(self.coll, {}).drop(["_id"])
-        self.assertEqual(data, out)
+        for func in [find_arrow_all, aggregate_arrow_all]:
+            out = func(self.coll, {} if func == find_arrow_all else []).drop(["_id"])
+            self.assertEqual(data, out)
 
     def test_auto_schema_heterogeneous(self):
         vals = [1, "2", True, 4]
@@ -357,8 +358,9 @@ class TestArrowApiMixin:
 
         self.coll.drop()
         self.coll.insert_many(data)
-        out = find_arrow_all(self.coll, {}).drop(["_id"])
-        self.assertEqual(out["a"].to_pylist(), [1, None, None, 4])
+        for func in [find_arrow_all, aggregate_arrow_all]:
+            out = func(self.coll, {} if func == find_arrow_all else []).drop(["_id"])
+            self.assertEqual(out["a"].to_pylist(), [1, None, None, 4])
 
     def test_auto_schema_tz(self):
         # Create table with random data of various types.
@@ -381,8 +383,12 @@ class TestArrowApiMixin:
         codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
         res = write(self.coll.with_options(codec_options=codec_options), data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
-        out = find_arrow_all(self.coll.with_options(codec_options=codec_options), {}).drop(["_id"])
-        self.assertEqual(data, out)
+        for func in [find_arrow_all, aggregate_arrow_all]:
+            out = func(
+                self.coll.with_options(codec_options=codec_options),
+                {} if func == find_arrow_all else [],
+            ).drop(["_id"])
+            self.assertEqual(data, out)
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
