@@ -58,8 +58,9 @@ query. We can do so using **PyMongo**::
 
 Defining the schema
 -------------------
-**PyMongoArrow** relies upon a **user-specified** data schema to marshall
-query result sets into tabular form. Users can define the schema by
+**PyMongoArrow** relies upon a data schema to marshall
+query result sets into tabular form. This schema can either be automatically inferred from the data,
+or provided by the user. Users can define the schema by
 instantiating :class:`pymongoarrow.api.Schema` using a mapping of field names
 to type-specifiers, e.g.::
 
@@ -69,6 +70,15 @@ to type-specifiers, e.g.::
 There are multiple permissible type-identifiers for each supported BSON type.
 For a full-list of supported types and associated type-identifiers see
 :doc:`supported_types`.
+
+.. note::
+
+   For all of the examples below, the schema can be omitted like so::
+
+    arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}})
+
+   In this case, PyMongoArrow will try to automatically apply a schema based on
+   the data contained in the first batch.
 
 Find operations
 ---------------

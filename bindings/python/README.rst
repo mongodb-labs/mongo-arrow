@@ -28,6 +28,8 @@ DataFrames or NumPy arrays.
   1    2  16.9
   2    3   2.3
   >>> arrow_table = client.db.test.find_arrow_all({}, schema=schema)
+  # The schema may also be omitted
+  >>> arrow_table = client.db.test.find_arrow_all({})
   >>> arrow_table
   pyarrow.Table
   _id: int64
