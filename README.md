@@ -5,8 +5,8 @@ Tools for using Apache Arrow with MongoDB
 We utilize Apache Arrow to offer fast and easy conversion of MongoDB query result sets to multiple numerical data formats popular among developers including NumPy ndarrays, Pandas DataFrames, parquet files, csv, and more.
 
 We chose Arrow for this because of its unique set of characteristics:
-- language-independent 
-- columnar memory format for flat and hierarchical data, 
+- language-independent
+- columnar memory format for flat and hierarchical data,
 - organized for efficient analytic operations on modern hardware like CPUs and GPUs
 - zero-copy reads for lightning-fast data access without serialization overhead
   - it was simple and fast, and from our perspective Apache Arrow is ideal for processing and transport of large datasets in high-performance applications.
@@ -22,7 +22,7 @@ from pymongoarrow.api import Schema
 schema = Schema({'_id': int, 'amount': float, 'last_updated': datetime})
 ```
 
-You can install PyMongoArrow on your local machine using Pip: 
+You can install PyMongoArrow on your local machine using Pip:
 `$ python -m pip install pymongoarrow`
 
 You can export data from MongoDB to a pandas dataframe easily using something like:
