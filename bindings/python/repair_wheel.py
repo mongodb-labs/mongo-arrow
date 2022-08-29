@@ -46,7 +46,7 @@ extra_path = os.path.pathsep.join([a.replace(os.sep, "/") for a in extra_paths])
 
 def append_os_variable(name):
     if os.environ.get(name):
-        os.environ[name] = os.environ[name] + ":" + extra_path
+        os.environ[name] = os.environ[name] + os.sep + extra_path
     else:
         os.environ[name] = extra_path
     print(f"{name}: {os.environ[name]}")
