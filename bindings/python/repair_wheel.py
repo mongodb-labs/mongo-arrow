@@ -53,6 +53,7 @@ def append_os_variable(name):
 
 
 if os.name == "nt":
+    append_os_variable("PATH")
     run([sys.executable, "-m", "pip", "install", "delvewheel"])
     run(["delvewheel", "repair", "--no-mangle", "ucrtbased.dll", "-w", wheel_dir, wheel_file])
 
