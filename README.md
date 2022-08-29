@@ -9,7 +9,7 @@ We chose Arrow for this because of its unique set of characteristics:
 - columnar memory format for flat and hierarchical data, 
 - organized for efficient analytic operations on modern hardware like CPUs and GPUs
 - zero-copy reads for lightning-fast data access without serialization overhead
-it was simple and fast, and from our perspective Apache Arrow is ideal for processing and transport of large datasets in high-performance applications.
+  - it was simple and fast, and from our perspective Apache Arrow is ideal for processing and transport of large datasets in high-performance applications.
 
 As reference points for our implementation, we also took a look at BigQuery’s Pandas integration, pandas methods to handle JSON/semi-structured data, the Snowflake Python connector, and Dask.DataFrame.
 
