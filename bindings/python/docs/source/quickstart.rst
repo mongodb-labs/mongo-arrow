@@ -75,8 +75,8 @@ For a full-list of supported types and associated type-identifiers see
    For all of the examples below, the schema can be omitted like so::
 
     arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}})
-   In this case, PyMongoArrow will try to automatically apply a schema.
-   If errors are encountered, it is likely necessary to use a schema for your usecase.
+   In this case, PyMongoArrow will try to automatically apply a schema based on
+   the data contained in the first batch.
 
 Find operations
 ---------------
