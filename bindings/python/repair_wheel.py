@@ -40,28 +40,28 @@ if os.name == "nt":
     libbson_lib = glob.glob(os.path.join(libbson, "bin"))
 else:
     libbson_lib = glob.glob(os.path.join(libbson, "lib*"))
-extra_path = pa.get_library_dirs() + libbson_lib
-extra_path = os.path.pathsep.join([a.replace(os.sep, "/") for a in extra_path])
+extra_paths = pa.get_library_dirs() + libbson_lib
+extra_path = os.path.pathsep.join([a.replace(os.sep, "/") for a in extra_paths])
+
+
+def append_os_variable(name):
+    if os.environ.get(name):
+        os.environ[name] = os.environ[name] + ":" + extra_path
+    else:
+        os.environ[name] = extra_path
+    print(f"{name}: {os.environ[name]}")
+
 
 if os.name == "nt":
-    # run([sys.executable, "-m", "pip", "install", "delvewheel"])
-    # os.environ["PATH"] = extra_path + os.path.pathsep + os.environ["PATH"]
-    # print("PATH:", os.environ["PATH"])
-    # run(["delvewheel", "repair", "--no-mangle", "ucrtbased.dll", "-w", wheel_dir, wheel_file])
-    pass
+    run([sys.executable, "-m", "pip", "install", "delvewheel"])
+    run(["delvewheel", "repair", "--no-mangle", "ucrtbased.dll", "-w", wheel_dir, wheel_file])
 
 elif sys.platform == "darwin":
-    # FIXME: We should not have to do this:
+    # FIXME: We should not have to do this.
     site_pkgs = sys.base_prefix
     dylib = glob.glob(f"{sys.base_prefix}/lib/python*/lib-dynload")[0]
     extra_path = f"{dylib}:{extra_path}"
-
-    if os.environ.get("DYLD_LIBRARY_PATH"):
-        os.environ["DYLD_LIBRARY_PATH"] = os.environ["DYLD_LIBRARY_PATH"] + ":" + extra_path
-    else:
-        os.environ["DYLD_LIBRARY_PATH"] = extra_path
-
-    print("DYLD_LIBRARY_PATH:", os.environ["DYLD_LIBRARY_PATH"])
+    append_os_variable("DYLD_LIBRARY_PATH")
     run([sys.executable, "-m", "pip", "install", "delocate"])
     run(
         [
@@ -74,10 +74,6 @@ elif sys.platform == "darwin":
         ]
     )
 else:
-    if os.environ.get("LD_LIBRARY_PATH"):
-        os.environ["LD_LIBRARY_PATH"] = os.environ["LD_LIBRARY_PATH"] + ":" + extra_path
-    else:
-        os.environ["LD_LIBRARY_PATH"] = extra_path
-    print("LD_LIBRARY_PATH:", os.environ["LD_LIBRARY_PATH"])
+    append_os_variable("LD_LIBRARY_PATH")
     run([sys.executable, "-m", "pip", "install", "auditwheel"])
     run(["auditwheel", "repair", "-w", wheel_dir, wheel_file])
