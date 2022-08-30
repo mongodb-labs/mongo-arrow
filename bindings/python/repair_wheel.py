@@ -14,8 +14,8 @@ wheel_file = wheel_file.replace(os.sep, "/")
 if "universal2" in wheel_file:
     macos_ver = os.environ.get("MACOSX_DEPLOYMENT_TARGET", "10.3")
     macos_ver = macos_ver.replace(".", "_")
-    wheel_dir = tempfile.TemporaryDirectory()
-    atexit.register(wheel_dir.cleanup)
+    wheel_temp_dir = tempfile.TemporaryDirectory()
+    atexit.register(wheel_temp_dir.cleanup)
     run(
         [
             sys.executable,
@@ -26,13 +26,13 @@ if "universal2" in wheel_file:
             f"macosx_{macos_ver}_universal2",
             "--upgrade",
             "--target",
-            wheel_dir.name,
+            wheel_temp_dir.name,
             "--only-binary=:all:",
             "pyarrow",
         ]
     )
     # Allow the installed pyarrow library to be imported.
-    sys.path.insert(0, wheel_dir.name)
+    sys.path.insert(0, wheel_temp_dir.name)
 else:
     run([sys.executable, "-m", "pip", "install", "pyarrow"])
 import pyarrow as pa  # noqa
