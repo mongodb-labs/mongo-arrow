@@ -30,7 +30,7 @@ You can export data from MongoDB to a pandas dataframe easily using something li
 df = production.invoices.find_pandas_all({'amount': {'$gt': 100.00}}, schema=invoices)
 ```
 
-Since PyMongoArrow can automatically infer the schema from the first batch of data, this can be 
+Since PyMongoArrow can automatically infer the schema from the first batch of data, this can be
 further simplifed to:
 
 ```
@@ -38,5 +38,5 @@ df = production.invoices.find_pandas_all({'amount': {'$gt': 100.00}})
 ```
 
 ## Final Thoughts
-This library is in the early stages of development, and so it's possible the API may change in the future - 
+This library is in the early stages of development, and so it's possible the API may change in the future -
 we definitely want to continue expanding it. We welcome your feedback as we continue to explore and build this tool.
