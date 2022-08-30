@@ -2,7 +2,7 @@ import atexit
 import glob
 import os
 import sys
-import tempdir
+import tempfile
 from subprocess import run
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -14,7 +14,7 @@ wheel_file = wheel_file.replace(os.sep, "/")
 if "universal2" in wheel_file:
     macos_ver = os.environ.get("MACOSX_DEPLOYMENT_TARGET", "10.3")
     macos_ver = macos_ver.replace(".", "_")
-    wheel_dir = tempdir.TemporaryDirectory()
+    wheel_dir = tempfile.TemporaryDirectory()
     atexit.register(wheel_dir.cleanup)
     run(
         [
