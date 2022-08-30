@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Changes in Version 0.5.1
+------------------------
+- Fixed auto-discovery of schemas for aggregation and ``numpy`` methods.
+- Added Documentation for Auto-Discovery of Schemas.
+
 Changes in Version 0.5.0
 ------------------------
 - Support auto-discovery of schemas in ``find/aggregate_*_all`` methods.
