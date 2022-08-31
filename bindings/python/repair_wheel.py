@@ -12,6 +12,9 @@ wheel_file = wheel_file.replace(os.sep, "/")
 
 # Ensure pyarrow.
 if "universal2" in wheel_file:
+    # pip selects the most specific platform by default,
+    # so we have to tell it to install the universal2 version.
+    # See https://github.com/pypa/packaging/issues/381
     macos_ver = os.environ.get("MACOSX_DEPLOYMENT_TARGET", "10.3")
     macos_ver = macos_ver.replace(".", "_")
     wheel_temp_dir = tempfile.TemporaryDirectory()
@@ -58,6 +61,14 @@ def append_os_variable(name, extra_path):
 if os.name == "nt":
     append_os_variable("PATH", extra_path)
     run([sys.executable, "-m", "pip", "install", "delvewheel"])
+    # Do not mangle ucrtbased.dll to avoid:
+    # "RuntimeError: Unable to rename the dependencies of vcruntime140d.dll
+    # because this DLL has trailing data. If this DLL was created with MinGW,
+    # run the strip utility. Otherwise, include ucrtbased.dll in the
+    # --no-mangle flag. In addition, if you believe that delvewheel should
+    # avoid name-mangling a specific DLL by default, open an issue at
+    # https://github.com/adang1345/delvewheel/issues and include this error
+    # message."
     run(["delvewheel", "repair", "--no-mangle", "ucrtbased.dll", "-w", wheel_dir, wheel_file])
 
 elif sys.platform == "darwin":
