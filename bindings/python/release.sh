@@ -10,6 +10,9 @@ then
   exit 1
 fi
 
+# Clean up
+rm -rf dist wheelhouse build pymongoarrow/*.so pymongoarrow/*.dll pymongoarrow/*.dylib
+
 # Platform-dependent actions:
 PYTHON=${PYTHON_BINARY:-"python"}
 if [ "Linux" = "$(uname -s)" ]
@@ -38,3 +41,7 @@ then
   $PYTHON -m pip install auditwheel
   $PYTHON addtags.py dist/*.whl "$PLAT" ./wheelhouse
 fi
+
+# Repair the wheel, copying shared libraries as needed
+MACHINE=$(python -c "import platform;print(platform.machine())")
+python repair_wheel.py "./wheelhouse" dist/*.whl $MACHINE
