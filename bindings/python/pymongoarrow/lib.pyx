@@ -69,8 +69,6 @@ def process_bson_stream(bson_stream, context):
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
     cdef size_t length = <size_t>PyBytes_Size(bson_stream)
     cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
-    cdef const bson_t * outer_doc = NULL
-    cdef bson_iter_t outer_iter
 
     cdef bson_decimal128_t dec128
     cdef const char* cursor_key
@@ -84,15 +82,11 @@ def process_bson_stream(bson_stream, context):
     cdef char *decimal128_str = <char *> malloc(
         BSON_DECIMAL128_STRING * sizeof(char))
 
-    cdef int64_t id_val = 0
-    cdef const char * ns_val
-    cdef uint32_t ns_len = 0
-
     cdef const uint8_t *arr_buf = NULL
     cdef uint32_t arr_buf_len = 0;
     cdef bson_iter_t arr_iter
     cdef bson_reader_t* arr_reader = NULL
-    cdef bson_t arr_doc
+    cdef const bson_t * arr_doc = NULL
 
     cdef const uint8_t *doc_buf = NULL
     cdef uint32_t doc_buf_len = 0;
@@ -115,27 +109,11 @@ def process_bson_stream(bson_stream, context):
         count = len(builder)
         break
 
-    # Get the batch contents from the OpMsg data.
-    outer_doc = bson_reader_read_safe(stream_reader)
-    if outer_doc == NULL:
-        raise InvalidBSON("Not a valid OpMsg stream")
-    if not bson_iter_init(&outer_iter, outer_doc):
-        raise InvalidBSON("Could not read BSON document")
-    while bson_iter_next(&outer_iter):
-        key = bson_iter_key(&outer_iter)
-        if key in [b'firstBatch', b'nextBatch']:
-            bson_iter_array(&outer_iter, &arr_buf_len, &arr_buf)
-            bson_init_static (&arr_doc, arr_buf, arr_buf_len)
-            cursor_key = key
-        elif key == b'id':
-            value_t = bson_iter_type(&outer_iter)
-            id_val = bson_iter_as_int64(&outer_iter)
-        elif key == b'ns':
-            value_t = bson_iter_type(&outer_iter)
-            ns_val = bson_iter_utf8(&outer_iter, &ns_len)
+    # Get the batch contents from the raw array data.
+    arr_doc = bson_reader_read_safe(stream_reader)
 
     # Iterate over all the documents in the array.
-    if not bson_iter_init(&arr_iter, &arr_doc):
+    if not bson_iter_init(&arr_iter, arr_doc):
         raise InvalidBSON("Could not read BSON document")
     try:
         while bson_iter_next(&arr_iter):
@@ -221,8 +199,6 @@ def process_bson_stream(bson_stream, context):
     finally:
         bson_reader_destroy(stream_reader)
         free(decimal128_str)
-
-    return id_val, <bytes>(ns_val)[:ns_len], cursor_key, doc_count
 
 
 # Builders

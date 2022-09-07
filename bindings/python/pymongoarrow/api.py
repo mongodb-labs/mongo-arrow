@@ -127,7 +127,10 @@ def find_arrow_all(collection, query, *, schema=None, **kwargs):
     if schema:
         kwargs.setdefault("projection", schema._get_projection())
 
-    list(CustomRawBatchCursor(context, collection, query, **kwargs))
+    raw_batch_cursor = collection.find_raw_batches(query, **kwargs)
+    for batch in raw_batch_cursor:
+        process_bson_stream(batch, context)
+
     return context.finish()
 
 
