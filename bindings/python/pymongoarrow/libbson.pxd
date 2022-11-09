@@ -126,6 +126,10 @@ cdef extern from "<bson/bson.h>":
 
     bint bson_iter_decimal128 (const bson_iter_t *iter, bson_decimal128_t *dec)
 
+    void bson_iter_document (const bson_iter_t *iter,  # IN
+                    uint32_t *document_len,  #  OUT
+                    const uint8_t **document) # OUT
+
 # bson_reader_t API
 cdef extern from "<bson/bson.h>":
     bson_reader_t * bson_reader_new_from_data(const uint8_t *data, size_t length)

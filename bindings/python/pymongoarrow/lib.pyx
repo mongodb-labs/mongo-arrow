@@ -32,6 +32,7 @@ from cpython cimport PyBytes_Size, object
 from cython.operator cimport dereference
 from libcpp cimport bool as cbool
 from libcpp.map cimport map
+from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libc.stdlib cimport malloc, free
 from pyarrow.lib cimport *
@@ -396,4 +397,45 @@ cdef class BoolBuilder(_ArrayBuilderBase):
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CBooleanBuilder] unwrap(self):
+        return self.builder
+
+
+cdef class DocumentBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.struct
+    cdef:
+        shared_ptr[CStructBuilder] builder
+
+    #  https://github.com/apache/arrow/blob/31a07be1d9dc2f7c9720cc0fdcd7f083d947aba1/cpp/src/arrow/array/builder_nested.h#L487
+    # Append an element to the Struct. All child-builders' Append method must
+    # be called independently to maintain data-structure consistency.
+
+    # We want to make a struct builder that allows adding homogeneous
+    # recursive nested documents.
+
+    # Use https://github.com/mongodb-labs/mongo-arrow/pull/91/files#diff-4bebdbb1fb3a226fc1c92ec68a1472b09b4a8b8362f49db23529af97f126b3c2
+    # for some of the Cython code.
+
+
+
+    def __cinit__(self, vector[CArrayBuilder] field_builders,  MemoryPool memory_pool=None):
+        cdef shared_ptr[CDataType] dtype = fixed_size_binary(12)
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CStructBuilder(dtype, pool, field_builders))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(value)
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CStructBuilder] unwrap(self):
         return self.builder
