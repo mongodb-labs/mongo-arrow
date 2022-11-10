@@ -13,7 +13,10 @@ IS_WIN = platform == "win32"
 
 # Find and copy the binary libbson file, unless
 # MONGO_NO_COPY_LIBBSON is set (for instance in a conda build).
-COPY_LIBBSON = not os.environ.get("MONGO_NO_COPY_LIBBSON", False)
+COPY_LIBBSON = not os.environ.get("MONGO_NO_COPY_LIBBSON", "")
+
+# Whether to create libarrow symlinks on posix systems.
+CREATE_LIBARROW_SYMLINKS = os.environ.get("MONGO_CREATE_LIBARROW_SYMLINKS", "1")
 
 
 def query_pkgconfig(cmd):
@@ -136,7 +139,7 @@ def append_arrow_flags(ext):
     ext.libraries.extend(pa.get_libraries())
     ext.library_dirs.extend(pa.get_library_dirs())
 
-    if os.name != "nt":
+    if os.name != "nt" and CREATE_LIBARROW_SYMLINKS:
         # On Linux and MacOS, we must run pyarrow.create_library_symlinks()
         # as a user with write access to the directory where pyarrow is
         # installed.

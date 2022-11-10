@@ -23,6 +23,7 @@ echo "Installing libbson..."
 
 MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-"10.15"}
 CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES:-"x86_64"}
+CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE:-"Debug"}
 
 # Directory where build artifacts will be placed
 LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR:-""}
@@ -44,18 +45,20 @@ pushd "$WORKDIR"
       cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
             -DENABLE_MONGOC=OFF \
             -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES} \
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET} \
             -DCMAKE_INSTALL_PREFIX:PATH="$LIBBSON_INSTALL_DIR" \
             ..
     else
       cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF \
             -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES} \
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET} \
             -DENABLE_MONGOC=OFF \
             ..
     fi
     cmake --build . --target clean
     cmake --build .
-    cmake --build . --target install
+    cmake --build . --target install --config ${CMAKE_BUILD_TYPE}
   popd
 popd
