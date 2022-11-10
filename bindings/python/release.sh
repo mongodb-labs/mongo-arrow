@@ -24,7 +24,7 @@ fi
 LIBBSON_INSTALL_DIR="$(pwd)/libbson"
 
 # Build libbson
-LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""} CMAKE_BUILD_TYPE=Release ./build-libbson.sh ./build-libbson.sh
+LIBBSON_INSTALL_DIR="$LIBBSON_INSTALL_DIR" LIBBSON_VERSION=${LIBBSON_VERSION:-""} CMAKE_BUILD_TYPE=Release ./build-libbson.sh
 
 # Print Python version used
 $PYTHON --version
