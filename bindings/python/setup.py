@@ -18,6 +18,9 @@ COPY_LIBBSON = not os.environ.get("MONGO_NO_COPY_LIBBSON", "")
 # Whether to create libarrow symlinks on posix systems.
 CREATE_LIBARROW_SYMLINKS = os.environ.get("MONGO_CREATE_LIBARROW_SYMLINKS", "1")
 
+# Set a default value for MACOSX_DEPLOYMENT_TARGET.
+os.environ.setdefault("MACOSX_DEPLOYMENT_TARGET", "10.15")
+
 
 def query_pkgconfig(cmd):
     status, output = subprocess.getstatusoutput(cmd)
