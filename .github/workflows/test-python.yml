@@ -2,6 +2,7 @@ name: Python Tests
 
 on:
   push:
+      branches: ["main"]
   pull_request:
 
 concurrency:
@@ -20,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
       - uses: pre-commit/action@v2.0.0
         with:
           extra_args: --all-files --hook-stage=manual
@@ -36,9 +37,9 @@ jobs:
       fail-fast: false
     name: CPython ${{ matrix.python-version }}-${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -83,9 +84,9 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Cache conda
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           # Increase this value to reset cache if environment.yml has not changed
           CACHE_NUMBER: 0
