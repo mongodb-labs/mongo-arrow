@@ -4,6 +4,7 @@ Changelog
 Changes in Version 0.6.0
 ------------------------
 - Fixed ``ImportError`` on Windows by building ``libbson`` in "Release" mode.
+- Support PyArrow 10.0.
 
 Changes in Version 0.5.1
 ------------------------
