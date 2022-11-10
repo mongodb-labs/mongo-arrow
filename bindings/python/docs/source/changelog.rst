@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Changes in Version 0.6.0
+------------------------
+- Fixed ``ImportError`` on Windows by building ``libbson`` in "Release" mode.
+
 Changes in Version 0.5.1
 ------------------------
 - Fixed auto-discovery of schemas for aggregation and ``numpy`` methods.
