@@ -158,7 +158,7 @@ def append_arrow_flags(ext):
         if "std=" not in os.environ.get("CXXFLAGS", ""):
             ext.extra_compile_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
 
-    if os.name == "nt":
+    elif os.name == "nt":
         ext.extra_compile_args.append("/std:c++17")
 
 
