@@ -152,11 +152,11 @@ def append_arrow_flags(ext):
     if os.name == "posix":
         ext.extra_compile_args.append("-std=c++17")
 
-    # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
-    # - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
-    # - https://arrow.apache.org/docs/python/extending.html#example
-    if os.name != "nt" and "std=" not in os.environ.get("CXXFLAGS", ""):
-        ext.extra_compile_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
+        # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
+        # - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
+        # - https://arrow.apache.org/docs/python/extending.html#example
+        if "std=" not in os.environ.get("CXXFLAGS", ""):
+            ext.extra_compile_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
 
     if os.name == "nt":
         ext.extra_compile_args.append("/std:c++17")
