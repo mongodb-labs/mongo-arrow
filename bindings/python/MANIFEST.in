@@ -4,7 +4,6 @@ include *.sh
 include pyproject.toml
 
 exclude THIRD-PARTY-NOTICES
-exclude release.sh
 exclude addtags.py
 exclude benchmark.py
 exclude repair_wheel.py
