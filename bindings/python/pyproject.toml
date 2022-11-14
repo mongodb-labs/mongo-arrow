@@ -22,8 +22,8 @@ LIBBSON_INSTALL_DIR = "./libbson"
 manylinux-x86_64-image = "manylinux2014"
 environment-pass = ["TARGET_PLATFORM"]
 repair-wheel-command = [
-    "pip install \"auditwheel>=3,<4\"",
-    "python addtags.py {wheel} {dest_dir}"
+    "pip install auditwheel",
+    "auditwheel addtag -w {dest_dir} {wheel}"
 ]
 
 [tool.cibuildwheel.macos]
