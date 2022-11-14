@@ -2,7 +2,7 @@
 # Dependencies:
 # - auditwheel>=3,<4
 # Usage:
-# $ python addtags.py WHEEL_PATH TARGET_PLATFORM WHEEL_DIR
+# $ python addtags.py WHEEL_PATH WHEEL_DIR
 import os
 from os.path import abspath, basename, exists, isfile
 from os.path import join as pjoin
