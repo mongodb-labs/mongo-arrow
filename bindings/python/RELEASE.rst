@@ -52,9 +52,6 @@ https://github.com/mongodb-labs/mongo-arrow/actions/runs/2060477840.
    new version does not show up automatically, trigger a rebuild of "latest":
    https://readthedocs.org/projects/mongo-arrow/builds/
 
-#. Bump the version number to <next version>.dev0 in version.py,
-   commit, push.
-
 #. Publish the release version in Jira.
 
 #. Announce the release on:
