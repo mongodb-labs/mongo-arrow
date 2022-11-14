@@ -45,5 +45,6 @@ def main(wheel_path, abi, wheel_dir):
 
 
 if __name__ == "__main__":
-    WHEEL_PATH, TARGET_PLATFORM, WHEEL_DIR = argv[1], argv[2], argv[3]
+    WHEEL_PATH, WHEEL_DIR = argv[1], argv[2]
+    TARGET_PLATFORM = os.environ["TARGET_PLATFORM"]
     main(wheel_path=abspath(WHEEL_PATH), abi=TARGET_PLATFORM, wheel_dir=abspath(WHEEL_DIR))
