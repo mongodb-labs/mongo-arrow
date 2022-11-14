@@ -3,7 +3,10 @@ name: Python Wheels
 on:
   push:
     branches: ["main"]
+    tags:
+      - "**"
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: wheels-${{ github.ref }}
