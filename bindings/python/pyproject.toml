@@ -21,7 +21,7 @@ LIBBSON_INSTALL_DIR = "./libbson"
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux2014"
 environment-pass = ["TARGET_PLATFORM"]
-repair-wheel-command = "python addtags.py {dest_dir} {wheel}"
+repair-wheel-command = "python addtags.py {wheel} {dest_dir}"
 
 [tool.cibuildwheel.macos]
 archs = "x86_64 universal2"
