@@ -24,6 +24,7 @@ from pyarrow.includes.libarrow cimport (CStatus, CMemoryPool)  # noqa: E211
 # libarrow type wrappings
 
 cdef extern from "arrow/builder.h" namespace "arrow" nogil:
+
     cdef cppclass CFixedSizeBinaryBuilder" arrow::FixedSizeBinaryBuilder"(CArrayBuilder):
         CFixedSizeBinaryBuilder(shared_ptr[CDataType], CMemoryPool* pool)
         CStatus Append(const uint8_t* value)
@@ -34,6 +35,8 @@ cdef extern from "arrow/builder.h" namespace "arrow" nogil:
         CStatus Append(uint8_t is_valid)
         CArrayBuilder* field_builder(int i)
         int32_t num_fields()
+        shared_ptr[CDataType] type()
+
 
 cdef extern from "arrow/type_fwd.h" namespace "arrow" nogil:
     shared_ptr[CDataType] fixed_size_binary(int32_t byte_width)
