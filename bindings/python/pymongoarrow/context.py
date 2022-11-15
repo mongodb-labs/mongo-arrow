@@ -79,7 +79,10 @@ class PyMongoArrowContext:
                 arrow_type = schema.typemap[fname]
                 if codec_options.tzinfo is not None and arrow_type.tz is None:
                     arrow_type = timestamp(arrow_type.unit, tz=codec_options.tzinfo)
-                builder_map[encoded_fname] = builder_cls(dtype=arrow_type)
+                builder_map[encoded_fname] = DatetimeBuilder(dtype=arrow_type)
+            elif builder_cls == DocumentBuilder:
+                arrow_type = schema.typemap[fname]
+                builder_map[encoded_fname] = DocumentBuilder(arrow_type)
             else:
                 builder_map[encoded_fname] = builder_cls()
         return cls(schema, builder_map)

@@ -61,7 +61,8 @@ _builder_type_map = {
     0x09: DatetimeBuilder,
     0x07: ObjectIdBuilder,
     0x02: StringBuilder,
-    0x08: BoolBuilder
+    0x08: BoolBuilder,
+    0x03: DocumentBuilder,
 }
 
 def process_bson_stream(bson_stream, context):
@@ -87,6 +88,7 @@ def process_bson_stream(bson_stream, context):
     t_oid = _BsonArrowTypes.objectid
     t_string = _BsonArrowTypes.string
     t_bool = _BsonArrowTypes.bool
+    t_document = _BsonArrowTypes.document
     builder_map = context.builder_map
 
     # initialize count to current length of builders
@@ -113,7 +115,15 @@ def process_bson_stream(bson_stream, context):
                     builder_type = _builder_type_map[ftype]
                     if builder_type == DatetimeBuilder and context.tzinfo is not None:
                         arrow_type = timestamp(arrow_type.unit, tz=context.tzinfo)
-                        builder_map[key] = builder_type(dtype=arrow_type)
+                        builder_map[key] = DatetimeBuilder(dtype=arrow_type)
+                    elif builder_type == DocumentBuilder:
+                        # TODO: we need to inspect the document in order
+                        # to build up the data type.
+                        # we probably need to make a copy of the iterator
+                        # to hand off to a function.  The function will
+                        # create the builder.
+                        #builder_map[key] = DocumentBuilder()
+                        pass
                     else:
                         builder_map[key] = builder_type()
                     builder = builder_map[key]
@@ -166,6 +176,13 @@ def process_bson_stream(bson_stream, context):
                     elif ftype == t_bool:
                         if value_t == BSON_TYPE_BOOL:
                             builder.append(bson_iter_bool(&doc_iter))
+                        else:
+                            builder.append_null()
+                    elif ftype == t_document:
+                        if value_t == BSON_TYPE_DOCUMENT:
+                            # TODO: what can we pass here?
+                            # builder.append(&doc_iter)
+                            pass
                         else:
                             builder.append_null()
                     else:
@@ -404,6 +421,9 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     type_marker = _BsonArrowTypes.struct
     cdef:
         shared_ptr[CStructBuilder] builder
+        StructType dtype
+        vector[shared_ptr[CArrayBuilder]] field_builders
+
 
     #  https://github.com/apache/arrow/blob/31a07be1d9dc2f7c9720cc0fdcd7f083d947aba1/cpp/src/arrow/array/builder_nested.h#L487
     # Append an element to the Struct. All child-builders' Append method must
@@ -416,11 +436,11 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     # for some of the Cython code.
 
 
-
-    def __cinit__(self, vector[CArrayBuilder] field_builders,  MemoryPool memory_pool=None):
-        cdef shared_ptr[CDataType] dtype = fixed_size_binary(12)
+    def __cinit__(self, StructType dtype, MemoryPool memory_pool=None):
+        # TODO: we need to create the field builders here based on the
+        # data
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
-        self.builder.reset(new CStructBuilder(dtype, pool, field_builders))
+        self.builder.reset(new CStructBuilder(dtype, pool, self.field_builders))
 
     cpdef append_null(self):
         self.builder.get().AppendNull()
@@ -429,6 +449,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         return self.builder.get().length()
 
     cpdef append(self, value):
+        # TODO: we need to traverse the document here
         self.builder.get().Append(value)
 
     cpdef finish(self):
