@@ -439,8 +439,9 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     def __cinit__(self, StructType dtype, MemoryPool memory_pool=None):
         # TODO: we need to create the field builders here based on the
         # data
+        self.dtype = dtype
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
-        self.builder.reset(new CStructBuilder(dtype, pool, self.field_builders))
+        self.builder.reset(new CStructBuilder(pyarrow_unwrap_data_type(self.dtype), pool, self.field_builders))
 
     cpdef append_null(self):
         self.builder.get().AppendNull()
