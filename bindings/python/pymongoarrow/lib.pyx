@@ -77,6 +77,8 @@ def process_bson_stream(bson_stream, context):
     cdef Py_ssize_t count = 0
     cdef const char * bson_str
     cdef uint32_t str_len
+    cdef const uint8_t *doc_buf = NULL
+    cdef uint32_t doc_buf_len = 0;
     cdef char *decimal128_str = <char *> malloc(
         BSON_DECIMAL128_STRING * sizeof(char))
 
@@ -118,7 +120,7 @@ def process_bson_stream(bson_stream, context):
                         builder_map[key] = DatetimeBuilder(dtype=arrow_type)
                     elif builder_type == DocumentBuilder:
                         # TODO: we need to inspect the document in order
-                        # to build up the data type.
+                        # to build up the data type and the builder map.
                         # we probably need to make a copy of the iterator
                         # to hand off to a function.  The function will
                         # create the builder.
@@ -129,6 +131,8 @@ def process_bson_stream(bson_stream, context):
                     builder = builder_map[key]
                     for _ in range(count):
                         builder.append_null()
+
+
                 if builder is not None:
                     ftype = builder.type_marker
                     value_t = bson_iter_type(&doc_iter)
@@ -180,8 +184,8 @@ def process_bson_stream(bson_stream, context):
                             builder.append_null()
                     elif ftype == t_document:
                         if value_t == BSON_TYPE_DOCUMENT:
-                            append_document(<shared_ptr[CStructBuilder]>builder.builder, <shared_ptr[bson_iter_t]>&doc_iter)
-                            builder.append()
+                            bson_iter_document(&doc_iter, &doc_buf_len, &doc_buf)
+                            builder.append(<bytes>doc_buf[doc_buf_len])
                         else:
                             builder.append_null()
                     else:
@@ -196,65 +200,73 @@ def process_bson_stream(bson_stream, context):
         free(decimal128_str)
 
 
-cdef append_document(shared_ptr[CStructBuilder] builder, shared_ptr[bson_iter_t] outer_iter_ptr):
-    cdef bson_iter_t doc_iter
-    cdef const uint8_t *doc_buf = NULL
-    cdef uint32_t doc_buf_len = 0;
-    cdef bson_t doc
-    cdef const char* key
-    cdef bson_type_t value_t
-    cdef uint32_t i = 0
-    cdef StructType dtype = <StructType>builder.get().type()
-    cdef DataType field_type
-    cdef CDoubleBuilder* field_builder
-    cdef uint32_t str_len
-    cdef bson_decimal128_t dec128
-    cdef char *decimal128_str = <char *> malloc(
-        BSON_DECIMAL128_STRING * sizeof(char))
+# Goals:
+# We want to make a function that accepts bytes and a builder map
+# and processes it.  Then we can use that from process_stream and
+# DocumentBuilder.append
 
-    bson_iter_document(<const bson_iter_t *>outer_iter_ptr, &doc_buf_len, &doc_buf)
-    bson_init_static (&doc, doc_buf, doc_buf_len)
-    if not bson_iter_init(&doc_iter, &doc):
-        raise InvalidBSON("Could not read BSON document")
-    i = 0
-    while bson_iter_next(&doc_iter):
-        key = bson_iter_key(&doc_iter)
-        value_t = bson_iter_type(&doc_iter)
-        field_builder = <CDoubleBuilder*>builder.get().field_builder(i)
-        if value_t == BSON_TYPE_NULL:
-            field_builder.AppendNull()
-        elif value_t == BSON_TYPE_INT32:
-            field_builder.Append(bson_iter_int32(&doc_iter))
-        elif (value_t == BSON_TYPE_INT64 or
-            value_t == BSON_TYPE_BOOL or
-            value_t == BSON_TYPE_DOUBLE or
-            value_t == BSON_TYPE_INT32):
-            field_builder.Append(bson_iter_as_int64(&doc_iter))
-        elif value_t == BSON_TYPE_OID:
-            field_builder.Append(<bytes>(<uint8_t*>bson_iter_oid(&doc_iter))[:12])
-        elif value_t == BSON_TYPE_UTF8:
-            bson_str = bson_iter_utf8(&doc_iter, &str_len)
-            field_builder.Append(<bytes>(bson_str)[:str_len])
-        elif value_t == BSON_TYPE_DECIMAL128:
-            bson_iter_decimal128(&doc_iter, &dec128)
-            bson_decimal128_to_string(&dec128, decimal128_str)
-            field_builder.Append(<bytes>(decimal128_str))
-        elif (value_t == BSON_TYPE_DOUBLE or
-            value_t == BSON_TYPE_BOOL or
-            value_t == BSON_TYPE_INT32 or
-            value_t == BSON_TYPE_INT64):
-            field_builder.Append(bson_iter_as_double(&doc_iter))
-        elif value_t == BSON_TYPE_DATE_TIME:
-            field_builder.Append(bson_iter_date_time(&doc_iter))
-        elif value_t == BSON_TYPE_BOOL:
-            field_builder.Append(bson_iter_bool(&doc_iter))
-        elif value_t == BSON_TYPE_DOCUMENT:
-            append_document(<shared_ptr[CStructBuilder]>field_builder, <shared_ptr[bson_iter_t]>&doc_iter)
-            <CStructBuilder>(field_builder).Append(True)
 
-        # TODO: iterate through the document and append to the underlying builder
-        # question: what to do when the underlying document is a document itself?
-    free(decimal128_str)
+# cdef append_document(shared_ptr[CStructBuilder] builder, bson_iter_t *outer_iter_ptr):
+#     cdef bson_iter_t doc_iter
+#     cdef const uint8_t *doc_buf = NULL
+#     cdef uint32_t doc_buf_len = 0;
+#     cdef bson_t doc
+#     cdef const char* key
+#     cdef bson_type_t value_t
+#     cdef uint32_t i = 0
+#     cdef StructType dtype = <StructType>builder.get().type()
+#     cdef DataType field_type
+#     cdef CArrayBuilder* field_builder
+#     cdef CInt32Builder* int32_builder
+#     cdef uint32_t str_len
+#     cdef bson_decimal128_t dec128
+#     cdef char *decimal128_str = <char *> malloc(
+#         BSON_DECIMAL128_STRING * sizeof(char))
+
+#     bson_iter_document(<const bson_iter_t *>outer_iter_ptr, &doc_buf_len, &doc_buf)
+#     bson_init_static (&doc, doc_buf, doc_buf_len)
+#     if not bson_iter_init(&doc_iter, &doc):
+#         raise InvalidBSON("Could not read BSON document")
+#     i = 0
+#     while bson_iter_next(&doc_iter):
+#         key = bson_iter_key(&doc_iter)
+#         value_t = bson_iter_type(&doc_iter)
+#         field_builder = <CArrayBuilder*>builder.get().field_builder(i)
+#         if value_t == BSON_TYPE_NULL:
+#             field_builder.AppendNull()
+#         elif value_t == BSON_TYPE_INT32:
+#             int32builder = <CInt32Builder*>field_builder
+#             int32builder.Append(bson_iter_int32(&doc_iter))
+#         elif (value_t == BSON_TYPE_INT64 or
+#             value_t == BSON_TYPE_BOOL or
+#             value_t == BSON_TYPE_DOUBLE or
+#             value_t == BSON_TYPE_INT32):
+#             field_builder.Append(bson_iter_as_int64(&doc_iter))
+#         elif value_t == BSON_TYPE_OID:
+#             field_builder.Append(<bytes>(<uint8_t*>bson_iter_oid(&doc_iter))[:12])
+#         elif value_t == BSON_TYPE_UTF8:
+#             bson_str = bson_iter_utf8(&doc_iter, &str_len)
+#             field_builder.Append(<bytes>(bson_str)[:str_len])
+#         elif value_t == BSON_TYPE_DECIMAL128:
+#             bson_iter_decimal128(&doc_iter, &dec128)
+#             bson_decimal128_to_string(&dec128, decimal128_str)
+#             field_builder.Append(<bytes>(decimal128_str))
+#         elif (value_t == BSON_TYPE_DOUBLE or
+#             value_t == BSON_TYPE_BOOL or
+#             value_t == BSON_TYPE_INT32 or
+#             value_t == BSON_TYPE_INT64):
+#             field_builder.Append(bson_iter_as_double(&doc_iter))
+#         elif value_t == BSON_TYPE_DATE_TIME:
+#             field_builder.Append(bson_iter_date_time(&doc_iter))
+#         elif value_t == BSON_TYPE_BOOL:
+#             field_builder.Append(bson_iter_bool(&doc_iter))
+#         elif value_t == BSON_TYPE_DOCUMENT:
+#             append_document(<shared_ptr[CStructBuilder]>field_builder, &doc_iter)
+#             <CStructBuilder>(field_builder).Append(True)
+
+#         # TODO: iterate through the document and append to the underlying builder
+#         # question: what to do when the underlying document is a document itself?
+#     free(decimal128_str)
 
 
 
@@ -262,6 +274,7 @@ cdef append_document(shared_ptr[CStructBuilder] builder, shared_ptr[bson_iter_t]
 # Builders
 
 cdef class _ArrayBuilderBase:
+
     def append_values(self, values):
         for value in values:
             if value is None or value is np.nan:
@@ -279,11 +292,11 @@ cdef class StringBuilder(_ArrayBuilderBase):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CStringBuilder(pool))
 
-    cpdef append_null(self):
-        self.builder.get().AppendNull()
-
     def __len__(self):
         return self.builder.get().length()
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
 
     cpdef append(self, value):
         self.builder.get().Append(tobytes(value))
@@ -519,8 +532,8 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     def __len__(self):
         return self.builder.get().length()
 
-    cdef append(self, value=True):
-        self.builder.get().Append(value)
+    cdef append(self, value):
+        self.builder.get().Append(True)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
