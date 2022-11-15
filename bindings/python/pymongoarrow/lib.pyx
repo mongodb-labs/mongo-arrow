@@ -23,7 +23,7 @@ import enum
 
 # Python imports
 import numpy as np
-from pyarrow import timestamp
+from pyarrow import timestamp, struct
 from pymongoarrow.types import _BsonArrowTypes
 from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
 
@@ -65,24 +65,45 @@ _builder_type_map = {
     0x03: DocumentBuilder,
 }
 
-def process_bson_stream(bson_stream, context):
-    cdef const uint8_t* docstream = <const uint8_t *>bson_stream
-    cdef size_t length = <size_t>PyBytes_Size(bson_stream)
-    cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
-    cdef const bson_t * doc = NULL
-    cdef bson_iter_t doc_iter
-    cdef bson_decimal128_t dec128
-    cdef const char* key
+cdef char *_decimal128_str = <char *> malloc(
+        BSON_DECIMAL128_STRING * sizeof(char))
+
+
+cdef get_builder(bson_iter_t doc_iter, context):
     cdef bson_type_t value_t
-    cdef Py_ssize_t count = 0
-    cdef const char * bson_str
+    cdef bson_iter_t doc_iter_copy
+
+    value_t = bson_iter_type(&doc_iter)
+    if value_t not in _builder_type_map:
+        return
+
+    builder_type = _builder_type_map[value_t]
+    if builder_type == DatetimeBuilder and context.tzinfo is not None:
+        arrow_type = timestamp('ms', tz=context.tzinfo)
+        return DatetimeBuilder(dtype=arrow_type)
+
+    if builder_type == DocumentBuilder:
+        doc_iter_copy = doc_iter
+        struct_dtype = extract_document_dtype(&doc_iter_copy, context)
+        return DocumentBuilder(struct_dtype)
+
+    return builder_type()
+
+
+cdef extract_document_dtype(bson_iter_t * doc_iter, context):
+    # TODO: auto-discovery for documents
+    pass
+
+
+cdef handle_value(builder, bson_iter_t * doc_iter):
     cdef uint32_t str_len
     cdef const uint8_t *doc_buf = NULL
     cdef uint32_t doc_buf_len = 0;
-    cdef char *decimal128_str = <char *> malloc(
-        BSON_DECIMAL128_STRING * sizeof(char))
+    cdef bson_decimal128_t dec128
+    cdef bson_type_t value_t
+    cdef const char * bson_str
 
-    # Localize types for better performance.
+    # Alias types
     t_int32 = _BsonArrowTypes.int32
     t_int64 = _BsonArrowTypes.int64
     t_double = _BsonArrowTypes.double
@@ -91,6 +112,76 @@ def process_bson_stream(bson_stream, context):
     t_string = _BsonArrowTypes.string
     t_bool = _BsonArrowTypes.bool
     t_document = _BsonArrowTypes.document
+
+    ftype = builder.type_marker
+    value_t = bson_iter_type(doc_iter)
+    if ftype == t_int32:
+        if value_t == BSON_TYPE_INT32:
+            builder.append(bson_iter_int32(doc_iter))
+        else:
+            builder.append_null()
+    elif ftype == t_int64:
+        if (value_t == BSON_TYPE_INT64 or
+                value_t == BSON_TYPE_BOOL or
+                value_t == BSON_TYPE_DOUBLE or
+                value_t == BSON_TYPE_INT32):
+            builder.append(bson_iter_as_int64(doc_iter))
+        else:
+            builder.append_null()
+    elif ftype == t_oid:
+        if value_t == BSON_TYPE_OID:
+            builder.append(<bytes>(<uint8_t*>bson_iter_oid(doc_iter))[:12])
+        else:
+            builder.append_null()
+    elif ftype == t_string:
+        if value_t == BSON_TYPE_UTF8:
+            bson_str = bson_iter_utf8(doc_iter, &str_len)
+            builder.append(<bytes>(bson_str)[:str_len])
+        elif value_t == BSON_TYPE_DECIMAL128:
+            bson_iter_decimal128(doc_iter, &dec128)
+            bson_decimal128_to_string(&dec128, _decimal128_str)
+            builder.append(<bytes>(_decimal128_str))
+        else:
+            builder.append_null()
+    elif ftype == t_double:
+        if (value_t == BSON_TYPE_DOUBLE or
+                value_t == BSON_TYPE_BOOL or
+                value_t == BSON_TYPE_INT32 or
+                value_t == BSON_TYPE_INT64):
+            builder.append(bson_iter_as_double(doc_iter))
+        else:
+            builder.append_null()
+    elif ftype == t_datetime:
+        if value_t == BSON_TYPE_DATE_TIME:
+            builder.append(bson_iter_date_time(doc_iter))
+        else:
+            builder.append_null()
+    elif ftype == t_bool:
+        if value_t == BSON_TYPE_BOOL:
+            builder.append(bson_iter_bool(doc_iter))
+        else:
+            builder.append_null()
+    elif ftype == t_document:
+        if value_t == BSON_TYPE_DOCUMENT:
+            bson_iter_document(doc_iter, &doc_buf_len, &doc_buf)
+            builder.append(<bytes>doc_buf[doc_buf_len])
+        else:
+            builder.append_null()
+    else:
+        raise PyMongoArrowError('unknown ftype {}'.format(ftype))
+
+
+def process_bson_stream(bson_stream, context):
+    cdef const uint8_t* docstream = <const uint8_t *>bson_stream
+    cdef size_t length = <size_t>PyBytes_Size(bson_stream)
+    cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
+    cdef StructType struct_dtype
+    cdef const bson_t * doc = NULL
+    cdef bson_iter_t doc_iter
+    cdef bson_iter_t doc_iter_copy
+    cdef const char* key
+    cdef Py_ssize_t count = 0
+
     builder_map = context.builder_map
 
     # initialize count to current length of builders
@@ -109,87 +200,17 @@ def process_bson_stream(bson_stream, context):
                 key = bson_iter_key(&doc_iter)
                 builder = builder_map.get(key)
                 if builder is None and context.schema is None:
-                    # Only run if there is no schema.
-                    value_t = bson_iter_type(&doc_iter)
-                    if value_t not in _builder_type_map:
+                    doc_iter_copy = doc_iter
+                    builder = get_builder(doc_iter_copy, context)
+                    if not builder:
                         continue
-
-                    builder_type = _builder_type_map[value_t]
-                    if builder_type == DatetimeBuilder and context.tzinfo is not None:
-                        arrow_type = timestamp(arrow_type.unit, tz=context.tzinfo)
-                        builder_map[key] = DatetimeBuilder(dtype=arrow_type)
-                    elif builder_type == DocumentBuilder:
-                        # TODO: we need to inspect the document in order
-                        # to build up the data type and the builder map.
-                        # we probably need to make a copy of the iterator
-                        # to hand off to a function.  The function will
-                        # create the builder.
-                        #builder_map[key] = DocumentBuilder()
-                        pass
-                    else:
-                        builder_map[key] = builder_type()
-                    builder = builder_map[key]
+                    builder_map[key] = builder
                     for _ in range(count):
                         builder.append_null()
 
-
                 if builder is not None:
-                    ftype = builder.type_marker
-                    value_t = bson_iter_type(&doc_iter)
-                    if ftype == t_int32:
-                        if value_t == BSON_TYPE_INT32:
-                            builder.append(bson_iter_int32(&doc_iter))
-                        else:
-                            builder.append_null()
-                    elif ftype == t_int64:
-                        if (value_t == BSON_TYPE_INT64 or
-                                value_t == BSON_TYPE_BOOL or
-                                value_t == BSON_TYPE_DOUBLE or
-                                value_t == BSON_TYPE_INT32):
-                            builder.append(bson_iter_as_int64(&doc_iter))
-                        else:
-                            builder.append_null()
-                    elif ftype == t_oid:
-                        if value_t == BSON_TYPE_OID:
-                            builder.append(<bytes>(<uint8_t*>bson_iter_oid(&doc_iter))[:12])
-                        else:
-                            builder.append_null()
-                    elif ftype == t_string:
-                        if value_t == BSON_TYPE_UTF8:
-                            bson_str = bson_iter_utf8(&doc_iter, &str_len)
-                            builder.append(<bytes>(bson_str)[:str_len])
-                        elif value_t == BSON_TYPE_DECIMAL128:
-                            bson_iter_decimal128(&doc_iter, &dec128)
-                            bson_decimal128_to_string(&dec128, decimal128_str)
-                            builder.append(<bytes>(decimal128_str))
-                        else:
-                            builder.append_null()
-                    elif ftype == t_double:
-                        if (value_t == BSON_TYPE_DOUBLE or
-                                value_t == BSON_TYPE_BOOL or
-                                value_t == BSON_TYPE_INT32 or
-                                value_t == BSON_TYPE_INT64):
-                            builder.append(bson_iter_as_double(&doc_iter))
-                        else:
-                            builder.append_null()
-                    elif ftype == t_datetime:
-                        if value_t == BSON_TYPE_DATE_TIME:
-                            builder.append(bson_iter_date_time(&doc_iter))
-                        else:
-                            builder.append_null()
-                    elif ftype == t_bool:
-                        if value_t == BSON_TYPE_BOOL:
-                            builder.append(bson_iter_bool(&doc_iter))
-                        else:
-                            builder.append_null()
-                    elif ftype == t_document:
-                        if value_t == BSON_TYPE_DOCUMENT:
-                            bson_iter_document(&doc_iter, &doc_buf_len, &doc_buf)
-                            builder.append(<bytes>doc_buf[doc_buf_len])
-                        else:
-                            builder.append_null()
-                    else:
-                        raise PyMongoArrowError('unknown ftype {}'.format(ftype))
+                    doc_iter_copy = doc_iter
+                    handle_value(builder, &doc_iter)
             count += 1
             for _, builder in builder_map.items():
                 if len(builder) != count:
@@ -197,78 +218,6 @@ def process_bson_stream(bson_stream, context):
                     builder.append_null()
     finally:
         bson_reader_destroy(stream_reader)
-        free(decimal128_str)
-
-
-# Goals:
-# We want to make a function that accepts bytes and a builder map
-# and processes it.  Then we can use that from process_stream and
-# DocumentBuilder.append
-
-
-# cdef append_document(shared_ptr[CStructBuilder] builder, bson_iter_t *outer_iter_ptr):
-#     cdef bson_iter_t doc_iter
-#     cdef const uint8_t *doc_buf = NULL
-#     cdef uint32_t doc_buf_len = 0;
-#     cdef bson_t doc
-#     cdef const char* key
-#     cdef bson_type_t value_t
-#     cdef uint32_t i = 0
-#     cdef StructType dtype = <StructType>builder.get().type()
-#     cdef DataType field_type
-#     cdef CArrayBuilder* field_builder
-#     cdef CInt32Builder* int32_builder
-#     cdef uint32_t str_len
-#     cdef bson_decimal128_t dec128
-#     cdef char *decimal128_str = <char *> malloc(
-#         BSON_DECIMAL128_STRING * sizeof(char))
-
-#     bson_iter_document(<const bson_iter_t *>outer_iter_ptr, &doc_buf_len, &doc_buf)
-#     bson_init_static (&doc, doc_buf, doc_buf_len)
-#     if not bson_iter_init(&doc_iter, &doc):
-#         raise InvalidBSON("Could not read BSON document")
-#     i = 0
-#     while bson_iter_next(&doc_iter):
-#         key = bson_iter_key(&doc_iter)
-#         value_t = bson_iter_type(&doc_iter)
-#         field_builder = <CArrayBuilder*>builder.get().field_builder(i)
-#         if value_t == BSON_TYPE_NULL:
-#             field_builder.AppendNull()
-#         elif value_t == BSON_TYPE_INT32:
-#             int32builder = <CInt32Builder*>field_builder
-#             int32builder.Append(bson_iter_int32(&doc_iter))
-#         elif (value_t == BSON_TYPE_INT64 or
-#             value_t == BSON_TYPE_BOOL or
-#             value_t == BSON_TYPE_DOUBLE or
-#             value_t == BSON_TYPE_INT32):
-#             field_builder.Append(bson_iter_as_int64(&doc_iter))
-#         elif value_t == BSON_TYPE_OID:
-#             field_builder.Append(<bytes>(<uint8_t*>bson_iter_oid(&doc_iter))[:12])
-#         elif value_t == BSON_TYPE_UTF8:
-#             bson_str = bson_iter_utf8(&doc_iter, &str_len)
-#             field_builder.Append(<bytes>(bson_str)[:str_len])
-#         elif value_t == BSON_TYPE_DECIMAL128:
-#             bson_iter_decimal128(&doc_iter, &dec128)
-#             bson_decimal128_to_string(&dec128, decimal128_str)
-#             field_builder.Append(<bytes>(decimal128_str))
-#         elif (value_t == BSON_TYPE_DOUBLE or
-#             value_t == BSON_TYPE_BOOL or
-#             value_t == BSON_TYPE_INT32 or
-#             value_t == BSON_TYPE_INT64):
-#             field_builder.Append(bson_iter_as_double(&doc_iter))
-#         elif value_t == BSON_TYPE_DATE_TIME:
-#             field_builder.Append(bson_iter_date_time(&doc_iter))
-#         elif value_t == BSON_TYPE_BOOL:
-#             field_builder.Append(bson_iter_bool(&doc_iter))
-#         elif value_t == BSON_TYPE_DOCUMENT:
-#             append_document(<shared_ptr[CStructBuilder]>field_builder, &doc_iter)
-#             <CStructBuilder>(field_builder).Append(True)
-
-#         # TODO: iterate through the document and append to the underlying builder
-#         # question: what to do when the underlying document is a document itself?
-#     free(decimal128_str)
-
-
 
 
 # Builders
@@ -533,6 +482,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         return self.builder.get().length()
 
     cdef append(self, value):
+        # TODO: extract the document and append the values.
         self.builder.get().Append(True)
 
     cpdef finish(self):
