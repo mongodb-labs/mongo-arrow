@@ -180,9 +180,9 @@ def process_bson_stream(bson_stream, context):
                             builder.append_null()
                     elif ftype == t_document:
                         if value_t == BSON_TYPE_DOCUMENT:
-                            # TODO: what can we pass here?
-                            # builder.append(&doc_iter)
-                            pass
+                            for field_builder in builder.c_field_builders:
+                                handle_building(<shared_ptr[CArrayBuilder]>field_builder, <shared_ptr[bson_iter_t]>&doc_iter)
+                            builder.append()
                         else:
                             builder.append_null()
                     else:
@@ -195,6 +195,12 @@ def process_bson_stream(bson_stream, context):
     finally:
         bson_reader_destroy(stream_reader)
         free(decimal128_str)
+
+
+cdef handle_building(shared_ptr[CArrayBuilder] field_builder, shared_ptr[bson_iter_t] doc_iter):
+    # TODO: iterate through the document and append to the underlying builder
+    # question: what to do when the underlying document is a document itself?
+
 
 
 # Builders
@@ -419,10 +425,11 @@ cdef class BoolBuilder(_ArrayBuilderBase):
 
 cdef class DocumentBuilder(_ArrayBuilderBase):
     type_marker = _BsonArrowTypes.struct
+    field_builders = []
     cdef:
         shared_ptr[CStructBuilder] builder
         StructType dtype
-        vector[shared_ptr[CArrayBuilder]] field_builders
+        vector[shared_ptr[CArrayBuilder]] c_field_builders
 
 
     #  https://github.com/apache/arrow/blob/31a07be1d9dc2f7c9720cc0fdcd7f083d947aba1/cpp/src/arrow/array/builder_nested.h#L487
@@ -435,23 +442,29 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     # Use https://github.com/mongodb-labs/mongo-arrow/pull/91/files#diff-4bebdbb1fb3a226fc1c92ec68a1472b09b4a8b8362f49db23529af97f126b3c2
     # for some of the Cython code.
 
-
     def __cinit__(self, StructType dtype, MemoryPool memory_pool=None):
-        # TODO: we need to create the field builders here based on the
-        # data
         self.dtype = dtype
-        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
-        self.builder.reset(new CStructBuilder(pyarrow_unwrap_data_type(self.dtype), pool, self.field_builders))
+        for field in dtype:
+            # TODO: determine the appropriate builder given the field
+            field_builder = StringBuilder()
+            self.builders.append(field_builder)
+            self.c_field_builders.push_back(<shared_ptr[CArrayBuilder]>field_builder.builder)
 
-    cpdef append_null(self):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CStructBuilder(pyarrow_unwrap_data_type(self.dtype), pool, self.c_field_builders))
+
+    @property
+    def dtype(self):
+        return self.dtype
+
+    cdef append_null(self):
         self.builder.get().AppendNull()
 
     def __len__(self):
         return self.builder.get().length()
 
-    cpdef append(self, value):
-        # TODO: we need to traverse the document here
-        self.builder.get().Append(value)
+    cdef append(self):
+        self.builder.get().Append(True)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
