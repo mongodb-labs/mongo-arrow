@@ -36,10 +36,10 @@ from libcpp.vector cimport vector
 from libcpp.string cimport string
 from libc.stdlib cimport malloc, free
 from pyarrow.lib cimport *
-from pyarrow.lib import tobytes
+from pyarrow.lib import tobytes, StructType
 from pymongoarrow.libarrow cimport *
 from pymongoarrow.libbson cimport *
-from pymongoarrow.types import _BsonArrowTypes
+from pymongoarrow.types import _BsonArrowTypes, _atypes
 
 
 # libbson version
@@ -63,7 +63,9 @@ _builder_type_map = {
     0x02: StringBuilder,
     0x08: BoolBuilder,
     0x03: DocumentBuilder,
+    0x13: StringBuilder
 }
+
 
 cdef char *_decimal128_str = <char *> malloc(
         BSON_DECIMAL128_STRING * sizeof(char))
@@ -92,6 +94,7 @@ cdef get_builder(bson_iter_t doc_iter, context):
 
 cdef extract_document_dtype(bson_iter_t * doc_iter, context):
     # TODO: auto-discovery for documents
+    # TODO: test all of the _BsonArrowTypes
     pass
 
 
@@ -441,6 +444,32 @@ cdef class BoolBuilder(_ArrayBuilderBase):
         return self.builder
 
 
+
+cdef get_field_builder(field):
+    field_type = field.type
+    if _atypes.is_int32(field_type):
+        field_builder = Int32Builder()
+    elif _atypes.is_int64(field_type):
+        field_builder = Int64Builder()
+    elif _atypes.is_float64(field_type):
+        field_builder = DoubleBuilder()
+    elif _atypes.is_timestamp(field_type):
+        field_builder = DatetimeBuilder(field_type)
+    elif _atypes.is_string(field_type):
+        field_builder = StringBuilder()
+    elif _atypes.is_boolean(field_type):
+        field_builder = BoolBuilder()
+    elif _atypes.is_struct(field_type):
+        field_builder = DocumentBuilder(field_type)
+    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.objectid:
+        field_builder = ObjectIdBuilder()
+    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.decimal128_str:
+        field_builder = StringBuilder()
+    else:
+        field_builder = StringBuilder()
+    return field_builder()
+
+
 cdef class DocumentBuilder(_ArrayBuilderBase):
     type_marker = _BsonArrowTypes.struct
     field_builders = []
@@ -448,7 +477,6 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         shared_ptr[CStructBuilder] builder
         StructType dtype
         vector[shared_ptr[CArrayBuilder]] c_field_builders
-
 
     #  https://github.com/apache/arrow/blob/31a07be1d9dc2f7c9720cc0fdcd7f083d947aba1/cpp/src/arrow/array/builder_nested.h#L487
     # Append an element to the Struct. All child-builders' Append method must
@@ -461,10 +489,12 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     # for some of the Cython code.
 
     def __cinit__(self, StructType dtype, MemoryPool memory_pool=None):
+        if not isinstance(dtype, StructType):
+            raise ValueError("dtype must be a struct()")
+        cdef StringBuilder field_builder
         self.dtype = dtype
         for field in dtype:
-            # TODO: determine the appropriate builder given the field
-            field_builder = StringBuilder()
+            field_builder = get_field_builder(field)
             self.builders.append(field_builder)
             self.c_field_builders.push_back(<shared_ptr[CArrayBuilder]>field_builder.builder)
 
@@ -482,7 +512,9 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         return self.builder.get().length()
 
     cdef append(self, value):
-        # TODO: extract the document and append the values.
+        # TODO: extract the document from the bytes and append the values
+        # to the field builders.
+        # TODO: Add a test to test builders
         self.builder.get().Append(True)
 
     cpdef finish(self):
