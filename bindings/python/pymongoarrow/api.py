@@ -17,10 +17,19 @@ import numpy as np
 import pymongo.errors
 from bson import encode
 from bson.raw_bson import RawBSONDocument
-from numpy import ndarray
-from pandas import DataFrame
 from pyarrow import Schema as ArrowSchema
 from pyarrow import Table
+
+try:
+    from numpy import ndarray
+except ImportError:
+    ndarray = None
+
+try:
+    from pandas import DataFrame
+except ImportError:
+    DataFrame = None
+
 from pymongo.bulk import BulkWriteError
 from pymongo.common import MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext
@@ -295,7 +304,7 @@ def _tabular_generator(tabular):
         for i in tabular.to_batches():
             for row in i.to_pylist():
                 yield row
-    elif isinstance(tabular, DataFrame):
+    elif DataFrame is not None and isinstance(tabular, DataFrame):
         for row in tabular.to_dict("records"):
             yield row
     elif isinstance(tabular, dict):
@@ -325,11 +334,12 @@ def write(collection, tabular):
     tab_size = len(tabular)
     if isinstance(tabular, Table):
         _validate_schema(tabular.schema.types)
-    elif isinstance(tabular, DataFrame):
+    elif DataFrame is not None and isinstance(tabular, DataFrame):
         _validate_schema(ArrowSchema.from_pandas(tabular).types)
     elif (
         isinstance(tabular, dict)
         and len(tabular.values()) >= 1
+        and ndarray is not None
         and all([isinstance(i, ndarray) for i in tabular.values()])
     ):
         _validate_schema([i.dtype for i in tabular.values()])

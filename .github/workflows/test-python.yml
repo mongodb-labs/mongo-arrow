@@ -71,10 +71,15 @@ jobs:
           python -m pip install -U pip
       - name: Install pymongoarrow
         run: |
-          # Install the library
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
+          # Install the library with no deps
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vv -e "."
+      - name: Ensure imports with no test deps
+        run: |
+          python -c "from pymongoarrow.monkey import patch_all; patch_all()"
       - name: Run tests
         run: |
+          # Install the test deps
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vv -e ".[test]"
           LD_LIBRARY_PATH=$(pwd)/libbson/lib python -m unittest discover test -v
       - name: Check the manifest
         run: |
