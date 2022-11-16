@@ -101,7 +101,7 @@ def process_bson_stream(bson_stream, context):
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
     cdef size_t length = <size_t>PyBytes_Size(bson_stream)
     cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
-    cdef char *_decimal128_str = <char *> malloc(
+    cdef char *decimal128_str = <char *> malloc(
         BSON_DECIMAL128_STRING * sizeof(char))
     cdef uint32_t str_len
     cdef const uint8_t *doc_buf = NULL
@@ -181,8 +181,8 @@ def process_bson_stream(bson_stream, context):
                         builder.append(<bytes>(bson_str)[:str_len])
                     elif value_t == BSON_TYPE_DECIMAL128:
                         bson_iter_decimal128(&doc_iter, &dec128)
-                        bson_decimal128_to_string(&dec128, _decimal128_str)
-                        builder.append(<bytes>(_decimal128_str))
+                        bson_decimal128_to_string(&dec128, decimal128_str)
+                        builder.append(<bytes>(decimal128_str))
                     else:
                         builder.append_null()
                 elif ftype == t_double:
@@ -442,8 +442,9 @@ cdef class BoolBuilder(_ArrayBuilderBase):
 
 
 
-cdef get_field_builder(field, context):
+cdef object get_field_builder(field, context):
     """"Find the appropriate field builder given a pyarrow field"""
+    cdef object field_builder
     field_type = field.type
     if _atypes.is_int32(field_type):
         field_builder = Int32Builder()
@@ -465,15 +466,16 @@ cdef get_field_builder(field, context):
         field_builder = StringBuilder()
     else:
         field_builder = StringBuilder()
-    return field_builder()
+    return field_builder
 
 
 cdef class DocumentBuilder(_ArrayBuilderBase):
-    type_marker = _BsonArrowTypes.struct
+    type_marker = _BsonArrowTypes.document
 
     cdef:
         shared_ptr[CStructBuilder] builder
-        StructType dtype
+        object dtype
+        object context
 
     #  https://github.com/apache/arrow/blob/31a07be1d9dc2f7c9720cc0fdcd7f083d947aba1/cpp/src/arrow/array/builder_nested.h#L487
     # Append an element to the Struct. All child-builders' Append method must
@@ -495,11 +497,11 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         context.builder_map = builder_map = {}
         context.schema = None
 
-        if not isinstance(dtype, StructType):
+        if not _atypes.is_struct(dtype):
             raise ValueError("dtype must be a struct()")
 
         for field in dtype:
-            field_builder = get_field_builder(field, context)
+            field_builder = <StringBuilder>get_field_builder(field, context)
             builder_map[field.name] = field_builder
             c_field_builders.push_back(<shared_ptr[CArrayBuilder]>field_builder.builder)
 
