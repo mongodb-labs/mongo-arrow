@@ -70,6 +70,8 @@ class PyMongoArrowContext:
             return cls(schema, {})
 
         builder_map = {}
+        context = cls(schema, builder_map, codec_options)
+
         str_type_map = _get_internal_typemap(schema.typemap)
         for fname, ftype in str_type_map.items():
             builder_cls = _TYPE_TO_BUILDER_CLS[ftype]
@@ -82,10 +84,10 @@ class PyMongoArrowContext:
                 builder_map[encoded_fname] = DatetimeBuilder(dtype=arrow_type)
             elif builder_cls == DocumentBuilder:
                 arrow_type = schema.typemap[fname]
-                builder_map[encoded_fname] = DocumentBuilder(arrow_type)
+                builder_map[encoded_fname] = DocumentBuilder(arrow_type, context)
             else:
                 builder_map[encoded_fname] = builder_cls()
-        return cls(schema, builder_map)
+        return context
 
     def finish(self):
         arrays = []
