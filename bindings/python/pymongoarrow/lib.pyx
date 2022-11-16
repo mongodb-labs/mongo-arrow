@@ -68,12 +68,6 @@ _builder_type_map = {
 }
 
 
-# This will be allocated once for the module and freed
-# at interpreter shutdown.
-cdef char *_decimal128_str = <char *> malloc(
-        BSON_DECIMAL128_STRING * sizeof(char))
-
-
 cdef get_builder(bson_iter_t doc_iter, context):
     """Get the appropriate builder for a document field."""
     cdef bson_type_t value_t
@@ -107,6 +101,8 @@ def process_bson_stream(bson_stream, context):
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
     cdef size_t length = <size_t>PyBytes_Size(bson_stream)
     cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
+    cdef char *_decimal128_str = <char *> malloc(
+        BSON_DECIMAL128_STRING * sizeof(char))
     cdef uint32_t str_len
     cdef const uint8_t *doc_buf = NULL
     cdef uint32_t doc_buf_len = 0;
@@ -222,12 +218,12 @@ def process_bson_stream(bson_stream, context):
                     builder.append_null()
     finally:
         bson_reader_destroy(stream_reader)
+        free(decimal128_str)
 
 
 # Builders
 
 cdef class _ArrayBuilderBase:
-
     def append_values(self, values):
         for value in values:
             if value is None or value is np.nan:
@@ -245,11 +241,11 @@ cdef class StringBuilder(_ArrayBuilderBase):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CStringBuilder(pool))
 
-    def __len__(self):
-        return self.builder.get().length()
-
     cpdef append_null(self):
         self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
 
     cpdef append(self, value):
         self.builder.get().Append(tobytes(value))
