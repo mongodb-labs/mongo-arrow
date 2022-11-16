@@ -22,9 +22,12 @@ from pyarrow import Table
 
 try:
     from numpy import ndarray
-    from pandas import DataFrame
 except ImportError:
     ndarray = None
+
+try:
+    from pandas import DataFrame
+except ImportError:
     DataFrame = None
 
 from pymongo.bulk import BulkWriteError
