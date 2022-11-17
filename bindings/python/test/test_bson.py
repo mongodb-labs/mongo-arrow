@@ -234,3 +234,27 @@ class TestSubdocumentType(TestBsonToArrowConversionBase):
             ]
         }
         self._run_test(docs, as_dict)
+
+    def test_nested(self):
+        self.schema = Schema({"data": dict(x=bool, y=dict(a=int))})
+        self.context = PyMongoArrowContext.from_schema(self.schema)
+
+        docs = [
+            {"data": dict(x=True, y=dict(a=1))},
+            {"data": dict(x=False, y=dict(a=1))},
+            {"data": dict(x=19, y=dict(a=1))},
+            {"data": dict(x="string", y=dict(a=1))},
+            {"data": dict(x=False, y=dict(a=1))},
+            {"data": dict(x=True, y=dict(a=1))},
+        ]
+        as_dict = {
+            "data": [
+                dict(x=True, y=dict(a=1)),
+                dict(x=False, y=dict(a=1)),
+                dict(x=None, y=dict(a=1)),
+                dict(x=None, y=dict(a=1)),
+                dict(x=False, y=dict(a=1)),
+                dict(x=True, y=dict(a=1)),
+            ]
+        }
+        self._run_test(docs, as_dict)

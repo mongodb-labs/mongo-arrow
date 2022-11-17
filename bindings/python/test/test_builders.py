@@ -16,19 +16,21 @@ from datetime import datetime, timedelta
 from unittest import TestCase
 
 from bson.objectid import ObjectId
-from pyarrow import Array, bool_, int32, int64, timestamp
+from pyarrow import Array, bool_, field, int32, int64, struct, timestamp
 from pymongoarrow.lib import (
     BoolBuilder,
     DatetimeBuilder,
+    DocumentBuilder,
     DoubleBuilder,
     Int32Builder,
     Int64Builder,
     ObjectIdBuilder,
     StringBuilder,
 )
+from pymongoarrow.types import ObjectIdType
 
 
-class TestIntBuildersMixin:
+class IntBuildersMixin:
     def test_simple(self):
         builder = self.builder_cls()
         builder.append(0)
@@ -43,13 +45,13 @@ class TestIntBuildersMixin:
         self.assertEqual(arr.type, self.data_type)
 
 
-class TestInt32Builder(TestCase, TestIntBuildersMixin):
+class TestInt32Builder(TestCase, IntBuildersMixin):
     def setUp(self):
         self.builder_cls = Int32Builder
         self.data_type = int32()
 
 
-class TestInt64Builder(TestCase, TestIntBuildersMixin):
+class TestInt64Builder(TestCase, IntBuildersMixin):
     def setUp(self):
         self.builder_cls = Int64Builder
         self.data_type = int64()
@@ -146,7 +148,40 @@ class TestStringBuilder(TestCase):
         self.assertEqual(arr.to_pylist(), values + [None])
 
 
-class TestBoolBuilderMixin:
+class TestDocumentBuilder(TestCase):
+    def test_simple(self):
+        dtype = struct([field("a", int32()), field("b", bool_())])
+        builder = DocumentBuilder(dtype)
+        builder.append({"a": 1, "b": True})
+        builder.append_values([{"a": 1, "b": False}, {"a": 2, "b": True}])
+        builder.append_null()
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 4)
+        self.assertEqual(arr.type, dtype)
+
+    def test_nested(self):
+        sub_struct = struct([field("c", bool_()), field("d", ObjectIdType())])
+        dtype = struct([field("a", int32()), field("b", sub_struct)])
+        builder = DocumentBuilder(dtype)
+        builder.append({"a": 1, "b": {"c": True, "d": ObjectId()}})
+        builder.append_values(
+            [
+                {"a": 1, "b": {"c": False, "d": ObjectId()}},
+                {"a": 2, "b": {"c": True, "d": ObjectId()}},
+            ]
+        )
+        builder.append_null()
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 4)
+
+
+class BoolBuilderMixin:
     def test_simple(self):
         builder = BoolBuilder()
         builder.append(False)
@@ -161,7 +196,7 @@ class TestBoolBuilderMixin:
         self.assertEqual(arr.type, self.data_type)
 
 
-class TestBoolBuilder(TestCase, TestBoolBuilderMixin):
+class TestBoolBuilder(TestCase, BoolBuilderMixin):
     def setUp(self):
         self.builder_cls = BoolBuilder
         self.data_type = bool_()

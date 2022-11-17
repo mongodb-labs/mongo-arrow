@@ -22,6 +22,7 @@ import datetime
 import enum
 
 # Python imports
+import bson
 import numpy as np
 from pyarrow import timestamp, struct
 from pyarrow.lib import tobytes, StructType
@@ -143,6 +144,8 @@ def process_bson_stream(bson_stream, context):
             while bson_iter_next(&doc_iter):
                 key = bson_iter_key(&doc_iter)
                 builder = builder_map.get(key)
+                if builder is None:
+                    builder = builder_map.get(key.decode('utf8'))
                 if builder is None and context.schema is None:
                     doc_iter_copy = doc_iter
                     builder = get_builder(doc_iter_copy, context)
@@ -206,7 +209,7 @@ def process_bson_stream(bson_stream, context):
                 elif ftype == t_document:
                     if value_t == BSON_TYPE_DOCUMENT:
                         bson_iter_document(&doc_iter, &doc_buf_len, &doc_buf)
-                        builder.append(<bytes>doc_buf[doc_buf_len])
+                        builder.append(<bytes>doc_buf[:doc_buf_len])
                     else:
                         builder.append_null()
                 else:
@@ -442,7 +445,7 @@ cdef class BoolBuilder(_ArrayBuilderBase):
 
 
 
-cdef object get_field_builder(field, context):
+cdef object get_field_builder(field, tzinfo):
     """"Find the appropriate field builder given a pyarrow field"""
     cdef object field_builder
     field_type = field.type
@@ -459,7 +462,7 @@ cdef object get_field_builder(field, context):
     elif _atypes.is_boolean(field_type):
         field_builder = BoolBuilder()
     elif _atypes.is_struct(field_type):
-        field_builder = DocumentBuilder(field_type, context)
+        field_builder = DocumentBuilder(field_type, tzinfo)
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.objectid:
         field_builder = ObjectIdBuilder()
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.decimal128_str:
@@ -487,21 +490,21 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     # Use https://github.com/mongodb-labs/mongo-arrow/pull/91/files#diff-4bebdbb1fb3a226fc1c92ec68a1472b09b4a8b8362f49db23529af97f126b3c2
     # for some of the Cython code.
 
-    def __cinit__(self, StructType dtype, context=None, MemoryPool memory_pool=None):
+    def __cinit__(self, StructType dtype, tzinfo=None, MemoryPool memory_pool=None):
         cdef StringBuilder field_builder
         cdef vector[shared_ptr[CArrayBuilder]] c_field_builders
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
 
         self.dtype = dtype
-        context = self.context = context or PyMongoArrowContext(None, {})
-        context.builder_map = builder_map = {}
-        context.schema = None
-
         if not _atypes.is_struct(dtype):
             raise ValueError("dtype must be a struct()")
 
+        self.context = context = PyMongoArrowContext(None, {})
+        context.tzinfo = tzinfo
+        builder_map = context.builder_map
+
         for field in dtype:
-            field_builder = <StringBuilder>get_field_builder(field, context)
+            field_builder = <StringBuilder>get_field_builder(field, tzinfo)
             builder_map[field.name] = field_builder
             c_field_builders.push_back(<shared_ptr[CArrayBuilder]>field_builder.builder)
 
@@ -511,13 +514,15 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     def dtype(self):
         return self.dtype
 
-    cdef append_null(self):
+    cpdef append_null(self):
         self.builder.get().AppendNull()
 
     def __len__(self):
         return self.builder.get().length()
 
-    cdef append(self, value):
+    cpdef append(self, value):
+        if not isinstance(value, bytes):
+            value = bson.encode(value)
         process_bson_stream(value, self.context)
         self.builder.get().Append(True)
 
