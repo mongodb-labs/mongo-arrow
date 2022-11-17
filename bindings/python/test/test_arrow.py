@@ -16,7 +16,7 @@ import unittest
 import unittest.mock as mock
 from datetime import datetime
 from test import client_context
-from test.utils import AllowListEventListener, TestNullsBase
+from test.utils import AllowListEventListener, NullsTestMixin
 
 import pyarrow
 import pymongo
@@ -38,7 +38,7 @@ from pymongoarrow.types import (
 from pytz import timezone
 
 
-class TestArrowApiMixin:
+class ArrowApiMixin:
     @classmethod
     def setUpClass(cls):
         if not client_context.connected:
@@ -367,7 +367,7 @@ class TestArrowApiMixin:
         data = Table.from_pydict(
             {
                 "bool": [True for _ in range(3)],
-                "dt": [datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)],
+                "dt": [datetime(1970 + i, 1, 1) for i in range(3)],
                 "string": [None] + [str(i) for i in range(2)],
             },
             ArrowSchema(
@@ -390,8 +390,37 @@ class TestArrowApiMixin:
             ).drop(["_id"])
             self.assertEqual(data, out)
 
+    # def test_auto_schema_tz_no_override(self):
+    #     # Create table with random data of various types.
+    #     tz = timezone("US/Pacific")
+    #     data = Table.from_pydict(
+    #         {
+    #             "bool": [True for _ in range(3)],
+    #             "dt": [datetime(1970 + i, 1, 1, tzinfo=tz) for i in range(3)],
+    #             "string": [None] + [str(i) for i in range(2)],
+    #         },
+    #         ArrowSchema(
+    #             {
+    #                 "bool": bool_(),
+    #                 "dt": timestamp("ms", tz=tz),
+    #                 "string": string(),
+    #             }
+    #         ),
+    #     )
 
-class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
+    #     self.coll.drop()
+    #     codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
+    #     res = write(self.coll.with_options(codec_options=codec_options), data)
+    #     self.assertEqual(len(data), res.raw_result["insertedCount"])
+    #     for func in [find_arrow_all, aggregate_arrow_all]:
+    #         out = func(
+    #             self.coll.with_options(codec_options=codec_options),
+    #             {} if func == find_arrow_all else [],
+    #         ).drop(["_id"])
+    #         self.assertEqual(data, out)
+
+
+class TestArrowExplicitApi(ArrowApiMixin, unittest.TestCase):
     def run_find(self, *args, **kwargs):
         return find_arrow_all(self.coll, *args, **kwargs)
 
@@ -399,7 +428,7 @@ class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
         return aggregate_arrow_all(self.coll, *args, **kwargs)
 
 
-class TestArrowPatchedApi(TestArrowApiMixin, unittest.TestCase):
+class TestArrowPatchedApi(ArrowApiMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         patch_all()
@@ -451,7 +480,7 @@ class TestBSONTypes(unittest.TestCase):
         self.assertEqual(table, expected)
 
 
-class TestNulls(TestNullsBase):
+class TestNulls(NullsTestMixin, unittest.TestCase):
     def find_fn(self, coll, query, schema):
         return find_arrow_all(coll, query, schema=schema)
 

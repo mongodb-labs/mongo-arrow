@@ -79,7 +79,9 @@ cdef get_builder(bson_iter_t doc_iter, context):
         return
 
     builder_type = _builder_type_map[value_t]
+    print('hi', context.tzinfo)
     if builder_type == DatetimeBuilder and context.tzinfo is not None:
+        print('overriding tz info')
         arrow_type = timestamp('ms', tz=context.tzinfo)
         return DatetimeBuilder(dtype=arrow_type)
 
@@ -149,7 +151,7 @@ def process_bson_stream(bson_stream, context):
                 if builder is None and context.schema is None:
                     doc_iter_copy = doc_iter
                     builder = get_builder(doc_iter_copy, context)
-                    if not builder:
+                    if builder is None:
                         continue
                     builder_map[key] = builder
                     for _ in range(count):
@@ -456,6 +458,8 @@ cdef object get_field_builder(field, tzinfo):
     elif _atypes.is_float64(field_type):
         field_builder = DoubleBuilder()
     elif _atypes.is_timestamp(field_type):
+        if tzinfo and field_type.tz is None:
+            field_type = timestamp(field_type.unit, tz=tzinfo)
         field_builder = DatetimeBuilder(field_type)
     elif _atypes.is_string(field_type):
         field_builder = StringBuilder()
