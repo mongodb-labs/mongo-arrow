@@ -367,7 +367,7 @@ class TestArrowApiMixin:
         data = Table.from_pydict(
             {
                 "bool": [True for _ in range(3)],
-                "dt": [datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)],
+                "dt": [datetime(1970 + i, 1, 1) for i in range(3)],
                 "string": [None] + [str(i) for i in range(2)],
             },
             ArrowSchema(
@@ -388,7 +388,11 @@ class TestArrowApiMixin:
                 self.coll.with_options(codec_options=codec_options),
                 {} if func == find_arrow_all else [],
             ).drop(["_id"])
-            self.assertEqual(data, out)
+            self.assertEqual(data["bool"], out["bool"])
+            self.assertEqual(data["string"], out["string"])
+            self.assertNotEqual(data["dt"], out["dt"])
+            self.assertIsNone(data["dt"].type.tz)
+            self.assertEqual(out["dt"].type.tz, "US/Eastern")
 
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):

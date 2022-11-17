@@ -146,7 +146,7 @@ class TestExplicitPandasApi(PandasTestBase):
             Schema(arrow_schema),
         )
 
-        schema = {"_id": "int32", "data": np.ubyte()}
+        schema = {"_id": "int32", "data": bytes}
         data = pd.DataFrame(
             data={"_id": [i for i in range(2)], "data": [i for i in range(2)]}
         ).astype(schema)
@@ -230,10 +230,7 @@ class TestExplicitPandasApi(PandasTestBase):
             data={
                 "string": [None] + [str(i) for i in range(2)],
                 "bool": [True for _ in range(3)],
-                "dt": [
-                    datetime.datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern"))
-                    for i in range(3)
-                ],
+                "dt": [datetime.datetime(1970 + i, 1, 1) for i in range(3)],
             },
         ).astype(schema)
         self.coll.drop()
@@ -245,7 +242,10 @@ class TestExplicitPandasApi(PandasTestBase):
                 self.coll.with_options(codec_options=codec_options),
                 {} if func == find_pandas_all else [],
             ).drop(columns=["_id"])
-            pd.testing.assert_frame_equal(data, out)
+            pd.testing.assert_series_equal(data["bool"], out["bool"])
+            pd.testing.assert_series_equal(data["string"], out["string"])
+            assert data["dt"].dtype == np.dtype("<M8[ns]")
+            assert out["dt"].dtype.tz.zone == "US/Eastern"
 
 
 class TestBSONTypes(PandasTestBase):

@@ -111,7 +111,7 @@ def process_bson_stream(bson_stream, context):
 
                     builder_type = _builder_type_map[ftype]
                     if builder_type == DatetimeBuilder and context.tzinfo is not None:
-                        arrow_type = timestamp(arrow_type.unit, tz=context.tzinfo)
+                        arrow_type = timestamp('ms', tz=context.tzinfo)
                         builder_map[key] = builder_type(dtype=arrow_type)
                     else:
                         builder_map[key] = builder_type()

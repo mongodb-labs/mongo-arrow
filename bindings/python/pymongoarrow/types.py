@@ -88,7 +88,7 @@ _TYPE_CHECKER_TO_NUMPY = {
     _atypes.is_int64: np.int64,
     _atypes.is_float64: np.float64,
     _atypes.is_timestamp: "datetime64[ms]",
-    _is_objectid: np.object,
+    _is_objectid: object,
     _atypes.is_string: np.str_,
     _atypes.is_boolean: np.bool_,
 }
