@@ -54,6 +54,7 @@ jobs:
         run: |
           echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_OUTPUT
           echo "LD_LIBRARY_PATH=$PWD/libbson/lib" >> $GITHUB_OUTPUT
+          cat $GITHUB_OUTPUT
       - name: Start MongoDB on MacOS
         if: ${{ startsWith(runner.os, 'macOS') }}
         run: |
