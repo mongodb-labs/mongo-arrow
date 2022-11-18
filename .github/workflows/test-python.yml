@@ -81,6 +81,10 @@ jobs:
           # Install the test deps
           LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vv -e ".[test]"
           LD_LIBRARY_PATH=$(pwd)/libbson/lib python -m unittest discover test -v
+      - name: Run the tests with pytest
+        run: |
+          pip install pytest
+          LD_LIBRARY_PATH=$(pwd)/libbson/lib pytest -vv
       - name: Check the manifest
         run: |
           pip install check-manifest

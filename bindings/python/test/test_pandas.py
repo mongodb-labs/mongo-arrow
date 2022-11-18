@@ -16,7 +16,7 @@ import datetime
 import unittest
 import unittest.mock as mock
 from test import client_context
-from test.utils import AllowListEventListener, TestNullsBase
+from test.utils import AllowListEventListener, TullsTestMixin
 
 import numpy as np
 import pandas as pd
@@ -283,7 +283,7 @@ class TestBSONTypes(PandasTestBase):
         pd.testing.assert_frame_equal(expected, table)
 
 
-class TestNulls(TestNullsBase):
+class TestNulls(TullsTestMixin, unittest.TestCase):
     def find_fn(self, coll, query, schema):
         return find_pandas_all(coll, query, schema=schema)
 

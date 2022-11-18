@@ -28,7 +28,7 @@ from pymongoarrow.lib import (
 )
 
 
-class TestIntBuildersMixin:
+class IntBuildersTestMixin:
     def test_simple(self):
         builder = self.builder_cls()
         builder.append(0)
@@ -43,13 +43,13 @@ class TestIntBuildersMixin:
         self.assertEqual(arr.type, self.data_type)
 
 
-class TestInt32Builder(TestCase, TestIntBuildersMixin):
+class TestInt32Builder(TestCase, IntBuildersTestMixin):
     def setUp(self):
         self.builder_cls = Int32Builder
         self.data_type = int32()
 
 
-class TestInt64Builder(TestCase, TestIntBuildersMixin):
+class TestInt64Builder(TestCase, IntBuildersTestMixin):
     def setUp(self):
         self.builder_cls = Int64Builder
         self.data_type = int64()
@@ -146,7 +146,7 @@ class TestStringBuilder(TestCase):
         self.assertEqual(arr.to_pylist(), values + [None])
 
 
-class TestBoolBuilderMixin:
+class BoolBuilderTestMixin:
     def test_simple(self):
         builder = BoolBuilder()
         builder.append(False)
@@ -161,7 +161,7 @@ class TestBoolBuilderMixin:
         self.assertEqual(arr.type, self.data_type)
 
 
-class TestBoolBuilder(TestCase, TestBoolBuilderMixin):
+class TestBoolBuilder(TestCase, BoolBuilderTestMixin):
     def setUp(self):
         self.builder_cls = BoolBuilder
         self.data_type = bool_()
