@@ -44,16 +44,16 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
           cache-dependency-path: '**/setup.cfg'
+      - name: Set up env
+        run: |
+           echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
+           echo "LD_LIBRARY_PATH=$PWD/libbson/lib" >> $GITHUB_ENV
       - name: Start MongoDB on Linux
         if: ${{ startsWith(runner.os, 'Linux') }}
         uses: supercharge/mongodb-github-action@1.3.0
         with:
           mongodb-version: 4.4
           mongodb-replica-set: test-rs
-      - name: Set up env
-        run: |
-           echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
-           echo "LD_LIBRARY_PATH=$PWD/libbson/lib" >> $GITHUB_ENV
       - name: Start MongoDB on MacOS
         if: ${{ startsWith(runner.os, 'macOS') }}
         run: |
