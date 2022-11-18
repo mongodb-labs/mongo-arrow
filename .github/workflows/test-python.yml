@@ -15,8 +15,8 @@ defaults:
     shell: bash
 
 env:
-  LIBBSON_INSTALL_DIR: ${{ env.GITHUB_PATH }}/libbson
-  LD_LIBRARY_PATH: ${{ env.GITHUB_PATH }}/libbson/lib
+  LIBBSON_INSTALL_DIR: $GITHUB_PATH/libbson
+  LD_LIBRARY_PATH: $GITHUB_PATH/libbson/lib
 
 jobs:
 
