@@ -26,10 +26,9 @@ import bson
 import numpy as np
 from pyarrow import timestamp, struct
 from pyarrow.lib import tobytes, StructType
-from pymongoarrow.types import _BsonArrowTypes
 from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
 from pymongoarrow.context import PyMongoArrowContext
-from pymongoarrow.types import _BsonArrowTypes, _atypes
+from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128StringType
 
 # Cython imports
 from cpython cimport PyBytes_Size, object
@@ -57,15 +56,25 @@ cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? N
     return doc
 
 _builder_type_map = {
-    0x10: Int32Builder,
-    0x12: Int64Builder,
-    0x01: DoubleBuilder,
-    0x09: DatetimeBuilder,
-    0x07: ObjectIdBuilder,
-    0x02: StringBuilder,
-    0x08: BoolBuilder,
-    0x03: DocumentBuilder,
-    0x13: StringBuilder
+    BSON_TYPE_INT32: Int32Builder,
+    BSON_TYPE_INT64: Int64Builder,
+    BSON_TYPE_DOUBLE: DoubleBuilder,
+    BSON_TYPE_DATE_TIME: DatetimeBuilder,
+    BSON_TYPE_OID: ObjectIdBuilder,
+    BSON_TYPE_UTF8: StringBuilder,
+    BSON_TYPE_BOOL: BoolBuilder,
+    BSON_TYPE_DOCUMENT: DocumentBuilder,
+    BSON_TYPE_DECIMAL128: StringBuilder
+}
+
+_field_type_map = {
+    BSON_TYPE_INT32: int32(),
+    BSON_TYPE_INT64: int64(),
+    BSON_TYPE_DOUBLE: float64(),
+    BSON_TYPE_OID: ObjectIdType(),
+    BSON_TYPE_UTF8: string(),
+    BSON_TYPE_BOOL: bool_(),
+    BSON_TYPE_DECIMAL128: Decimal128StringType()
 }
 
 
@@ -79,9 +88,7 @@ cdef get_builder(bson_iter_t doc_iter, context):
         return
 
     builder_type = _builder_type_map[value_t]
-    print('hi', context.tzinfo)
     if builder_type == DatetimeBuilder and context.tzinfo is not None:
-        print('overriding tz info')
         arrow_type = timestamp('ms', tz=context.tzinfo)
         return DatetimeBuilder(dtype=arrow_type)
 
@@ -94,9 +101,26 @@ cdef get_builder(bson_iter_t doc_iter, context):
 
 
 cdef extract_document_dtype(bson_iter_t * doc_iter, context):
-    # TODO: auto-discovery for documents
-    # TODO: test all of the _BsonArrowTypes
-    pass
+    cdef const char* key
+    cdef bson_type_t value_t
+    cdef bson_iter_t doc_iter_copy
+    fields = []
+    while bson_iter_next(&doc_iter):
+        key = bson_iter_key(&doc_iter)
+        value_t = bson_iter_type(&doc_iter)
+        if value_t in _field_type_map:
+            field_type = _field_type_map[value_t]
+        elif value_t == BSON_TYPE_DOCUMENT:
+            # TODO: add recursion here
+            pass
+        elif value_t == BSON_TYPE_DATE_TIME:
+            field_type = timestamp('ms', tz=context.tzinfo)
+
+        fields.append(field(key.decode('uft8'), field_type))
+    return struct(fields)
+
+# TODO: test all of the _BsonArrowTypes for auto discovery, including
+# nested
 
 
 def process_bson_stream(bson_stream, context):
