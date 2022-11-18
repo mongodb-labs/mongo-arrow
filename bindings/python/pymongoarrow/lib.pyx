@@ -38,7 +38,6 @@ from cython.operator cimport dereference
 from libcpp cimport bool as cbool
 from libcpp.map cimport map
 from libcpp.vector cimport vector
-from libcpp.string cimport string
 from libc.stdlib cimport malloc, free
 from pyarrow.lib cimport *
 from pymongoarrow.libarrow cimport *
@@ -80,28 +79,6 @@ _field_type_map = {
 }
 
 
-cdef get_builder(bson_iter_t doc_iter, context):
-    """Get the appropriate builder for a document field."""
-    cdef bson_type_t value_t
-    cdef bson_iter_t doc_iter_copy
-
-    value_t = bson_iter_type(&doc_iter)
-    if value_t not in _builder_type_map:
-        return
-
-    builder_type = _builder_type_map[value_t]
-    if builder_type == DatetimeBuilder and context.tzinfo is not None:
-        arrow_type = timestamp('ms', tz=context.tzinfo)
-        return DatetimeBuilder(dtype=arrow_type)
-
-    if builder_type == DocumentBuilder:
-        doc_iter_copy = doc_iter
-        struct_dtype = extract_document_dtype(&doc_iter_copy, context)
-        return DocumentBuilder(struct_dtype, context)
-
-    return builder_type()
-
-
 cdef extract_document_dtype(bson_iter_t * doc_iter, context):
     """Get the appropropriate data type for a sub document"""
     cdef const char* key
@@ -119,7 +96,7 @@ cdef extract_document_dtype(bson_iter_t * doc_iter, context):
         elif value_t == BSON_TYPE_DATE_TIME:
             field_type = timestamp('ms', tz=context.tzinfo)
 
-        fields.append(field(key.decode('uft8'), field_type))
+        fields.append(field(key.decode('utf-8'), field_type))
     return struct(fields)
 
 
@@ -139,7 +116,7 @@ def process_bson_stream(bson_stream, context):
     cdef StructType struct_dtype
     cdef const bson_t * doc = NULL
     cdef bson_iter_t doc_iter
-    cdef bson_iter_t doc_iter_copy
+    cdef bson_iter_t child_iter
     cdef const char* key
     cdef Py_ssize_t count = 0
 
@@ -173,10 +150,24 @@ def process_bson_stream(bson_stream, context):
                 if builder is None:
                     builder = builder_map.get(key.decode('utf8'))
                 if builder is None and context.schema is None:
-                    doc_iter_copy = doc_iter
-                    builder = get_builder(doc_iter_copy, context)
-                    if builder is None:
+                    """Get the appropriate builder for a document field."""
+                    value_t = bson_iter_type(&doc_iter)
+                    builder_type = _builder_type_map.get(value_t)
+                    if builder_type is None:
                         continue
+
+                    # Handle the parameterized builders.
+                    if builder_type == DatetimeBuilder and context.tzinfo is not None:
+                        arrow_type = timestamp('ms', tz=context.tzinfo)
+                        builder = DatetimeBuilder(dtype=arrow_type)
+
+                    elif builder_type == DocumentBuilder:
+                        bson_iter_recurse(&doc_iter, &child_iter)
+                        struct_dtype = extract_document_dtype(&child_iter, context)
+                        builder = DocumentBuilder(struct_dtype, context.tzinfo)
+                    else:
+                        builder = builder_type()
+
                     builder_map[key] = builder
                     for _ in range(count):
                         builder.append_null()

@@ -21,9 +21,9 @@ from test.utils import AllowListEventListener, NullsTestMixin
 import pyarrow
 import pymongo
 from bson import CodecOptions, Decimal128, ObjectId
-from pyarrow import Table, binary, bool_, decimal256, float64, int32, int64
+from pyarrow import Table, binary, bool_, decimal256, field, float64, int32, int64
 from pyarrow import schema as ArrowSchema
-from pyarrow import string, timestamp
+from pyarrow import string, struct, timestamp
 from pyarrow.parquet import read_table, write_table
 from pymongo import DESCENDING, MongoClient, WriteConcern
 from pymongo.collection import Collection
@@ -330,27 +330,43 @@ class ArrowApiMixin:
 
     def test_auto_schema(self):
         # Create table with random data of various types.
-        data = Table.from_pydict(
-            {
-                "string": [None] + [str(i) for i in range(2)],
-                "bool": [True for _ in range(3)],
-                "dt": [datetime(1970 + i, 1, 1) for i in range(3)],
-            },
-            ArrowSchema(
-                {
-                    "bool": bool_(),
-                    "dt": timestamp("ms"),
-                    "string": string(),
-                }
-            ),
-        )
+        raw_data = {
+            "string": [None] + [str(i) for i in range(2)],
+            "bool": [True for _ in range(3)],
+            "double": [0.1 for _ in range(3)],
+            "decimal128": [Decimal128(f"0.00{i}") for i in range(3)],
+            "int32": [i for i in range(3)],
+            "dt": [datetime(1970 + i, 1, 1) for i in range(3)],
+        }
+
+        def inner(i):
+            return dict(
+                string=str(i),
+                bool=bool(i),
+                double=i + 0.1,
+                decimal128=Decimal128(f"0.00{i}"),
+                int32=i,
+                dt=datetime(1970 + i, 1, 1),
+            )
+
+        raw_data["nested"] = [inner(i) for i in range(3)]
+        types = {
+            "bool": bool_(),
+            "dt": timestamp("ms"),
+            "string": string(),
+            "double": float64(),
+            "int32": int32(),
+        }
+        types["nested"] = struct([field(a, b) for (a, b) in types.items()])
+        data = Table.from_pydict(raw_data, ArrowSchema(types))
 
         self.coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
         for func in [find_arrow_all, aggregate_arrow_all]:
             out = func(self.coll, {} if func == find_arrow_all else []).drop(["_id"])
-            self.assertEqual(data, out)
+            for name in out.column_names:
+                self.assertEqual(data[name], out[name])
 
     def test_auto_schema_heterogeneous(self):
         vals = [1, "2", True, 4]
@@ -364,8 +380,6 @@ class ArrowApiMixin:
 
     def test_auto_schema_tz(self):
         # Create table with random data of various types.
-        # TODO: test all of the _BsonArrowTypes for auto discovery, including
-        # nested
         data = Table.from_pydict(
             {
                 "bool": [True for _ in range(3)],
