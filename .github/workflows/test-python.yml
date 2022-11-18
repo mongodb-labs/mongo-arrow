@@ -12,7 +12,7 @@ concurrency:
 defaults:
   run:
     working-directory: ./bindings/python
-    shell: bash
+    shell: bash -eux {0}
 
 env:
   LIBBSON_INSTALL_DIR: $GITHUB_PATH/libbson
