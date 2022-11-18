@@ -364,6 +364,8 @@ class ArrowApiMixin:
 
     def test_auto_schema_tz(self):
         # Create table with random data of various types.
+        # TODO: test all of the _BsonArrowTypes for auto discovery, including
+        # nested
         data = Table.from_pydict(
             {
                 "bool": [True for _ in range(3)],

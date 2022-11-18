@@ -24,8 +24,10 @@ import enum
 # Python imports
 import bson
 import numpy as np
-from pyarrow import timestamp, struct
-from pyarrow.lib import tobytes, StructType
+from pyarrow import timestamp, struct, field
+from pyarrow.lib import (
+    tobytes, StructType, int32, int64, float64, string, bool_
+)
 from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128StringType
@@ -101,26 +103,24 @@ cdef get_builder(bson_iter_t doc_iter, context):
 
 
 cdef extract_document_dtype(bson_iter_t * doc_iter, context):
+    """Get the appropropriate data type for a sub document"""
     cdef const char* key
     cdef bson_type_t value_t
-    cdef bson_iter_t doc_iter_copy
+    cdef bson_iter_t * child_iter
     fields = []
-    while bson_iter_next(&doc_iter):
-        key = bson_iter_key(&doc_iter)
-        value_t = bson_iter_type(&doc_iter)
+    while bson_iter_next(doc_iter):
+        key = bson_iter_key(doc_iter)
+        value_t = bson_iter_type(doc_iter)
         if value_t in _field_type_map:
             field_type = _field_type_map[value_t]
         elif value_t == BSON_TYPE_DOCUMENT:
-            # TODO: add recursion here
-            pass
+            bson_iter_recurse(doc_iter, child_iter)
+            field_type = extract_document_dtype(child_iter, context)
         elif value_t == BSON_TYPE_DATE_TIME:
             field_type = timestamp('ms', tz=context.tzinfo)
 
         fields.append(field(key.decode('uft8'), field_type))
     return struct(fields)
-
-# TODO: test all of the _BsonArrowTypes for auto discovery, including
-# nested
 
 
 def process_bson_stream(bson_stream, context):
@@ -507,16 +507,6 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         shared_ptr[CStructBuilder] builder
         object dtype
         object context
-
-    #  https://github.com/apache/arrow/blob/31a07be1d9dc2f7c9720cc0fdcd7f083d947aba1/cpp/src/arrow/array/builder_nested.h#L487
-    # Append an element to the Struct. All child-builders' Append method must
-    # be called independently to maintain data-structure consistency.
-
-    # We want to make a struct builder that allows adding homogeneous
-    # recursive nested documents.
-
-    # Use https://github.com/mongodb-labs/mongo-arrow/pull/91/files#diff-4bebdbb1fb3a226fc1c92ec68a1472b09b4a8b8362f49db23529af97f126b3c2
-    # for some of the Cython code.
 
     def __cinit__(self, StructType dtype, tzinfo=None, MemoryPool memory_pool=None):
         cdef StringBuilder field_builder

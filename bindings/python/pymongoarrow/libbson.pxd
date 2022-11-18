@@ -126,6 +126,9 @@ cdef extern from "<bson/bson.h>":
 
     bint bson_iter_decimal128 (const bson_iter_t *iter, bson_decimal128_t *dec)
 
+    bint  bson_iter_recurse (const bson_iter_t *iter, # IN
+                             bson_iter_t *child)  # OUT
+
     void bson_iter_document (const bson_iter_t *iter,  # IN
                     uint32_t *document_len,  #  OUT
                     const uint8_t **document) # OUT
