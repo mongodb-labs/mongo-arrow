@@ -52,9 +52,8 @@ jobs:
           mongodb-replica-set: test-rs
       - name: Set up env
         run: |
-          echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_OUTPUT
-          echo "LD_LIBRARY_PATH=$PWD/libbson/lib" >> $GITHUB_OUTPUT
-          cat $GITHUB_OUTPUT
+           echo "::set-env name=LIBBSON_INSTALL_DIR::$PWD/libbson"
+           echo "::set-env name=LD_LIBRARY_PATH::$PWD/libbson/lib"
       - name: Start MongoDB on MacOS
         if: ${{ startsWith(runner.os, 'macOS') }}
         run: |
