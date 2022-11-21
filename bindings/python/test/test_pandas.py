@@ -18,7 +18,7 @@ import unittest
 import unittest.mock as mock
 import warnings
 from test import client_context
-from test.utils import AllowListEventListener, TullsTestMixin
+from test.utils import AllowListEventListener, NullsTestMixin
 
 import numpy as np
 import pandas as pd
@@ -347,7 +347,7 @@ class TestBSONTypes(PandasTestBase):
         pd.testing.assert_frame_equal(expected, table)
 
 
-class TestNulls(TullsTestMixin, unittest.TestCase):
+class TestNulls(NullsTestMixin, unittest.TestCase):
     def find_fn(self, coll, query, schema):
         return find_pandas_all(coll, query, schema=schema)
 
