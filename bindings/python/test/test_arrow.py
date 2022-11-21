@@ -16,7 +16,7 @@ import unittest
 import unittest.mock as mock
 from datetime import datetime
 from test import client_context
-from test.utils import AllowListEventListener, TullsTestMixin
+from test.utils import AllowListEventListener, NullsTestMixin
 
 import pyarrow
 import pymongo
@@ -451,7 +451,7 @@ class TestBSONTypes(unittest.TestCase):
         self.assertEqual(table, expected)
 
 
-class TestNulls(TullsTestMixin, unittest.TestCase):
+class TestNulls(NullsTestMixin, unittest.TestCase):
     def find_fn(self, coll, query, schema):
         return find_arrow_all(coll, query, schema=schema)
 

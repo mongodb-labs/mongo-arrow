@@ -15,7 +15,7 @@
 import datetime
 import unittest
 from test import client_context
-from test.utils import AllowListEventListener, TullsTestMixin
+from test.utils import AllowListEventListener, NullsTestMixin
 from unittest import mock
 
 import numpy as np
@@ -309,7 +309,7 @@ class TestBSONTypes(NumpyTestBase):
 
 # The spec for pyarrow says to_numpy is experimental, so we should expect
 # this to change in the future.
-class TestNulls(TullsTestMixin, NumpyTestBase):
+class TestNulls(NullsTestMixin, NumpyTestBase):
     def table_from_dict(self, d, schema=None):
         out = {}
         for k, v in d.items():
