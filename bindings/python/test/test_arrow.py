@@ -367,7 +367,7 @@ class TestArrowApiMixin:
         data = Table.from_pydict(
             {
                 "bool": [True for _ in range(3)],
-                "dt": [datetime(1970 + i, 1, 1) for i in range(3)],
+                "dt": [datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)],
                 "string": [None] + [str(i) for i in range(2)],
             },
             ArrowSchema(
