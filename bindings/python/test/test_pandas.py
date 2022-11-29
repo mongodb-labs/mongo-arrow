@@ -223,14 +223,17 @@ class TestExplicitPandasApi(PandasTestBase):
     def test_auto_schema_tz(self):
         schema = {
             "bool": "bool",
-            "dt": "datetime64[ns]",
+            "dt": "datetime64[ns, US/Eastern]",
             "string": "str",
         }
         data = pd.DataFrame(
             data={
                 "string": [None] + [str(i) for i in range(2)],
                 "bool": [True for _ in range(3)],
-                "dt": [datetime.datetime(1970 + i, 1, 1) for i in range(3)],
+                "dt": [
+                    datetime.datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern"))
+                    for i in range(3)
+                ],
             },
         ).astype(schema)
         self.coll.drop()
@@ -242,10 +245,7 @@ class TestExplicitPandasApi(PandasTestBase):
                 self.coll.with_options(codec_options=codec_options),
                 {} if func == find_pandas_all else [],
             ).drop(columns=["_id"])
-            pd.testing.assert_series_equal(data["bool"], out["bool"])
-            pd.testing.assert_series_equal(data["string"], out["string"])
-            assert data["dt"].dtype == np.dtype("<M8[ns]")
-            assert out["dt"].dtype.tz.zone == "US/Eastern"
+            pd.testing.assert_frame_equal(data, out)
 
 
 class TestBSONTypes(PandasTestBase):
