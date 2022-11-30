@@ -96,7 +96,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: "sdist"
-          path: ./bindings/python/wheelhouse/*.tar.gz
+          path: ./bindings/python/dist/*.tar.gz
 
   collect-dist:
     runs-on: ubuntu-latest

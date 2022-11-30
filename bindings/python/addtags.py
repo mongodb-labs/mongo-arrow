@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # Dependencies:
-# - auditwheel>=3,<4
+# - auditwheel>=5,<6
+# Requires AUDITWHEEL_PLAT to be set (e.g. manylinux2014_x86_64)
 # Usage:
-# $ python addtags.py WHEEL_PATH TARGET_PLATFORM WHEEL_DIR
+# $ python addtags.py WHEEL_PATH WHEEL_DIR
 import os
 from os.path import abspath, basename, exists, isfile
 from os.path import join as pjoin
@@ -45,5 +46,9 @@ def main(wheel_path, abi, wheel_dir):
 
 
 if __name__ == "__main__":
-    WHEEL_PATH, TARGET_PLATFORM, WHEEL_DIR = argv[1], argv[2], argv[3]
+    WHEEL_PATH, WHEEL_DIR = argv[1], argv[2]
+    TARGET_PLATFORM = os.environ["AUDITWHEEL_PLAT"]
+    print(f"wheel path: {WHEEL_PATH}")
+    print(f"target platform: {TARGET_PLATFORM}")
+    print(f"wheel dir: {WHEEL_DIR}")
     main(wheel_path=abspath(WHEEL_PATH), abi=TARGET_PLATFORM, wheel_dir=abspath(WHEEL_DIR))

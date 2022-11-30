@@ -389,7 +389,7 @@ class ArrowApiMixin:
             ArrowSchema(
                 {
                     "bool": bool_(),
-                    "dt": timestamp("ms"),
+                    "dt": timestamp("ms", "US/Eastern"),
                     "string": string(),
                 }
             ),
@@ -404,6 +404,7 @@ class ArrowApiMixin:
                 self.coll.with_options(codec_options=codec_options),
                 {} if func == find_arrow_all else [],
             ).drop(["_id"])
+            self.assertEqual(out["dt"].type.tz, "US/Eastern")
             self.assertEqual(data, out)
 
     # def test_auto_schema_tz_no_override(self):

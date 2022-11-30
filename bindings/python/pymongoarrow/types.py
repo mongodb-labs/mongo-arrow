@@ -85,7 +85,10 @@ _TYPE_NORMALIZER_FACTORY = {
     Int64: lambda _: int64(),
     float: lambda _: float64(),
     int: lambda _: int64(),
-    datetime: lambda _: timestamp("ms"),  # TODO: add tzinfo support
+    # Note: we cannot infer a timezone form a raw datetime class,
+    # if a timezone is preferred then a timestamp with tz information
+    # must be used directly.
+    datetime: lambda _: timestamp("ms"),
     ObjectId: lambda _: ObjectIdType(),
     Decimal128: lambda _: Decimal128StringType(),
     str: lambda _: string(),
