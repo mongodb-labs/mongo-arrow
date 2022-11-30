@@ -283,7 +283,7 @@ class TestBSONTypes(PandasTestBase):
         pd.testing.assert_frame_equal(expected, table)
 
 
-class TestNulls(TestNullsBase, unittest.TestCase):
+class TestNulls(TestNullsBase):
     def find_fn(self, coll, query, schema):
         return find_pandas_all(coll, query, schema=schema)
 

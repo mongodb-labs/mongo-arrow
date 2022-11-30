@@ -72,7 +72,7 @@ class AllowListEventListener(EventListener):
             super(AllowListEventListener, self).failed(event)
 
 
-class TestNullsBase:
+class TestNullsBase(unittest.TestCase):
     def find_fn(self, coll, query, schema):
         raise NotImplementedError
 
