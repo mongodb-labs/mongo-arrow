@@ -19,12 +19,12 @@ repair-wheel-command = ""
 LIBBSON_INSTALL_DIR = "./libbson"
 
 [tool.cibuildwheel.linux]
-manylinux-x86_64-image = "manylinux2014"
+manylinux-x86_64-image = "manylinux_2_17"
 repair-wheel-command = [
     "pip install \"auditwheel>=5,<6\"",
     "python addtags.py {wheel} {dest_dir}"
 ]
 
 [tool.cibuildwheel.macos]
-archs = "x86_64 universal2"
-test-skip = "*universal2:arm64"
+archs = "x86_64 arm64"
+test-skip = "*arm64"
