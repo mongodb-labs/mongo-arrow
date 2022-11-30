@@ -9,12 +9,15 @@ set -o errexit
 
 if [[ "$CIBW_BUILD" == *"macosx_"* ]]
 then
-  mac_version="${MACOSX_DEPLOYMENT_TARGET/\./_}"
   if [[ "$ARCHFLAGS" == *"arm64"* ]]
   then
+    export MACOSX_DEPLOYMENT_TARGET="11.0"
+    mac_version="${MACOSX_DEPLOYMENT_TARGET/\./_}"
     platform="macosx_${mac_version}_arm64"
     export CMAKE_OSX_ARCHITECTURES="arm64"
   else
+    export MACOSX_DEPLOYMENT_TARGET="10.14"
+    mac_version="${MACOSX_DEPLOYMENT_TARGET/\./_}"
     platform="macosx_${mac_version}_x86_64"
   fi
 
