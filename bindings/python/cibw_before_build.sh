@@ -12,7 +12,7 @@ then
   if [[ "$ARCHFLAGS" == *"arm64"* ]]
   then
     platform="macosx_11__universal2"
-    export CMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+    export CMAKE_OSX_ARCHITECTURES="arm64"
   else
     platform="macosx_10_14_x86_64"
   fi
