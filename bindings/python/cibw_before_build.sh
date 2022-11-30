@@ -12,8 +12,8 @@ then
   mac_version="${MACOSX_DEPLOYMENT_TARGET/\./_}"
   if [[ "$ARCHFLAGS" == *"arm64"* ]]
   then
-    platform="macosx_${mac_version}_universal2"
-    export CMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+    platform="macosx_${mac_version}_arm64"
+    export CMAKE_OSX_ARCHITECTURES="arm64"
   else
     platform="macosx_${mac_version}_x86_64"
   fi
