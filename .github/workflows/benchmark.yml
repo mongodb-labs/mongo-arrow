@@ -67,6 +67,8 @@ jobs:
 
 
           git checkout --force refs/bm/merge-target --
+          # Re-install the library
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
           run_asv
 
           asv compare refs/bm/merge-target refs/bm/pr --
