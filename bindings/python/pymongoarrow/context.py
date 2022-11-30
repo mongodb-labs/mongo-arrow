@@ -67,7 +67,7 @@ class PyMongoArrowContext:
             :class:`~bson.codec_options.CodecOptions`.
         """
         if schema is None:
-            return cls(None, {}, codec_options)
+            return cls(schema, {}, codec_options)
 
         builder_map = {}
         tzinfo = codec_options.tzinfo
