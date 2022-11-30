@@ -11,7 +11,7 @@ if [[ "$CIBW_BUILD" == *"macosx_"* ]]
 then
   if [[ "$ARCHFLAGS" == *"arm64"* ]]
   then
-    platform="macosx_11__universal2"
+    platform="macosx_11_0_arm64"
     export CMAKE_OSX_ARCHITECTURES="arm64"
   else
     platform="macosx_10_14_x86_64"
