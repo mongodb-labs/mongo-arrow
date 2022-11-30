@@ -70,7 +70,6 @@ class PyMongoArrowContext:
             return cls(None, {}, codec_options)
 
         builder_map = {}
-        context = cls(schema, builder_map)
         tzinfo = codec_options.tzinfo
 
         str_type_map = _get_internal_typemap(schema.typemap)
@@ -89,7 +88,7 @@ class PyMongoArrowContext:
                 builder_map[encoded_fname] = DocumentBuilder(arrow_type, tzinfo)
             else:
                 builder_map[encoded_fname] = builder_cls()
-        return context
+        return cls(schema, builder_map)
 
     def finish(self):
         arrays = []
