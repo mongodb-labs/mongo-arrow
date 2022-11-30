@@ -26,5 +26,5 @@ repair-wheel-command = [
 ]
 
 [tool.cibuildwheel.macos]
-archs = "x86_64 universal2"
-test-skip = "*universal2:arm64"
+archs = "x86_64 arm64"
+test-skip = "*arm64"
