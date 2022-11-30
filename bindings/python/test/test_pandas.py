@@ -146,7 +146,7 @@ class TestExplicitPandasApi(PandasTestBase):
             Schema(arrow_schema),
         )
 
-        schema = {"_id": "int32", "data": np.ubyte()}
+        schema = {"_id": "int32", "data": bytes}
         data = pd.DataFrame(
             data={"_id": [i for i in range(2)], "data": [i for i in range(2)]}
         ).astype(schema)
@@ -223,7 +223,7 @@ class TestExplicitPandasApi(PandasTestBase):
     def test_auto_schema_tz(self):
         schema = {
             "bool": "bool",
-            "dt": "datetime64[ns]",
+            "dt": "datetime64[ns, US/Eastern]",
             "string": "str",
         }
         data = pd.DataFrame(

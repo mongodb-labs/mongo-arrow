@@ -254,9 +254,7 @@ class TestExplicitNumPyApi(NumpyTestBase):
         data = {
             "string": [str(i) for i in range(3)],
             "bool": [True for _ in range(3)],
-            "dt": [
-                datetime.datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)
-            ],
+            "dt": [datetime.datetime(1970 + i, 1, 1) for i in range(3)],
         }
         data = self.schemafied_ndarray_dict(data, schema)
         self.coll.drop()
@@ -270,6 +268,10 @@ class TestExplicitNumPyApi(NumpyTestBase):
                     {} if func == find_numpy_all else [],
                 )
                 del out["_id"]
+                # Note: Numpy does not handle timezones.
+                assert out["dt"].dtype == np.dtype("<M8[ns]")
+                assert data["dt"].dtype == np.dtype("<M8[ms]")
+                out.pop("dt")
                 self.assert_numpy_equal(data, out)
 
 
