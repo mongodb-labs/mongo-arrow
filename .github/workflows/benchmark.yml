@@ -38,10 +38,6 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install -U pip
-      - name: Install pymongoarrow
-        run: |
-          # Install the library
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
       - name: Run tests
         run: |
           set -eu
@@ -63,11 +59,13 @@ jobs:
           # the current target that this PR will be merged into is HEAD^1.
           git update-ref refs/bm/merge-target $(git log -n 1 --pretty=format:"%H" main --)
           git checkout --force refs/bm/pr --
+          # Install the library
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
           run_asv
 
 
           git checkout --force refs/bm/merge-target --
-          # Re-install the library
+          # Install the library
           LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
           run_asv
 
