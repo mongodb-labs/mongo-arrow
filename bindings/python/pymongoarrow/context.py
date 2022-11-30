@@ -51,7 +51,7 @@ class PyMongoArrowContext:
         """
         self.schema = schema
         self.builder_map = builder_map
-        if codec_options is not None:
+        if self.schema is None and codec_options is not None:
             self.tzinfo = codec_options.tzinfo
         else:
             self.tzinfo = None
@@ -67,11 +67,11 @@ class PyMongoArrowContext:
             :class:`~bson.codec_options.CodecOptions`.
         """
         if schema is None:
-            return cls(schema, {}, codec_options)
+            return cls(None, {}, codec_options)
 
         builder_map = {}
-        context = cls(schema, builder_map, codec_options)
-        tzinfo = context.tzinfo
+        context = cls(schema, builder_map)
+        tzinfo = codec_options.tzinfo
 
         str_type_map = _get_internal_typemap(schema.typemap)
         for fname, ftype in str_type_map.items():
@@ -81,7 +81,7 @@ class PyMongoArrowContext:
             # special-case initializing builders for parameterized types
             if builder_cls == DatetimeBuilder:
                 arrow_type = schema.typemap[fname]
-                if tzinfo and not arrow_type.tz:
+                if tzinfo is not None and arrow_type.tz is None:
                     arrow_type = timestamp(arrow_type.unit, tz=tzinfo)
                 builder_map[encoded_fname] = DatetimeBuilder(dtype=arrow_type)
             elif builder_cls == DocumentBuilder:

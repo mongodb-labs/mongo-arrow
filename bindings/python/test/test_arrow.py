@@ -16,7 +16,7 @@ import unittest
 import unittest.mock as mock
 from datetime import datetime
 from test import client_context
-from test.utils import AllowListEventListener, NullsTestMixin
+from test.utils import AllowListEventListener, TestNullsBase
 
 import pyarrow
 import pymongo
@@ -38,7 +38,7 @@ from pymongoarrow.types import (
 from pytz import timezone
 
 
-class ArrowApiMixin:
+class TestArrowApiMixin:
     @classmethod
     def setUpClass(cls):
         if not client_context.connected:
@@ -407,37 +407,41 @@ class ArrowApiMixin:
             self.assertEqual(out["dt"].type.tz, "US/Eastern")
             self.assertEqual(data, out)
 
-    # def test_auto_schema_tz_no_override(self):
-    #     # Create table with random data of various types.
-    #     tz = timezone("US/Pacific")
-    #     data = Table.from_pydict(
-    #         {
-    #             "bool": [True for _ in range(3)],
-    #             "dt": [datetime(1970 + i, 1, 1, tzinfo=tz) for i in range(3)],
-    #             "string": [None] + [str(i) for i in range(2)],
-    #         },
-    #         ArrowSchema(
-    #             {
-    #                 "bool": bool_(),
-    #                 "dt": timestamp("ms", tz=tz),
-    #                 "string": string(),
-    #             }
-    #         ),
-    #     )
+    def test_auto_schema_tz_no_override(self):
+        # Create table with random data of various types.
+        # The tz of the original data is lost and replaced by the
+        # tz info of the collection.
+        tz = timezone("US/Pacific")
+        data = Table.from_pydict(
+            {
+                "bool": [True for _ in range(3)],
+                "dt": [datetime(1970 + i, 1, 1, tzinfo=tz) for i in range(3)],
+                "string": [None] + [str(i) for i in range(2)],
+            },
+            ArrowSchema(
+                {
+                    "bool": bool_(),
+                    "dt": timestamp("ms", tz=tz),
+                    "string": string(),
+                }
+            ),
+        )
 
-    #     self.coll.drop()
-    #     codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
-    #     res = write(self.coll.with_options(codec_options=codec_options), data)
-    #     self.assertEqual(len(data), res.raw_result["insertedCount"])
-    #     for func in [find_arrow_all, aggregate_arrow_all]:
-    #         out = func(
-    #             self.coll.with_options(codec_options=codec_options),
-    #             {} if func == find_arrow_all else [],
-    #         ).drop(["_id"])
-    #         self.assertEqual(data, out)
+        self.coll.drop()
+        codec_options = CodecOptions(tzinfo=timezone("US/Eastern"), tz_aware=True)
+        res = write(self.coll.with_options(codec_options=codec_options), data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        for func in [find_arrow_all, aggregate_arrow_all]:
+            out = func(
+                self.coll.with_options(codec_options=codec_options),
+                {} if func == find_arrow_all else [],
+            ).drop(["_id"])
+            self.assertEqual(out["dt"].type.tz, "US/Eastern")
+            self.assertEqual(data["bool"], out["bool"])
+            self.assertEqual(data["string"], out["string"])
 
 
-class TestArrowExplicitApi(ArrowApiMixin, unittest.TestCase):
+class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
     def run_find(self, *args, **kwargs):
         return find_arrow_all(self.coll, *args, **kwargs)
 
@@ -445,7 +449,7 @@ class TestArrowExplicitApi(ArrowApiMixin, unittest.TestCase):
         return aggregate_arrow_all(self.coll, *args, **kwargs)
 
 
-class TestArrowPatchedApi(ArrowApiMixin, unittest.TestCase):
+class TestArrowPatchedApi(TestArrowApiMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         patch_all()
@@ -497,7 +501,7 @@ class TestBSONTypes(unittest.TestCase):
         self.assertEqual(table, expected)
 
 
-class TestNulls(NullsTestMixin, unittest.TestCase):
+class TestNulls(TestNullsBase):
     def find_fn(self, coll, query, schema):
         return find_arrow_all(coll, query, schema=schema)
 
