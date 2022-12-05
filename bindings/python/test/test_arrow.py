@@ -441,6 +441,13 @@ class TestArrowApiMixin:
             self.assertEqual(data["bool"], out["bool"])
             self.assertEqual(data["string"], out["string"])
 
+    def test_empty_nested_objects(self):
+        fields = [field("a", int32()), field("b", bool_())]
+        schema = dict(top=struct(fields))
+        raw_data = dict(top=[{}, {}, {}])
+        data = Table.from_pydict(raw_data, ArrowSchema(schema))
+        self.round_trip(data, Schema(schema))
+
 
 class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
     def run_find(self, *args, **kwargs):
