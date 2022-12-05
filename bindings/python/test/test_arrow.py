@@ -21,7 +21,7 @@ from test.utils import AllowListEventListener, TestNullsBase
 import pyarrow
 import pymongo
 from bson import CodecOptions, Decimal128, ObjectId
-from pyarrow import Table, binary, bool_, decimal256, field, float64, int32, int64
+from pyarrow import Table, binary, bool_, csv, decimal256, field, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
 from pyarrow.parquet import read_table, write_table
@@ -243,7 +243,7 @@ class TestArrowApiMixin:
             exc.exception.details.keys(), {"nInserted", "writeConcernErrors", "writeErrors"}
         )
 
-    def test_write_schema_validation(self):
+    def _create_data(self):
         schema = {
             k.__name__: v(True)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
@@ -260,6 +260,10 @@ class TestArrowApiMixin:
             },
             ArrowSchema(schema),
         )
+        return schema, data
+
+    def test_write_schema_validation(self):
+        schema, data = self._create_data()
         self.round_trip(data, Schema(schema))
 
         schema = {"_id": int32(), "data": decimal256(2)}
@@ -282,28 +286,53 @@ class TestArrowApiMixin:
         self.round_trip(data, Schema(schema), coll=self.coll)
         self.assertEqual(mock.call_count, 2)
 
-    def test_parquet(self):
+    def _create_nested_data(self):
         schema = {
-            "data": int64(),
-            "float": float64(),
-            "datetime": timestamp("ms"),
-            "string": string(),
-            "bool": bool_(),
+            k.__name__: v(True)
+            for k, v in _TYPE_NORMALIZER_FACTORY.items()
+            if k.__name__ not in ("ObjectId", "Decimal128")
         }
-        data = Table.from_pydict(
-            {
-                "data": [i for i in range(2)],
-                "float": [i for i in range(2)],
-                "datetime": [i for i in range(2)],
-                "string": [str(i) for i in range(2)],
-                "bool": [True for _ in range(2)],
-            },
-            ArrowSchema(schema),
-        )
+        schema["nested"] = struct([field(a, b) for (a, b) in schema.items()])
+
+        raw_data = {
+            "str": [None] + [str(i) for i in range(2)],
+            "bool": [True for _ in range(3)],
+            "float": [0.1 for _ in range(3)],
+            "Int64": [i for i in range(3)],
+            "int": [i for i in range(3)],
+            "datetime": [datetime(1970 + i, 1, 1) for i in range(3)],
+        }
+
+        def inner(i):
+            return dict(
+                str=str(i),
+                bool=bool(i),
+                float=i + 0.1,
+                Int64=i,
+                int=i,
+                datetime=datetime(1970 + i, 1, 1),
+            )
+
+        raw_data["nested"] = [inner(i) for i in range(3)]
+        return schema, Table.from_pydict(raw_data, ArrowSchema(schema))
+
+    def test_parquet(self):
+        schema, data = self._create_nested_data()
         write_table(data, "test.parquet")
         data = read_table("test.parquet")
         self.round_trip(data, Schema(schema))
         os.remove("test.parquet")
+
+    def test_csv(self):
+        # Arrow does not support struct data in csvs
+        #  https://arrow.apache.org/docs/python/csv.html#reading-and-writing-csv-files
+        _, data = self._create_data()
+        csv.write_csv(data, "test.csv")
+        out = csv.read_csv("test.csv")
+        for name in data.column_names:
+            val = out[name].cast(data[name].type)
+            self.assertEqual(data[name], val)
+        os.remove("test.csv")
 
     def test_string_bool(self):
         data = Table.from_pydict(
@@ -330,35 +359,7 @@ class TestArrowApiMixin:
 
     def test_auto_schema(self):
         # Create table with random data of various types.
-        raw_data = {
-            "string": [None] + [str(i) for i in range(2)],
-            "bool": [True for _ in range(3)],
-            "double": [0.1 for _ in range(3)],
-            "decimal128": [Decimal128(f"0.00{i}") for i in range(3)],
-            "int32": [i for i in range(3)],
-            "dt": [datetime(1970 + i, 1, 1) for i in range(3)],
-        }
-
-        def inner(i):
-            return dict(
-                string=str(i),
-                bool=bool(i),
-                double=i + 0.1,
-                decimal128=Decimal128(f"0.00{i}"),
-                int32=i,
-                dt=datetime(1970 + i, 1, 1),
-            )
-
-        raw_data["nested"] = [inner(i) for i in range(3)]
-        types = {
-            "bool": bool_(),
-            "dt": timestamp("ms"),
-            "string": string(),
-            "double": float64(),
-            "int32": int32(),
-        }
-        types["nested"] = struct([field(a, b) for (a, b) in types.items()])
-        data = Table.from_pydict(raw_data, ArrowSchema(types))
+        _, data = self._create_nested_data()
 
         self.coll.drop()
         res = write(self.coll, data)
@@ -366,7 +367,7 @@ class TestArrowApiMixin:
         for func in [find_arrow_all, aggregate_arrow_all]:
             out = func(self.coll, {} if func == find_arrow_all else []).drop(["_id"])
             for name in out.column_names:
-                self.assertEqual(data[name], out[name])
+                self.assertEqual(data[name], out[name].cast(data[name].type))
 
     def test_auto_schema_heterogeneous(self):
         vals = [1, "2", True, 4]

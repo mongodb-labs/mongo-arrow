@@ -13,6 +13,7 @@
 # limitations under the License.
 # from datetime import datetime, timedelta
 import datetime
+import os
 import unittest
 import unittest.mock as mock
 from test import client_context
@@ -121,26 +122,30 @@ class TestExplicitPandasApi(PandasTestBase):
                 )
                 raise awe
 
-    def test_write_schema_validation(self):
+    def _create_data(self):
         arrow_schema = {
             k.__name__: v(True)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
             if k.__name__ not in ("ObjectId", "Decimal128")
         }
         schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
-        schema["str"] = "str"
-        schema["datetime"] = "datetime64[ms]"
+        schema["str"] = "U8"
+        schema["datetime"] = "datetime64[ns]"
 
         data = pd.DataFrame(
             data={
                 "Int64": [i for i in range(2)],
                 "float": [i for i in range(2)],
                 "int": [i for i in range(2)],
-                "datetime": [i for i in range(2)],
-                "str": [str(i) for i in range(2)],
+                "datetime": [datetime.datetime(1970 + i, 1, 1) for i in range(2)],
+                "str": [f"a{i}" for i in range(2)],
                 "bool": [True, False],
             }
         ).astype(schema)
+        return arrow_schema, data
+
+    def test_write_schema_validation(self):
+        arrow_schema, data = self._create_data()
         self.round_trip(
             data,
             Schema(arrow_schema),
@@ -189,26 +194,48 @@ class TestExplicitPandasApi(PandasTestBase):
             ),
         )
 
-    def test_auto_schema(self):
+    def _create_nested_data(self):
         schema = {
+            "string": "string",
             "bool": "bool",
+            "double": "float64",
+            "int32": "int32",
             "dt": "datetime64[ns]",
-            "string": "str",
         }
-        data = pd.DataFrame(
-            data={
-                "string": [None] + [str(i) for i in range(2)],
-                "bool": [True for _ in range(3)],
-                "dt": [datetime.datetime(1970 + i, 1, 1) for i in range(3)],
-            },
-        ).astype(schema)
+        schema["nested"] = "object"
 
+        raw_data = {
+            "string": [str(i) for i in range(3)],
+            "bool": [True for _ in range(3)],
+            "double": [0.1 for _ in range(3)],
+            "int32": [i for i in range(3)],
+            "dt": [datetime.datetime(1970 + i, 1, 1) for i in range(3)],
+        }
+
+        def inner(i):
+            return dict(
+                string=str(i),
+                bool=bool(i),
+                double=i + 0.1,
+                int32=i,
+                dt=datetime.datetime(1970 + i, 1, 1),
+            )
+
+        raw_data["nested"] = [inner(i) for i in range(3)]
+        return pd.DataFrame(data=raw_data).astype(schema)
+
+    def test_auto_schema(self):
+        data = self._create_nested_data()
         self.coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
         for func in [find_pandas_all, aggregate_pandas_all]:
             out = func(self.coll, {} if func == find_pandas_all else []).drop(columns=["_id"])
-            pd.testing.assert_frame_equal(data, out)
+            for name in data.columns:
+                val = out[name]
+                if str(val.dtype) == "object":
+                    val = val.astype(data[name].dtype)
+                pd.testing.assert_series_equal(data[name], val)
 
     def test_auto_schema_heterogeneous(self):
         vals = [1, "2", True, 4]
@@ -246,6 +273,20 @@ class TestExplicitPandasApi(PandasTestBase):
                 {} if func == find_pandas_all else [],
             ).drop(columns=["_id"])
             pd.testing.assert_frame_equal(data, out)
+
+    def test_csv(self):
+        # Pandas csv does not support nested data.
+        # cf https://github.com/pandas-dev/pandas/issues/40652
+        _, data = self._create_data()
+        data.to_csv("test.csv", index=False)
+        out = pd.read_csv("test.csv")
+        for name in data.columns:
+            col = data[name]
+            val = out[name]
+            if str(val.dtype) == "object":
+                val = val.astype(col.dtype)
+            pd.testing.assert_series_equal(col, val)
+        os.remove("test.csv")
 
 
 class TestBSONTypes(PandasTestBase):
