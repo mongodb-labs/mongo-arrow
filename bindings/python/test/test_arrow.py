@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
+
 import tempfile
 import unittest
 import unittest.mock as mock
@@ -319,22 +319,23 @@ class TestArrowApiMixin:
 
     def test_parquet(self):
         schema, data = self._create_nested_data()
-        write_table(data, "test.parquet")
-        data = read_table("test.parquet")
-        self.round_trip(data, Schema(schema))
-        os.remove("test.parquet")
+        with tempfile.NamedTemporaryFile(suffix=".parquet") as f:
+            f.close()
+            write_table(data, f.name)
+            data = read_table(f.name)
+            self.round_trip(data, Schema(schema))
 
     def test_csv(self):
         # Arrow does not support struct data in csvs
         #  https://arrow.apache.org/docs/python/csv.html#reading-and-writing-csv-files
         _, data = self._create_data()
-        with tempfile.NamedTemporaryFile(suffix=".csv") as t:
-            t.close()
-            csv.write_csv(data, t.name)
-        out = csv.read_csv(t.name)
-        for name in data.column_names:
-            val = out[name].cast(data[name].type)
-            self.assertEqual(data[name], val)
+        with tempfile.NamedTemporaryFile(suffix=".csv") as f:
+            f.close()
+            csv.write_csv(data, f.name)
+            out = csv.read_csv(f.name)
+            for name in data.column_names:
+                val = out[name].cast(data[name].type)
+                self.assertEqual(data[name], val)
 
     def test_string_bool(self):
         data = Table.from_pydict(

@@ -13,7 +13,7 @@
 # limitations under the License.
 # from datetime import datetime, timedelta
 import datetime
-import os
+import tempfile
 import unittest
 import unittest.mock as mock
 from test import client_context
@@ -278,15 +278,16 @@ class TestExplicitPandasApi(PandasTestBase):
         # Pandas csv does not support nested data.
         # cf https://github.com/pandas-dev/pandas/issues/40652
         _, data = self._create_data()
-        data.to_csv("test.csv", index=False)
-        out = pd.read_csv("test.csv")
-        for name in data.columns:
-            col = data[name]
-            val = out[name]
-            if str(val.dtype) == "object":
-                val = val.astype(col.dtype)
-            pd.testing.assert_series_equal(col, val)
-        os.remove("test.csv")
+        with tempfile.NamedTemporaryFile(suffix=".csv") as f:
+            f.close()
+            data.to_csv(f.name, index=False)
+            out = pd.read_csv(f.name)
+            for name in data.columns:
+                col = data[name]
+                val = out[name]
+                if str(val.dtype) == "object":
+                    val = val.astype(col.dtype)
+                pd.testing.assert_series_equal(col, val)
 
 
 class TestBSONTypes(PandasTestBase):
