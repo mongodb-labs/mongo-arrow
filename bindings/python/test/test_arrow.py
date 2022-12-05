@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import tempfile
 import unittest
 import unittest.mock as mock
 from datetime import datetime
@@ -327,12 +328,13 @@ class TestArrowApiMixin:
         # Arrow does not support struct data in csvs
         #  https://arrow.apache.org/docs/python/csv.html#reading-and-writing-csv-files
         _, data = self._create_data()
-        csv.write_csv(data, "test.csv")
-        out = csv.read_csv("test.csv")
+        with tempfile.NamedTemporaryFile(suffix=".csv") as t:
+            t.close()
+            csv.write_csv(data, t.name)
+        out = csv.read_csv(t.name)
         for name in data.column_names:
             val = out[name].cast(data[name].type)
             self.assertEqual(data[name], val)
-        os.remove("test.csv")
 
     def test_string_bool(self):
         data = Table.from_pydict(
