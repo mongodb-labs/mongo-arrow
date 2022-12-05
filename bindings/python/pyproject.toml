@@ -19,6 +19,7 @@ repair-wheel-command = ""
 LIBBSON_INSTALL_DIR = "./libbson"
 
 [tool.cibuildwheel.linux]
+archs = "x86_64 aarch64"
 manylinux-x86_64-image = "manylinux2014"
 repair-wheel-command = [
     "pip install \"auditwheel>=5,<6\"",
