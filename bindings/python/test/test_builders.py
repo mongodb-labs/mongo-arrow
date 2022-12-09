@@ -171,6 +171,11 @@ class TestDocumentBuilder(TestCase):
             [
                 {"a": 1, "b": {"c": False, "d": ObjectId()}},
                 {"a": 2, "b": {"c": True, "d": ObjectId()}},
+                {"a": 3, "b": None},  # Null
+                {"a": 4},  # Missing
+                {"a": 5, "b": {}},  # Empty
+                {"a": 6, "b": 1},  # Wrong type
+                {"a": 6, "b": {"c": 1, "d": 1}},  # Wrong field types
             ]
         )
         builder.append_null()
@@ -178,7 +183,7 @@ class TestDocumentBuilder(TestCase):
 
         self.assertIsInstance(arr, Array)
         self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 4)
+        self.assertEqual(len(arr), 9)
 
 
 class TestBoolBuilderMixin:

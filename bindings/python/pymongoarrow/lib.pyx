@@ -83,7 +83,7 @@ cdef extract_document_dtype(bson_iter_t * doc_iter, context):
     """Get the appropropriate data type for a sub document"""
     cdef const char* key
     cdef bson_type_t value_t
-    cdef bson_iter_t * child_iter
+    cdef bson_iter_t child_iter
     fields = []
     while bson_iter_next(doc_iter):
         key = bson_iter_key(doc_iter)
@@ -91,8 +91,8 @@ cdef extract_document_dtype(bson_iter_t * doc_iter, context):
         if value_t in _field_type_map:
             field_type = _field_type_map[value_t]
         elif value_t == BSON_TYPE_DOCUMENT:
-            bson_iter_recurse(doc_iter, child_iter)
-            field_type = extract_document_dtype(child_iter, context)
+            bson_iter_recurse(doc_iter, &child_iter)
+            field_type = extract_document_dtype(&child_iter, context)
         elif value_t == BSON_TYPE_DATE_TIME:
             field_type = timestamp('ms', tz=context.tzinfo)
 
@@ -148,9 +148,9 @@ def process_bson_stream(bson_stream, context):
                 key = bson_iter_key(&doc_iter)
                 builder = builder_map.get(key)
                 if builder is None:
-                    builder = builder_map.get(key.decode('utf8'))
+                    builder = builder_map.get(key)
                 if builder is None and context.schema is None:
-                    """Get the appropriate builder for a document field."""
+                    # Get the appropriate builder for the current field.
                     value_t = bson_iter_type(&doc_iter)
                     builder_type = _builder_type_map.get(value_t)
                     if builder_type is None:
@@ -226,6 +226,8 @@ def process_bson_stream(bson_stream, context):
                 elif ftype == t_document:
                     if value_t == BSON_TYPE_DOCUMENT:
                         bson_iter_document(&doc_iter, &doc_buf_len, &doc_buf)
+                        if doc_buf_len <= 0:
+                            raise ValueError("Subdocument is invalid")
                         builder.append(<bytes>doc_buf[:doc_buf_len])
                     else:
                         builder.append_null()
@@ -514,7 +516,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
 
         for field in dtype:
             field_builder = <StringBuilder>get_field_builder(field, tzinfo)
-            builder_map[field.name] = field_builder
+            builder_map[field.name.encode('utf-8')] = field_builder
             c_field_builders.push_back(<shared_ptr[CArrayBuilder]>field_builder.builder)
 
         self.builder.reset(new CStructBuilder(pyarrow_unwrap_data_type(dtype), pool, c_field_builders))
@@ -532,7 +534,11 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     cpdef append(self, value):
         if not isinstance(value, bytes):
             value = bson.encode(value)
+        # Populate the child builders.
         process_bson_stream(value, self.context)
+        # Append an element to the Struct. "All child-builders' Append method
+        # must be called independently to maintain data-structure consistency."
+        # Pass "true" for is_valid.
         self.builder.get().Append(True)
 
     cpdef finish(self):
