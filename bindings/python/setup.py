@@ -18,6 +18,11 @@ COPY_LIBBSON = not os.environ.get("MONGO_NO_COPY_LIBBSON", "")
 # Whether to create libarrow symlinks on posix systems.
 CREATE_LIBARROW_SYMLINKS = os.environ.get("MONGO_CREATE_LIBARROW_SYMLINKS", "1")
 
+# Whether to add the GLIBCXX override.
+# Arrow's manylinux{2010, 2014} binaries are built with gcc <= 4.8 which predates CXX11 ABI
+# - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
+ADD_GLIBCXX_OVERRIDE = os.environ.get("MONGO_ADD_GLIBCXX_OVERRIDE", "1")
+
 # Set a default value for MACOSX_DEPLOYMENT_TARGET.
 os.environ.setdefault("MACOSX_DEPLOYMENT_TARGET", "10.15")
 
@@ -152,10 +157,7 @@ def append_arrow_flags(ext):
     if os.name == "posix":
         ext.extra_compile_args.append("-std=c++17")
 
-        # Arrow's manylinux{2010, 2014} binaries are built with gcc < 4.8 which predates CXX11 ABI
-        # - https://uwekorn.com/2019/09/15/how-we-build-apache-arrows-manylinux-wheels.html
-        # - https://arrow.apache.org/docs/python/extending.html#example
-        if "std=" not in os.environ.get("CXXFLAGS", ""):
+        if ADD_GLIBCXX_OVERRIDE:
             ext.extra_compile_args.append("-D_GLIBCXX_USE_CXX11_ABI=0")
 
     elif os.name == "nt":
