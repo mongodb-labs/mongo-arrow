@@ -16,6 +16,7 @@ from pyarrow import Table, timestamp
 from pymongoarrow.lib import (
     BoolBuilder,
     DatetimeBuilder,
+    DocumentBuilder,
     DoubleBuilder,
     Int32Builder,
     Int64Builder,
@@ -33,6 +34,7 @@ _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.decimal128_str: StringBuilder,
     _BsonArrowTypes.string: StringBuilder,
     _BsonArrowTypes.bool: BoolBuilder,
+    _BsonArrowTypes.document: DocumentBuilder,
 }
 
 
@@ -68,16 +70,22 @@ class PyMongoArrowContext:
             return cls(schema, {}, codec_options)
 
         builder_map = {}
+        tzinfo = codec_options.tzinfo
+
         str_type_map = _get_internal_typemap(schema.typemap)
         for fname, ftype in str_type_map.items():
             builder_cls = _TYPE_TO_BUILDER_CLS[ftype]
             encoded_fname = fname.encode("utf-8")
+
             # special-case initializing builders for parameterized types
             if builder_cls == DatetimeBuilder:
                 arrow_type = schema.typemap[fname]
-                if codec_options.tzinfo is not None and arrow_type.tz is None:
-                    arrow_type = timestamp(arrow_type.unit, tz=codec_options.tzinfo)
-                builder_map[encoded_fname] = builder_cls(dtype=arrow_type)
+                if tzinfo is not None and arrow_type.tz is None:
+                    arrow_type = timestamp(arrow_type.unit, tz=tzinfo)
+                builder_map[encoded_fname] = DatetimeBuilder(dtype=arrow_type)
+            elif builder_cls == DocumentBuilder:
+                arrow_type = schema.typemap[fname]
+                builder_map[encoded_fname] = DocumentBuilder(arrow_type, tzinfo)
             else:
                 builder_map[encoded_fname] = builder_cls()
         return cls(schema, builder_map)

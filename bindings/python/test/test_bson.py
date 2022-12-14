@@ -207,3 +207,54 @@ class TestDecimal128StringType(TestBsonToArrowConversionBase):
         ]
         as_dict = {"data": ["0.01", "0.00001", "1.0E+5"]}
         self._run_test(docs, as_dict)
+
+
+class TestSubdocumentType(TestBsonToArrowConversionBase):
+    def setUp(self):
+        self.schema = Schema({"data": dict(x=bool)})
+        self.context = PyMongoArrowContext.from_schema(self.schema)
+
+    def test_simple(self):
+        docs = [
+            {"data": dict(x=True)},
+            {"data": dict(x=False)},
+            {"data": dict(x=19)},
+            {"data": dict(x="string")},
+            {"data": dict(x=False)},
+            {"data": dict(x=True)},
+        ]
+        as_dict = {
+            "data": [
+                dict(x=True),
+                dict(x=False),
+                dict(x=None),
+                dict(x=None),
+                dict(x=False),
+                dict(x=True),
+            ]
+        }
+        self._run_test(docs, as_dict)
+
+    def test_nested(self):
+        self.schema = Schema({"data": dict(x=bool, y=dict(a=int))})
+        self.context = PyMongoArrowContext.from_schema(self.schema)
+
+        docs = [
+            {"data": dict(x=True, y=dict(a=1))},
+            {"data": dict(x=False, y=dict(a=1))},
+            {"data": dict(x=19, y=dict(a=1))},
+            {"data": dict(x="string", y=dict(a=1))},
+            {"data": dict(x=False, y=dict(a=1))},
+            {"data": dict(x=True, y=dict(a=1))},
+        ]
+        as_dict = {
+            "data": [
+                dict(x=True, y=dict(a=1)),
+                dict(x=False, y=dict(a=1)),
+                dict(x=None, y=dict(a=1)),
+                dict(x=None, y=dict(a=1)),
+                dict(x=False, y=dict(a=1)),
+                dict(x=True, y=dict(a=1)),
+            ]
+        }
+        self._run_test(docs, as_dict)

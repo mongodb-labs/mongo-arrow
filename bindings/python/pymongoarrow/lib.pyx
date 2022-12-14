@@ -22,23 +22,26 @@ import datetime
 import enum
 
 # Python imports
+import bson
 import numpy as np
-from pyarrow import timestamp
-from pymongoarrow.types import _BsonArrowTypes
+from pyarrow import timestamp, struct, field
+from pyarrow.lib import (
+    tobytes, StructType, int32, int64, float64, string, bool_
+)
 from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
+from pymongoarrow.context import PyMongoArrowContext
+from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128StringType
 
 # Cython imports
 from cpython cimport PyBytes_Size, object
 from cython.operator cimport dereference
 from libcpp cimport bool as cbool
 from libcpp.map cimport map
-from libcpp.string cimport string
+from libcpp.vector cimport vector
 from libc.stdlib cimport malloc, free
 from pyarrow.lib cimport *
-from pyarrow.lib import tobytes
 from pymongoarrow.libarrow cimport *
 from pymongoarrow.libbson cimport *
-from pymongoarrow.types import _BsonArrowTypes
 
 
 # libbson version
@@ -54,31 +57,72 @@ cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? N
     return doc
 
 _builder_type_map = {
-    0x10: Int32Builder,
-    0x12: Int64Builder,
-    0x01: DoubleBuilder,
-    0x09: DatetimeBuilder,
-    0x07: ObjectIdBuilder,
-    0x02: StringBuilder,
-    0x08: BoolBuilder
+    BSON_TYPE_INT32: Int32Builder,
+    BSON_TYPE_INT64: Int64Builder,
+    BSON_TYPE_DOUBLE: DoubleBuilder,
+    BSON_TYPE_DATE_TIME: DatetimeBuilder,
+    BSON_TYPE_OID: ObjectIdBuilder,
+    BSON_TYPE_UTF8: StringBuilder,
+    BSON_TYPE_BOOL: BoolBuilder,
+    BSON_TYPE_DOCUMENT: DocumentBuilder,
+    BSON_TYPE_DECIMAL128: StringBuilder
 }
 
+_field_type_map = {
+    BSON_TYPE_INT32: int32(),
+    BSON_TYPE_INT64: int64(),
+    BSON_TYPE_DOUBLE: float64(),
+    BSON_TYPE_OID: ObjectIdType(),
+    BSON_TYPE_UTF8: string(),
+    BSON_TYPE_BOOL: bool_(),
+    BSON_TYPE_DECIMAL128: Decimal128StringType()
+}
+
+
+cdef extract_document_dtype(bson_iter_t * doc_iter, context):
+    """Get the appropropriate data type for a sub document"""
+    cdef const char* key
+    cdef bson_type_t value_t
+    cdef bson_iter_t child_iter
+    fields = []
+    while bson_iter_next(doc_iter):
+        key = bson_iter_key(doc_iter)
+        value_t = bson_iter_type(doc_iter)
+        if value_t in _field_type_map:
+            field_type = _field_type_map[value_t]
+        elif value_t == BSON_TYPE_DOCUMENT:
+            bson_iter_recurse(doc_iter, &child_iter)
+            field_type = extract_document_dtype(&child_iter, context)
+        elif value_t == BSON_TYPE_DATE_TIME:
+            field_type = timestamp('ms', tz=context.tzinfo)
+
+        fields.append(field(key.decode('utf-8'), field_type))
+    return struct(fields)
+
+
 def process_bson_stream(bson_stream, context):
+    """Process a bson byte stream using a PyMongoArrowContext"""
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
     cdef size_t length = <size_t>PyBytes_Size(bson_stream)
     cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
-    cdef const bson_t * doc = NULL
-    cdef bson_iter_t doc_iter
-    cdef bson_decimal128_t dec128
-    cdef const char* key
-    cdef bson_type_t value_t
-    cdef Py_ssize_t count = 0
-    cdef const char * bson_str
-    cdef uint32_t str_len
     cdef char *decimal128_str = <char *> malloc(
         BSON_DECIMAL128_STRING * sizeof(char))
+    cdef uint32_t str_len
+    cdef const uint8_t *doc_buf = NULL
+    cdef uint32_t doc_buf_len = 0;
+    cdef bson_decimal128_t dec128
+    cdef bson_type_t value_t
+    cdef const char * bson_str
+    cdef StructType struct_dtype
+    cdef const bson_t * doc = NULL
+    cdef bson_iter_t doc_iter
+    cdef bson_iter_t child_iter
+    cdef const char* key
+    cdef Py_ssize_t count = 0
 
-    # Localize types for better performance.
+    builder_map = context.builder_map
+
+    # Alias types for performance.
     t_int32 = _BsonArrowTypes.int32
     t_int64 = _BsonArrowTypes.int64
     t_double = _BsonArrowTypes.double
@@ -86,7 +130,7 @@ def process_bson_stream(bson_stream, context):
     t_oid = _BsonArrowTypes.objectid
     t_string = _BsonArrowTypes.string
     t_bool = _BsonArrowTypes.bool
-    builder_map = context.builder_map
+    t_document = _BsonArrowTypes.document
 
     # initialize count to current length of builders
     for _, builder in builder_map.items():
@@ -103,72 +147,92 @@ def process_bson_stream(bson_stream, context):
             while bson_iter_next(&doc_iter):
                 key = bson_iter_key(&doc_iter)
                 builder = builder_map.get(key)
+                if builder is None:
+                    builder = builder_map.get(key)
                 if builder is None and context.schema is None:
-                    # Only run if there is no schema.
-                    ftype = bson_iter_type(&doc_iter)
-                    if ftype not in _builder_type_map:
+                    # Get the appropriate builder for the current field.
+                    value_t = bson_iter_type(&doc_iter)
+                    builder_type = _builder_type_map.get(value_t)
+                    if builder_type is None:
                         continue
 
-                    builder_type = _builder_type_map[ftype]
+                    # Handle the parameterized builders.
                     if builder_type == DatetimeBuilder and context.tzinfo is not None:
                         arrow_type = timestamp('ms', tz=context.tzinfo)
-                        builder_map[key] = builder_type(dtype=arrow_type)
+                        builder = DatetimeBuilder(dtype=arrow_type)
+
+                    elif builder_type == DocumentBuilder:
+                        bson_iter_recurse(&doc_iter, &child_iter)
+                        struct_dtype = extract_document_dtype(&child_iter, context)
+                        builder = DocumentBuilder(struct_dtype, context.tzinfo)
                     else:
-                        builder_map[key] = builder_type()
-                    builder = builder_map[key]
+                        builder = builder_type()
+
+                    builder_map[key] = builder
                     for _ in range(count):
                         builder.append_null()
-                if builder is not None:
-                    ftype = builder.type_marker
-                    value_t = bson_iter_type(&doc_iter)
-                    if ftype == t_int32:
-                        if value_t == BSON_TYPE_INT32:
-                            builder.append(bson_iter_int32(&doc_iter))
-                        else:
-                            builder.append_null()
-                    elif ftype == t_int64:
-                        if (value_t == BSON_TYPE_INT64 or
-                                value_t == BSON_TYPE_BOOL or
-                                value_t == BSON_TYPE_DOUBLE or
-                                value_t == BSON_TYPE_INT32):
-                            builder.append(bson_iter_as_int64(&doc_iter))
-                        else:
-                            builder.append_null()
-                    elif ftype == t_oid:
-                        if value_t == BSON_TYPE_OID:
-                            builder.append(<bytes>(<uint8_t*>bson_iter_oid(&doc_iter))[:12])
-                        else:
-                            builder.append_null()
-                    elif ftype == t_string:
-                        if value_t == BSON_TYPE_UTF8:
-                            bson_str = bson_iter_utf8(&doc_iter, &str_len)
-                            builder.append(<bytes>(bson_str)[:str_len])
-                        elif value_t == BSON_TYPE_DECIMAL128:
-                            bson_iter_decimal128(&doc_iter, &dec128)
-                            bson_decimal128_to_string(&dec128, decimal128_str)
-                            builder.append(<bytes>(decimal128_str))
-                        else:
-                            builder.append_null()
-                    elif ftype == t_double:
-                        if (value_t == BSON_TYPE_DOUBLE or
-                                value_t == BSON_TYPE_BOOL or
-                                value_t == BSON_TYPE_INT32 or
-                                value_t == BSON_TYPE_INT64):
-                            builder.append(bson_iter_as_double(&doc_iter))
-                        else:
-                            builder.append_null()
-                    elif ftype == t_datetime:
-                        if value_t == BSON_TYPE_DATE_TIME:
-                            builder.append(bson_iter_date_time(&doc_iter))
-                        else:
-                            builder.append_null()
-                    elif ftype == t_bool:
-                        if value_t == BSON_TYPE_BOOL:
-                            builder.append(bson_iter_bool(&doc_iter))
-                        else:
-                            builder.append_null()
+
+                if builder is None:
+                    continue
+
+                ftype = builder.type_marker
+                value_t = bson_iter_type(&doc_iter)
+                if ftype == t_int32:
+                    if value_t == BSON_TYPE_INT32:
+                        builder.append(bson_iter_int32(&doc_iter))
                     else:
-                        raise PyMongoArrowError('unknown ftype {}'.format(ftype))
+                        builder.append_null()
+                elif ftype == t_int64:
+                    if (value_t == BSON_TYPE_INT64 or
+                            value_t == BSON_TYPE_BOOL or
+                            value_t == BSON_TYPE_DOUBLE or
+                            value_t == BSON_TYPE_INT32):
+                        builder.append(bson_iter_as_int64(&doc_iter))
+                    else:
+                        builder.append_null()
+                elif ftype == t_oid:
+                    if value_t == BSON_TYPE_OID:
+                        builder.append(<bytes>(<uint8_t*>bson_iter_oid(&doc_iter))[:12])
+                    else:
+                        builder.append_null()
+                elif ftype == t_string:
+                    if value_t == BSON_TYPE_UTF8:
+                        bson_str = bson_iter_utf8(&doc_iter, &str_len)
+                        builder.append(<bytes>(bson_str)[:str_len])
+                    elif value_t == BSON_TYPE_DECIMAL128:
+                        bson_iter_decimal128(&doc_iter, &dec128)
+                        bson_decimal128_to_string(&dec128, decimal128_str)
+                        builder.append(<bytes>(decimal128_str))
+                    else:
+                        builder.append_null()
+                elif ftype == t_double:
+                    if (value_t == BSON_TYPE_DOUBLE or
+                            value_t == BSON_TYPE_BOOL or
+                            value_t == BSON_TYPE_INT32 or
+                            value_t == BSON_TYPE_INT64):
+                        builder.append(bson_iter_as_double(&doc_iter))
+                    else:
+                        builder.append_null()
+                elif ftype == t_datetime:
+                    if value_t == BSON_TYPE_DATE_TIME:
+                        builder.append(bson_iter_date_time(&doc_iter))
+                    else:
+                        builder.append_null()
+                elif ftype == t_bool:
+                    if value_t == BSON_TYPE_BOOL:
+                        builder.append(bson_iter_bool(&doc_iter))
+                    else:
+                        builder.append_null()
+                elif ftype == t_document:
+                    if value_t == BSON_TYPE_DOCUMENT:
+                        bson_iter_document(&doc_iter, &doc_buf_len, &doc_buf)
+                        if doc_buf_len <= 0:
+                            raise ValueError("Subdocument is invalid")
+                        builder.append(<bytes>doc_buf[:doc_buf_len])
+                    else:
+                        builder.append_null()
+                else:
+                    raise PyMongoArrowError('unknown ftype {}'.format(ftype))
             count += 1
             for _, builder in builder_map.items():
                 if len(builder) != count:
@@ -396,4 +460,92 @@ cdef class BoolBuilder(_ArrayBuilderBase):
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CBooleanBuilder] unwrap(self):
+        return self.builder
+
+
+
+cdef object get_field_builder(field, tzinfo):
+    """"Find the appropriate field builder given a pyarrow field"""
+    cdef object field_builder
+    field_type = field.type
+    if _atypes.is_int32(field_type):
+        field_builder = Int32Builder()
+    elif _atypes.is_int64(field_type):
+        field_builder = Int64Builder()
+    elif _atypes.is_float64(field_type):
+        field_builder = DoubleBuilder()
+    elif _atypes.is_timestamp(field_type):
+        if tzinfo and field_type.tz is None:
+            field_type = timestamp(field_type.unit, tz=tzinfo)
+        field_builder = DatetimeBuilder(field_type)
+    elif _atypes.is_string(field_type):
+        field_builder = StringBuilder()
+    elif _atypes.is_boolean(field_type):
+        field_builder = BoolBuilder()
+    elif _atypes.is_struct(field_type):
+        field_builder = DocumentBuilder(field_type, tzinfo)
+    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.objectid:
+        field_builder = ObjectIdBuilder()
+    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.decimal128_str:
+        field_builder = StringBuilder()
+    else:
+        field_builder = StringBuilder()
+    return field_builder
+
+
+cdef class DocumentBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.document
+
+    cdef:
+        shared_ptr[CStructBuilder] builder
+        object dtype
+        object context
+
+    def __cinit__(self, StructType dtype, tzinfo=None, MemoryPool memory_pool=None):
+        cdef StringBuilder field_builder
+        cdef vector[shared_ptr[CArrayBuilder]] c_field_builders
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+
+        self.dtype = dtype
+        if not _atypes.is_struct(dtype):
+            raise ValueError("dtype must be a struct()")
+
+        self.context = context = PyMongoArrowContext(None, {})
+        context.tzinfo = tzinfo
+        builder_map = context.builder_map
+
+        for field in dtype:
+            field_builder = <StringBuilder>get_field_builder(field, tzinfo)
+            builder_map[field.name.encode('utf-8')] = field_builder
+            c_field_builders.push_back(<shared_ptr[CArrayBuilder]>field_builder.builder)
+
+        self.builder.reset(new CStructBuilder(pyarrow_unwrap_data_type(dtype), pool, c_field_builders))
+
+    @property
+    def dtype(self):
+        return self.dtype
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        if not isinstance(value, bytes):
+            value = bson.encode(value)
+        # Populate the child builders.
+        process_bson_stream(value, self.context)
+        # Append an element to the Struct. "All child-builders' Append method
+        # must be called independently to maintain data-structure consistency."
+        # Pass "true" for is_valid.
+        self.builder.get().Append(True)
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CStructBuilder] unwrap(self):
         return self.builder
