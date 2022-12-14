@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "0.6.3"
+__version__ = "0.7.0.dev0"
 
 _MIN_LIBBSON_VERSION = "1.21.0"
