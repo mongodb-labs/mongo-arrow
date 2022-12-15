@@ -304,8 +304,8 @@ class TestArrowApiMixin:
             "datetime": [datetime(1970 + i, 1, 1) for i in range(3)],
         }
 
-        def inner(i):
-            return dict(
+        raw_data["nested"] = [
+            dict(
                 str=str(i),
                 bool=bool(i),
                 float=i + 0.1,
@@ -313,8 +313,8 @@ class TestArrowApiMixin:
                 int=i,
                 datetime=datetime(1970 + i, 1, 1),
             )
-
-        raw_data["nested"] = [inner(i) for i in range(3)]
+            for i in range(3)
+        ]
         return schema, Table.from_pydict(raw_data, ArrowSchema(schema))
 
     def test_parquet(self):
