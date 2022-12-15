@@ -20,13 +20,15 @@
 import copy
 import datetime
 import enum
+from collections import defaultdict
 
 # Python imports
 import bson
 import numpy as np
+from collections import defaultdict
 from pyarrow import timestamp, struct, field
 from pyarrow.lib import (
-    tobytes, StructType, int32, int64, float64, string, bool_
+    tobytes, StructType, int32, int64, float64, string, bool_, list_
 )
 from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
 from pymongoarrow.context import PyMongoArrowContext
@@ -65,7 +67,8 @@ _builder_type_map = {
     BSON_TYPE_UTF8: StringBuilder,
     BSON_TYPE_BOOL: BoolBuilder,
     BSON_TYPE_DOCUMENT: DocumentBuilder,
-    BSON_TYPE_DECIMAL128: StringBuilder
+    BSON_TYPE_DECIMAL128: StringBuilder,
+    BSON_TYPE_ARRAY: ListBuilder,
 }
 
 _field_type_map = {
@@ -75,7 +78,7 @@ _field_type_map = {
     BSON_TYPE_OID: ObjectIdType(),
     BSON_TYPE_UTF8: string(),
     BSON_TYPE_BOOL: bool_(),
-    BSON_TYPE_DECIMAL128: Decimal128StringType()
+    BSON_TYPE_DECIMAL128: Decimal128StringType(),
 }
 
 
@@ -99,8 +102,20 @@ cdef extract_document_dtype(bson_iter_t * doc_iter, context):
         fields.append(field(key.decode('utf-8'), field_type))
     return struct(fields)
 
+cdef extract_array_dtype(bson_iter_t * doc_iter, context):
+    """Get the appropropriate data type for a sub document"""
+    cdef const char* key
+    cdef bson_type_t value_t
+    cdef bson_iter_t child_iter
+    fields = []
+    first_item = bson_iter_next(doc_iter)
+    value_t = bson_iter_type(doc_iter)
+    if value_t in _field_type_map:
+        return _field_type_map[value_t]
+    else:
+        raise PyMongoArrowError('unknown value type {}'.format(value_t))
 
-def process_bson_stream(bson_stream, context):
+def process_bson_stream(bson_stream, context, value_builder=None):
     """Process a bson byte stream using a PyMongoArrowContext"""
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
     cdef size_t length = <size_t>PyBytes_Size(bson_stream)
@@ -110,6 +125,8 @@ def process_bson_stream(bson_stream, context):
     cdef uint32_t str_len
     cdef const uint8_t *doc_buf = NULL
     cdef uint32_t doc_buf_len = 0;
+    cdef const uint8_t *arr_buf = NULL
+    cdef uint32_t arr_buf_len = 0;
     cdef bson_decimal128_t dec128
     cdef bson_type_t value_t
     cdef const char * bson_str
@@ -131,12 +148,12 @@ def process_bson_stream(bson_stream, context):
     t_string = _BsonArrowTypes.string
     t_bool = _BsonArrowTypes.bool
     t_document = _BsonArrowTypes.document
+    t_array = _BsonArrowTypes.array
 
     # initialize count to current length of builders
     for _, builder in builder_map.items():
         count = len(builder)
         break
-
     try:
         while True:
             doc = bson_reader_read_safe(stream_reader)
@@ -146,7 +163,10 @@ def process_bson_stream(bson_stream, context):
                 raise InvalidBSON("Could not read BSON document")
             while bson_iter_next(&doc_iter):
                 key = bson_iter_key(&doc_iter)
-                builder = builder_map.get(key)
+                if value_builder is not None:
+                    builder = value_builder
+                else:
+                    builder = builder_map.get(key)
                 if builder is None:
                     builder = builder_map.get(key)
                 if builder is None and context.schema is None:
@@ -165,10 +185,15 @@ def process_bson_stream(bson_stream, context):
                         bson_iter_recurse(&doc_iter, &child_iter)
                         struct_dtype = extract_document_dtype(&child_iter, context)
                         builder = DocumentBuilder(struct_dtype, context.tzinfo)
+                    elif builder_type == ListBuilder:
+                        bson_iter_recurse(&doc_iter, &child_iter)
+                        list_dtype = extract_array_dtype(&child_iter, context)
+                        list_dtype = list_(list_dtype)
+                        builder = ListBuilder(list_dtype, context.tzinfo, value_builder=value_builder)
                     else:
                         builder = builder_type()
-
-                    builder_map[key] = builder
+                    if value_builder is None:
+                        builder_map[key] = builder
                     for _ in range(count):
                         builder.append_null()
 
@@ -229,6 +254,14 @@ def process_bson_stream(bson_stream, context):
                         if doc_buf_len <= 0:
                             raise ValueError("Subdocument is invalid")
                         builder.append(<bytes>doc_buf[:doc_buf_len])
+                    else:
+                        builder.append_null()
+                elif ftype == t_array:
+                    if value_t == BSON_TYPE_ARRAY:
+                        bson_iter_array(&doc_iter, &doc_buf_len, &doc_buf)
+                        if doc_buf_len <= 0:
+                            raise ValueError("Subarray is invalid")
+                        builder.append(<bytes>doc_buf[:doc_buf_len], value_builder=value_builder)
                     else:
                         builder.append_null()
                 else:
@@ -467,7 +500,11 @@ cdef class BoolBuilder(_ArrayBuilderBase):
 cdef object get_field_builder(field, tzinfo):
     """"Find the appropriate field builder given a pyarrow field"""
     cdef object field_builder
-    field_type = field.type
+    cdef DataType field_type
+    if isinstance(field, DataType):
+        field_type = field
+    else:
+        field_type = field.type
     if _atypes.is_int32(field_type):
         field_builder = Int32Builder()
     elif _atypes.is_int64(field_type):
@@ -484,6 +521,8 @@ cdef object get_field_builder(field, tzinfo):
         field_builder = BoolBuilder()
     elif _atypes.is_struct(field_type):
         field_builder = DocumentBuilder(field_type, tzinfo)
+    elif _atypes.is_list(field_type):
+        field_builder = ListBuilder(field_type, tzinfo)
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.objectid:
         field_builder = ObjectIdBuilder()
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.decimal128_str:
@@ -548,4 +587,58 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CStructBuilder] unwrap(self):
+        return self.builder
+
+
+cdef class ListBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.array
+
+    cdef:
+        shared_ptr[CListBuilder] builder
+        _ArrayBuilderBase child_builder
+        object dtype
+        object context
+
+    def __cinit__(self, DataType dtype, tzinfo=None, MemoryPool memory_pool=None, value_builder=None):
+        cdef StringBuilder field_builder
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        cdef shared_ptr[CArrayBuilder] grandchild_builder
+        self.dtype = dtype
+        if not _atypes.is_list(dtype):
+            raise ValueError("dtype must be a list_()")
+        self.context = context = PyMongoArrowContext(None, {})
+        self.context.tzinfo = tzinfo
+        field_builder = <StringBuilder>get_field_builder(self.dtype.value_type, tzinfo)
+        grandchild_builder = <shared_ptr[CArrayBuilder]>field_builder.builder
+        self.child_builder = field_builder
+        self.builder.reset(new CListBuilder(pool, grandchild_builder, pyarrow_unwrap_data_type(dtype)))
+
+
+    @property
+    def dtype(self):
+        return self.dtype
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value, value_builder=None):
+        if not isinstance(value, bytes):
+            value = bson.encode(value)
+        # Append an element to the Struct. "All child-builders' Append method
+        # must be called independently to maintain data-structure consistency."
+        # Pass "true" for is_valid.
+        self.builder.get().Append(True)
+        process_bson_stream(value, self.context, value_builder=self.child_builder)
+
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CListBuilder] unwrap(self):
         return self.builder

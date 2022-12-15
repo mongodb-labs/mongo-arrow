@@ -22,7 +22,7 @@ from test.utils import AllowListEventListener, TestNullsBase
 import pyarrow
 import pymongo
 from bson import CodecOptions, Decimal128, ObjectId
-from pyarrow import Table, binary, bool_, csv, decimal256, field, int32, int64
+from pyarrow import Table, binary, bool_, csv, decimal256, field, int32, int64, list_
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
 from pyarrow.parquet import read_table, write_table
@@ -203,6 +203,7 @@ class TestArrowApiMixin:
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
         self.assertEqual(data, find_arrow_all(coll, {}, schema=schema))
+        print(find_arrow_all(coll, {}, schema=schema))
         return res
 
     def test_write_error(self):
@@ -293,8 +294,8 @@ class TestArrowApiMixin:
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
             if k.__name__ not in ("ObjectId", "Decimal128")
         }
-        schema["nested"] = struct([field(a, b) for (a, b) in schema.items()])
-
+        schema["list"] = list_(int32())
+        schema["nested"] = struct([field(a, b) for (a, b) in list(schema.items())])
         raw_data = {
             "str": [None] + [str(i) for i in range(2)],
             "bool": [True for _ in range(3)],
@@ -302,6 +303,7 @@ class TestArrowApiMixin:
             "Int64": [i for i in range(3)],
             "int": [i for i in range(3)],
             "datetime": [datetime(1970 + i, 1, 1) for i in range(3)],
+            "list": [list(range(3)) for _ in range(3)],
         }
 
         def inner(i):
@@ -336,6 +338,10 @@ class TestArrowApiMixin:
             for name in data.column_names:
                 val = out[name].cast(data[name].type)
                 self.assertEqual(data[name], val)
+
+    def test_arrays(self):
+        schema, data = self._create_nested_data()
+        self.round_trip(data, Schema(schema))
 
     def test_string_bool(self):
         data = Table.from_pydict(
