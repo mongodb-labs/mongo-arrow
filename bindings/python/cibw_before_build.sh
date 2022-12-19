@@ -9,13 +9,12 @@ set -o errexit
 
 if [[ "$CIBW_BUILD" == *"macosx_"* ]]
 then
-  mac_version="${MACOSX_DEPLOYMENT_TARGET/\./_}"
   if [[ "$ARCHFLAGS" == *"arm64"* ]]
   then
-    platform="macosx_${mac_version}_universal2"
-    export CMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+    platform="macosx_11_0_arm64"
+    export CMAKE_OSX_ARCHITECTURES="arm64"
   else
-    platform="macosx_${mac_version}_x86_64"
+    platform="macosx_10_14_x86_64"
   fi
 
   # Install pyarrow with the appropriate platform.

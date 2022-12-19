@@ -5,6 +5,13 @@ Changes in Version 0.7.0
 ------------------------
 - Added support for BSON Embedded Document type.
 
+=======
+Changes in Version 0.6.3
+------------------------
+
+- Added wheels for Linux AArch64 and Python 3.11.
+- Fixed handling of time zones in schema auto-discovery.
+
 Changes in Version 0.6.2
 ------------------------
 Note: We did not publish 0.6.0 or 0.6.1 due to technical difficulties.
