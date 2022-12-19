@@ -17,6 +17,8 @@ Support for additional types will be added in subsequent releases.
      - Type Identifiers
    * - String
      - :class:`py.str`, an instance of :class:`pyarrow.string`
+   * - Embedded document
+     - :class:`py.dict`, and instance of :class:`pyarrow.struct`
    * - ObjectId
      - :class:`py.bytes`, :class:`bson.ObjectId`, an instance of :class:`pymongoarrow.types.ObjectIdType`, an instance of :class:`pyarrow.FixedSizeBinaryScalar`
    * - Boolean

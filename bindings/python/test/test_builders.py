@@ -16,16 +16,18 @@ from datetime import datetime, timedelta
 from unittest import TestCase
 
 from bson.objectid import ObjectId
-from pyarrow import Array, bool_, int32, int64, timestamp
+from pyarrow import Array, bool_, field, int32, int64, struct, timestamp
 from pymongoarrow.lib import (
     BoolBuilder,
     DatetimeBuilder,
+    DocumentBuilder,
     DoubleBuilder,
     Int32Builder,
     Int64Builder,
     ObjectIdBuilder,
     StringBuilder,
 )
+from pymongoarrow.types import ObjectIdType
 
 
 class TestIntBuildersMixin:
@@ -144,6 +146,44 @@ class TestStringBuilder(TestCase):
         self.assertEqual(arr.null_count, 1)
         self.assertEqual(len(arr), 5)
         self.assertEqual(arr.to_pylist(), values + [None])
+
+
+class TestDocumentBuilder(TestCase):
+    def test_simple(self):
+        dtype = struct([field("a", int32()), field("b", bool_())])
+        builder = DocumentBuilder(dtype)
+        builder.append({"a": 1, "b": True})
+        builder.append_values([{"a": 1, "b": False}, {"a": 2, "b": True}])
+        builder.append_null()
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 4)
+        self.assertEqual(arr.type, dtype)
+
+    def test_nested(self):
+        sub_struct = struct([field("c", bool_()), field("d", ObjectIdType())])
+        dtype = struct([field("a", int32()), field("b", sub_struct)])
+        builder = DocumentBuilder(dtype)
+        builder.append({"a": 1, "b": {"c": True, "d": ObjectId()}})
+        builder.append_values(
+            [
+                {"a": 1, "b": {"c": False, "d": ObjectId()}},
+                {"a": 2, "b": {"c": True, "d": ObjectId()}},
+                {"a": 3, "b": None},  # Null
+                {"a": 4},  # Missing
+                {"a": 5, "b": {}},  # Empty
+                {"a": 6, "b": 1},  # Wrong type
+                {"a": 6, "b": {"c": 1, "d": 1}},  # Wrong field types
+            ]
+        )
+        builder.append_null()
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 9)
 
 
 class TestBoolBuilderMixin:

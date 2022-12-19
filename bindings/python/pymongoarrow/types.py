@@ -19,7 +19,16 @@ import pyarrow as pa
 import pyarrow.types as _atypes
 from bson import Decimal128, Int64, ObjectId
 from pyarrow import DataType as _ArrowDataType
-from pyarrow import PyExtensionType, binary, bool_, float64, int64, string, timestamp
+from pyarrow import (
+    PyExtensionType,
+    binary,
+    bool_,
+    float64,
+    int64,
+    string,
+    struct,
+    timestamp,
+)
 
 
 class _BsonArrowTypes(enum.Enum):
@@ -31,6 +40,7 @@ class _BsonArrowTypes(enum.Enum):
     string = 6
     bool = 7
     decimal128_str = 8
+    document = 9
 
 
 # Custom Extension Types.
@@ -113,6 +123,7 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _is_decimal128_str: _BsonArrowTypes.decimal128_str,
     _atypes.is_string: _BsonArrowTypes.string,
     _atypes.is_boolean: _BsonArrowTypes.bool,
+    _atypes.is_struct: _BsonArrowTypes.document,
 }
 
 
@@ -123,6 +134,11 @@ def _is_typeid_supported(typeid):
 def _normalize_typeid(typeid, field_name):
     if isinstance(typeid, _ArrowDataType):
         return typeid
+    elif isinstance(typeid, dict):
+        fields = []
+        for sub_field_name, sub_typeid in typeid.items():
+            fields.append((sub_field_name, _normalize_typeid(sub_typeid, sub_field_name)))
+        return struct(fields)
     elif _is_typeid_supported(typeid):
         normalizer = _TYPE_NORMALIZER_FACTORY[typeid]
         return normalizer(typeid)

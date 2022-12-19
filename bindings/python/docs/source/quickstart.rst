@@ -71,6 +71,12 @@ There are multiple permissible type-identifiers for each supported BSON type.
 For a full-list of supported types and associated type-identifiers see
 :doc:`supported_types`.
 
+Nested data (embedded documents) are also supported::
+
+  from pymongoarrow.api import Schema
+  schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
+
+
 .. note::
 
    For all of the examples below, the schema can be omitted like so::
@@ -79,6 +85,7 @@ For a full-list of supported types and associated type-identifiers see
 
    In this case, PyMongoArrow will try to automatically apply a schema based on
    the data contained in the first batch.
+
 
 Find operations
 ---------------
@@ -99,6 +106,12 @@ Or as :class:`numpy.ndarray` instances::
 In the NumPy case, the return value is a dictionary where the keys are field
 names and values are the corresponding arrays.
 
+Nested data (embedded documents) are also supported::
+
+  from pymongoarrow.api import Schema
+  schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
+  arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
+
 Aggregate operations
 --------------------
 Running ``aggregate`` operations is similar to ``find``. Here is an example of
@@ -110,6 +123,14 @@ an aggregation that loads all records with an ``amount`` less than 10::
   arrow_table = client.db.data.aggregate_arrow_all([{'$match': {'amount': {'$lte': 10}}}], schema=schema)
   # numpy
   ndarrays = client.db.data.aggregate_numpy_all([{'$match': {'amount': {'$lte': 10}}}], schema=schema)
+
+Nested data (embedded documents) are also supported::
+
+  from pymongoarrow.api import Schema
+  schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
+  arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
+  arrow_table = client.db.data.aggregate_arrow_all([{'$match': {'amount': {'$lte': 10}}}], schema=schema)
+
 
 Writing to other formats
 ------------------------
@@ -128,6 +149,10 @@ referenced by the variable ``df`` to a CSV file ``out.csv``, run::
 
   df.to_csv('out.csv', index=False)
 
+.. note::
+
+  Nested data is supported for parquet read/write but is not well supported
+  by Arrow or Pandas for CSV read/write.
 
 Writing back to MongoDB
 -----------------------
