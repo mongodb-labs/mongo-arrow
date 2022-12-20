@@ -294,7 +294,7 @@ class TestArrowApiMixin:
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
             if k.__name__ not in ("ObjectId", "Decimal128")
         }
-        schema["list"] = list_(int32())
+        schema["list"] = list_(list_(int32()))
         schema["nested"] = struct([field(a, b) for (a, b) in list(schema.items())])
         raw_data = {
             "str": [None] + [str(i) for i in range(2)],
@@ -303,7 +303,7 @@ class TestArrowApiMixin:
             "Int64": [i for i in range(3)],
             "int": [i for i in range(3)],
             "datetime": [datetime(1970 + i, 1, 1) for i in range(3)],
-            "list": [list(range(3)) for _ in range(3)],
+            "list": [[list(range(3))] for _ in range(3)],
         }
 
         def inner(i):
@@ -314,6 +314,7 @@ class TestArrowApiMixin:
                 Int64=i,
                 int=i,
                 datetime=datetime(1970 + i, 1, 1),
+                list=[list(range(3))],
             )
 
         raw_data["nested"] = [inner(i) for i in range(3)]

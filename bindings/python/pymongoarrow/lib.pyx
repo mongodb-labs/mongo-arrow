@@ -112,6 +112,9 @@ cdef extract_array_dtype(bson_iter_t * doc_iter, context):
     value_t = bson_iter_type(doc_iter)
     if value_t in _field_type_map:
         return _field_type_map[value_t]
+    elif value_t == BSON_TYPE_ARRAY:
+        bson_iter_recurse(doc_iter, &child_iter)
+        return extract_array_dtype(&child_iter, context)
     else:
         raise PyMongoArrowError('unknown value type {}'.format(value_t))
 
@@ -199,7 +202,6 @@ def process_bson_stream(bson_stream, context, value_builder=None):
 
                 if builder is None:
                     continue
-
                 ftype = builder.type_marker
                 value_t = bson_iter_type(&doc_iter)
                 if ftype == t_int32:
@@ -261,7 +263,7 @@ def process_bson_stream(bson_stream, context, value_builder=None):
                         bson_iter_array(&doc_iter, &doc_buf_len, &doc_buf)
                         if doc_buf_len <= 0:
                             raise ValueError("Subarray is invalid")
-                        builder.append(<bytes>doc_buf[:doc_buf_len], value_builder=value_builder)
+                        builder.append(<bytes>doc_buf[:doc_buf_len])
                     else:
                         builder.append_null()
                 else:
