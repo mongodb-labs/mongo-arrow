@@ -98,13 +98,21 @@ class TestExplicitPandasApi(PandasTestBase):
         self.assertEqual(agg_cmd.command["pipeline"][0]["$project"], projection)
         self.assertEqual(agg_cmd.command["pipeline"][1]["$project"], {"_id": True, "data": True})
 
+    def _assert_frames_equal(self, incoming, outgoing):
+        for name in incoming.columns:
+            col = incoming[name]
+            val = outgoing[name]
+            if str(val.dtype) in ["object", "float64"]:
+                val = val.astype(col.dtype)
+            pd.testing.assert_series_equal(col, val)
+
     def round_trip(self, data, schema, coll=None):
         if coll is None:
             coll = self.coll
         coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
-        pd.testing.assert_frame_equal(data, find_pandas_all(coll, {}, schema=schema))
+        self._assert_frames_equal(data, find_pandas_all(coll, {}, schema=schema))
         return res
 
     def test_write_error(self):
@@ -129,23 +137,34 @@ class TestExplicitPandasApi(PandasTestBase):
             if k.__name__ not in ("ObjectId", "Decimal128")
         }
         schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
+        schema["Int64"] = pd.Int64Dtype()
+        schema["int"] = pd.Int32Dtype()
         schema["str"] = "U8"
         schema["datetime"] = "datetime64[ns]"
 
         data = pd.DataFrame(
             data={
-                "Int64": [i for i in range(2)],
-                "float": [i for i in range(2)],
-                "int": [i for i in range(2)],
-                "datetime": [datetime.datetime(1970 + i, 1, 1) for i in range(2)],
-                "str": [f"a{i}" for i in range(2)],
-                "bool": [True, False],
+                "Int64": [i for i in range(2)] + [None],
+                "float": [i for i in range(2)] + [None],
+                "int": [i for i in range(2)] + [None],
+                "datetime": [datetime.datetime(1970 + i, 1, 1) for i in range(2)] + [None],
+                "str": [f"a{i}" for i in range(2)] + [None],
+                "bool": [True, False, None],
             }
         ).astype(schema)
         return arrow_schema, data
 
     def test_write_schema_validation(self):
         arrow_schema, data = self._create_data()
+
+        # Work around https://github.com/pandas-dev/pandas/issues/11453.
+        def new_replace(k):
+            if k.value < 1:
+                return datetime.datetime(1970, 1, 1)
+            return k.replace(tzinfo=None)
+
+        data["datetime"] = data.apply(lambda row: new_replace(row["datetime"]), axis=1)
+
         self.round_trip(
             data,
             Schema(arrow_schema),
@@ -282,12 +301,7 @@ class TestExplicitPandasApi(PandasTestBase):
             f.close()
             data.to_csv(f.name, index=False)
             out = pd.read_csv(f.name)
-            for name in data.columns:
-                col = data[name]
-                val = out[name]
-                if str(val.dtype) == "object":
-                    val = val.astype(col.dtype)
-                pd.testing.assert_series_equal(col, val)
+            self._assert_frames_equal(data, out)
 
 
 class TestBSONTypes(PandasTestBase):
