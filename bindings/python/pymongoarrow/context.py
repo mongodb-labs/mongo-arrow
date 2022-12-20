@@ -37,7 +37,6 @@ _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.bool: BoolBuilder,
     _BsonArrowTypes.document: DocumentBuilder,
     _BsonArrowTypes.array: ListBuilder,
-
 }
 
 
