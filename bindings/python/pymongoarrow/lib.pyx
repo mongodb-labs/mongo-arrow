@@ -25,11 +25,11 @@ from collections import defaultdict
 # Python imports
 import bson
 import numpy as np
-from collections import defaultdict
 from pyarrow import timestamp, struct, field
 from pyarrow.lib import (
     tobytes, StructType, int32, int64, float64, string, bool_, list_
 )
+
 from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128StringType
@@ -97,6 +97,7 @@ cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_
         raise PyMongoArrowError('unknown value type {}'.format(value_t))
     return field_type
 
+
 cdef extract_document_dtype(bson_iter_t * doc_iter, context):
     """Get the appropropriate data type for a sub document"""
     cdef const char* key
@@ -155,6 +156,7 @@ def process_bson_stream(bson_stream, context, value_builder=None):
     t_document = _BsonArrowTypes.document
     t_array = _BsonArrowTypes.array
 
+
     # initialize count to current length of builders
     for _, builder in builder_map.items():
         count = len(builder)
@@ -204,6 +206,7 @@ def process_bson_stream(bson_stream, context, value_builder=None):
 
                 if builder is None:
                     continue
+
                 ftype = builder.type_marker
                 value_t = bson_iter_type(&doc_iter)
                 if ftype == t_int32:
@@ -592,7 +595,6 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
 
     cdef shared_ptr[CStructBuilder] unwrap(self):
         return self.builder
-
 
 cdef class ListBuilder(_ArrayBuilderBase):
     type_marker = _BsonArrowTypes.array

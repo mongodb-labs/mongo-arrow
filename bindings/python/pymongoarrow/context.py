@@ -37,6 +37,7 @@ _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.bool: BoolBuilder,
     _BsonArrowTypes.document: DocumentBuilder,
     _BsonArrowTypes.array: ListBuilder,
+
 }
 
 
@@ -78,6 +79,7 @@ class PyMongoArrowContext:
         for fname, ftype in str_type_map.items():
             builder_cls = _TYPE_TO_BUILDER_CLS[ftype]
             encoded_fname = fname.encode("utf-8")
+
             # special-case initializing builders for parameterized types
             if builder_cls == DatetimeBuilder:
                 arrow_type = schema.typemap[fname]
@@ -90,6 +92,7 @@ class PyMongoArrowContext:
             elif builder_cls == ListBuilder:
                 arrow_type = schema.typemap[fname]
                 builder_map[encoded_fname] = ListBuilder(arrow_type, tzinfo)
+
             else:
                 builder_map[encoded_fname] = builder_cls()
         return cls(schema, builder_map)
