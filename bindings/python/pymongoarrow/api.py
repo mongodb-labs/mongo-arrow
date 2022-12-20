@@ -16,7 +16,7 @@ import warnings
 import numpy as np
 import pymongo.errors
 from bson import encode
-from bson.codec_options import TypeCodec, TypeRegistry
+from bson.codec_options import TypeEncoder, TypeRegistry
 from bson.raw_bson import RawBSONDocument
 from pyarrow import Schema as ArrowSchema
 from pyarrow import Table
@@ -318,19 +318,14 @@ def _tabular_generator(tabular):
             return
 
 
-class _PandasNACodec(TypeCodec):
+class _PandasNACodec(TypeEncoder):
     """A custom type codec for Pandas NA objects."""
 
     python_type = NA.__class__  # type:ignore[assignment]
-    bson_type = None  # type:ignore[assignment]
 
     def transform_python(self, _):
         """Transform an NA object into 'None'"""
         return None
-
-    def transform_bson(self, _):
-        """Transform a 'None' object into NA"""
-        return NA
 
 
 def write(collection, tabular):
