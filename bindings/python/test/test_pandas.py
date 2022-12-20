@@ -299,7 +299,7 @@ class TestExplicitPandasApi(PandasTestBase):
         _, data = self._create_data()
         with tempfile.NamedTemporaryFile(suffix=".csv") as f:
             f.close()
-            data.to_csv(f.name, index=False)
+            data.to_csv(f.name, index=False, na_rep="")
             out = pd.read_csv(f.name)
             self._assert_frames_equal(data, out)
 
