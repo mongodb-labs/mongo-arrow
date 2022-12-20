@@ -101,11 +101,14 @@ class TestExplicitPandasApi(PandasTestBase):
 
     def _assert_frames_equal(self, incoming, outgoing):
         for name in incoming.columns:
-            col = incoming[name]
-            val = outgoing[name]
-            if str(val.dtype) in ["object", "float64"]:
-                val = val.astype(col.dtype)
-            pd.testing.assert_series_equal(col, val)
+            in_col = incoming[name]
+            out_col = outgoing[name]
+            # Object types may lose type information in a round trip.
+            # Integer types with missing values are converted to floating
+            # point in a round trip.
+            if str(out_col.dtype) in ["object", "float64"]:
+                out_col = out_col.astype(in_col.dtype)
+            pd.testing.assert_series_equal(in_col, out_col)
 
     def round_trip(self, data, schema, coll=None):
         if coll is None:
@@ -158,7 +161,8 @@ class TestExplicitPandasApi(PandasTestBase):
     def test_write_schema_validation(self):
         arrow_schema, data = self._create_data()
 
-        # Work around https://github.com/pandas-dev/pandas/issues/11453.
+        # Work around https://github.com/pandas-dev/pandas/issues/16248,
+        # Where pandas does not implement utcoffset for null timestamps.
         def new_replace(k):
             if k.value < 1:
                 return datetime.datetime(1970, 1, 1)
