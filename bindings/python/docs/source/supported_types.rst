@@ -19,6 +19,8 @@ Support for additional types will be added in subsequent releases.
      - :class:`py.str`, an instance of :class:`pyarrow.string`
    * - Embedded document
      - :class:`py.dict`, and instance of :class:`pyarrow.struct`
+   * - Embedded array
+     - :class:`py.list`, an instance of :class:`pyarrow.list_`,
    * - ObjectId
      - :class:`py.bytes`, :class:`bson.ObjectId`, an instance of :class:`pymongoarrow.types.ObjectIdType`, an instance of :class:`pyarrow.FixedSizeBinaryScalar`
    * - Boolean

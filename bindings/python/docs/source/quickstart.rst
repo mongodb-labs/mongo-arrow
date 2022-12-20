@@ -76,7 +76,12 @@ Nested data (embedded documents) are also supported::
   from pymongoarrow.api import Schema
   schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
 
+Arrays (and embedded arrays) are also supported::
 
+  from pymongoarrow.api import Schema
+  schema = Schema({'_id': int, 'amount': float, 'account': list_(list_(int32()))})
+
+You would need to insert
 .. note::
 
    For all of the examples below, the schema can be omitted like so::
@@ -110,6 +115,12 @@ Nested data (embedded documents) are also supported::
 
   from pymongoarrow.api import Schema
   schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
+  arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
+
+Arrays (and nested arrays) are also supported::
+
+  from pymongoarrow.api import Schema
+  schema = Schema({'_id': int, 'amount': float, 'account': list_(list_(int32()))})
   arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
 
 Aggregate operations
