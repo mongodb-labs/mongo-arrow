@@ -203,7 +203,6 @@ class TestArrowApiMixin:
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
         self.assertEqual(data, find_arrow_all(coll, {}, schema=schema))
-        print(find_arrow_all(coll, {}, schema=schema))
         return res
 
     def test_write_error(self):

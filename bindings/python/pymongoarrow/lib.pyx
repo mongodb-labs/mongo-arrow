@@ -81,6 +81,21 @@ _field_type_map = {
     BSON_TYPE_DECIMAL128: Decimal128StringType(),
 }
 
+cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, context):
+    if value_t in _field_type_map:
+        field_type = _field_type_map[value_t]
+    elif value_t == BSON_TYPE_ARRAY:
+        bson_iter_recurse(doc_iter, child_iter)
+        list_dtype = extract_array_dtype(child_iter, context)
+        field_type = list_(list_dtype)
+    elif value_t == BSON_TYPE_DOCUMENT:
+        bson_iter_recurse(doc_iter, child_iter)
+        field_type = extract_document_dtype(child_iter, context)
+    elif value_t == BSON_TYPE_DATE_TIME:
+        field_type = timestamp('ms', tz=context.tzinfo)
+    else:
+        raise PyMongoArrowError('unknown value type {}'.format(value_t))
+    return field_type
 
 cdef extract_document_dtype(bson_iter_t * doc_iter, context):
     """Get the appropropriate data type for a sub document"""
@@ -91,14 +106,7 @@ cdef extract_document_dtype(bson_iter_t * doc_iter, context):
     while bson_iter_next(doc_iter):
         key = bson_iter_key(doc_iter)
         value_t = bson_iter_type(doc_iter)
-        if value_t in _field_type_map:
-            field_type = _field_type_map[value_t]
-        elif value_t == BSON_TYPE_DOCUMENT:
-            bson_iter_recurse(doc_iter, &child_iter)
-            field_type = extract_document_dtype(&child_iter, context)
-        elif value_t == BSON_TYPE_DATE_TIME:
-            field_type = timestamp('ms', tz=context.tzinfo)
-
+        field_type = extract_field_dtype(doc_iter, &child_iter, value_t, context)
         fields.append(field(key.decode('utf-8'), field_type))
     return struct(fields)
 
@@ -110,13 +118,7 @@ cdef extract_array_dtype(bson_iter_t * doc_iter, context):
     fields = []
     first_item = bson_iter_next(doc_iter)
     value_t = bson_iter_type(doc_iter)
-    if value_t in _field_type_map:
-        return _field_type_map[value_t]
-    elif value_t == BSON_TYPE_ARRAY:
-        bson_iter_recurse(doc_iter, &child_iter)
-        return extract_array_dtype(&child_iter, context)
-    else:
-        raise PyMongoArrowError('unknown value type {}'.format(value_t))
+    return extract_field_dtype(doc_iter, &child_iter, value_t, context)
 
 def process_bson_stream(bson_stream, context, value_builder=None):
     """Process a bson byte stream using a PyMongoArrowContext"""
