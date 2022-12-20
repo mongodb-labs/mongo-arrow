@@ -53,7 +53,6 @@ class PyMongoArrowContext:
         """
         self.schema = schema
         self.builder_map = builder_map
-        self.default_builder = None
         if self.schema is None and codec_options is not None:
             self.tzinfo = codec_options.tzinfo
         else:

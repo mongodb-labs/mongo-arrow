@@ -20,7 +20,6 @@
 import copy
 import datetime
 import enum
-from collections import defaultdict
 
 # Python imports
 import bson
@@ -121,7 +120,7 @@ cdef extract_array_dtype(bson_iter_t * doc_iter, context):
     value_t = bson_iter_type(doc_iter)
     return extract_field_dtype(doc_iter, &child_iter, value_t, context)
 
-def process_bson_stream(bson_stream, context, value_builder=None):
+def process_bson_stream(bson_stream, context, arr_value_builder=None):
     """Process a bson byte stream using a PyMongoArrowContext"""
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
     cdef size_t length = <size_t>PyBytes_Size(bson_stream)
@@ -170,8 +169,8 @@ def process_bson_stream(bson_stream, context, value_builder=None):
                 raise InvalidBSON("Could not read BSON document")
             while bson_iter_next(&doc_iter):
                 key = bson_iter_key(&doc_iter)
-                if value_builder is not None:
-                    builder = value_builder
+                if arr_value_builder is not None:
+                    builder = arr_value_builder
                 else:
                     builder = builder_map.get(key)
                 if builder is None:
@@ -196,10 +195,10 @@ def process_bson_stream(bson_stream, context, value_builder=None):
                         bson_iter_recurse(&doc_iter, &child_iter)
                         list_dtype = extract_array_dtype(&child_iter, context)
                         list_dtype = list_(list_dtype)
-                        builder = ListBuilder(list_dtype, context.tzinfo, value_builder=value_builder)
+                        builder = ListBuilder(list_dtype, context.tzinfo, value_builder=arr_value_builder)
                     else:
                         builder = builder_type()
-                    if value_builder is None:
+                    if arr_value_builder is None:
                         builder_map[key] = builder
                     for _ in range(count):
                         builder.append_null()
@@ -630,14 +629,13 @@ cdef class ListBuilder(_ArrayBuilderBase):
     def __len__(self):
         return self.builder.get().length()
 
-    cpdef append(self, value, value_builder=None):
+    cpdef append(self, value):
         if not isinstance(value, bytes):
             value = bson.encode(value)
-        # Append an element to the Struct. "All child-builders' Append method
-        # must be called independently to maintain data-structure consistency."
-        # Pass "true" for is_valid.
+        # Append an element to the array.
+        # arr_value_builder will be appended to by process_bson_stream.
         self.builder.get().Append(True)
-        process_bson_stream(value, self.context, value_builder=self.child_builder)
+        process_bson_stream(value, self.context, arr_value_builder=self.child_builder)
 
 
     cpdef finish(self):
