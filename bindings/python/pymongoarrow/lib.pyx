@@ -81,7 +81,7 @@ _field_type_map = {
 }
 
 cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, context):
-    """Get the appropropriate data type for a specific"""
+    """Get the appropropriate data type for a specific field"""
     if value_t in _field_type_map:
         field_type = _field_type_map[value_t]
     elif value_t == BSON_TYPE_ARRAY:
