@@ -321,7 +321,9 @@ def _tabular_generator(tabular):
 class _PandasNACodec(TypeEncoder):
     """A custom type codec for Pandas NA objects."""
 
-    python_type = NA.__class__  # type:ignore[assignment]
+    @property
+    def python_type(self):
+        return NA.__class__
 
     def transform_python(self, _):
         """Transform an NA object into 'None'"""

@@ -164,7 +164,7 @@ class TestExplicitPandasApi(PandasTestBase):
         # Work around https://github.com/pandas-dev/pandas/issues/16248,
         # Where pandas does not implement utcoffset for null timestamps.
         def new_replace(k):
-            if k.value < 1:
+            if isinstance(k, pd.NaT.__class__):
                 return datetime.datetime(1970, 1, 1)
             return k.replace(tzinfo=None)
 
