@@ -287,13 +287,15 @@ class TestArrowApiMixin:
         self.round_trip(data, Schema(schema), coll=self.coll)
         self.assertEqual(mock.call_count, 2)
 
-    def _create_nested_data(self):
+    def _create_nested_data(self, nested_elem=None):
         schema = {
             k.__name__: v(True)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
             if k.__name__ not in ("ObjectId", "Decimal128")
         }
-        schema["list"] = list_(list_(int32()))
+        if nested_elem:
+            schem_ent, nested_elem = nested_elem
+            schema["list"] = list_(schem_ent)
         schema["nested"] = struct([field(a, b) for (a, b) in list(schema.items())])
         raw_data = {
             "str": [None] + [str(i) for i in range(2)],
@@ -302,20 +304,24 @@ class TestArrowApiMixin:
             "Int64": [i for i in range(3)],
             "int": [i for i in range(3)],
             "datetime": [datetime(1970 + i, 1, 1) for i in range(3)],
-            "list": [[list(range(3))] for _ in range(3)],
         }
 
         def inner(i):
-            return dict(
+            inner_dict = dict(
                 str=str(i),
                 bool=bool(i),
                 float=i + 0.1,
                 Int64=i,
                 int=i,
                 datetime=datetime(1970 + i, 1, 1),
-                list=[list(range(3))],
+                list=[nested_elem],
             )
+            if nested_elem:
+                inner_dict["list"] = [nested_elem]
+            return inner_dict
 
+        if nested_elem:
+            raw_data["list"] = [[nested_elem] for _ in range(3)]
         raw_data["nested"] = [inner(i) for i in range(3)]
         return schema, Table.from_pydict(raw_data, ArrowSchema(schema))
 
@@ -339,8 +345,14 @@ class TestArrowApiMixin:
                 val = out[name].cast(data[name].type)
                 self.assertEqual(data[name], val)
 
-    def test_arrays(self):
-        schema, data = self._create_nested_data()
+    def test_arrays_sublist(self):
+        schema, data = self._create_nested_data((list_(int32()), list(range(3))))
+        print(schema)
+        self.round_trip(data, Schema(schema))
+
+    def test_arrays_subdoc(self):
+        schema, data = self._create_nested_data((struct([field("a", int32())]), {"a": 32}))
+        print(schema)
         self.round_trip(data, Schema(schema))
 
     def test_string_bool(self):
