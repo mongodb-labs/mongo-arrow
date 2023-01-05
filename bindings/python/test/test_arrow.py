@@ -244,14 +244,12 @@ class TestArrowApiMixin:
             exc.exception.details.keys(), {"nInserted", "writeConcernErrors", "writeErrors"}
         )
 
-    def _create_data(self):
+    def _create_data(self, block=None, nested=True):
         schema = {
-            k.__name__: v(True)
-            for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("ObjectId", "Decimal128")
+            k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items() if k not in block
         }
-        data = Table.from_pydict(
-            {
+        data_dict = {
+            **{
                 "Int64": [i for i in range(2)],
                 "float": [i for i in range(2)],
                 "datetime": [i for i in range(2)],
@@ -259,12 +257,30 @@ class TestArrowApiMixin:
                 "int": [i for i in range(2)],
                 "bool": [True, False],
             },
+            **(
+                {
+                    "Decimal128": [str(Decimal128("1.00"))] * 2,
+                    "ObjectId": [ObjectId().binary] * 2,
+                }
+                if (not block)
+                else {}
+            ),
+        }
+        if nested:
+            schema["nested"] = struct(
+                [field(a, b) for (a, b) in schema.items() if a not in [i.__name__ for i in block]]
+            )
+            data_dict["nested"] = [{k: v[0] for k, v in data_dict.items()}] * 2
+        return schema, data_dict
+
+    def table_from_data(self, schema, data_dict):
+        return schema, Table.from_pydict(
+            data_dict,
             ArrowSchema(schema),
         )
-        return schema, data
 
     def test_write_schema_validation(self):
-        schema, data = self._create_data()
+        schema, data = self.table_from_data(*self._create_data(block=(ObjectId, Decimal128)))
         self.round_trip(data, Schema(schema))
 
         schema = {"_id": int32(), "data": decimal256(2)}
@@ -318,7 +334,9 @@ class TestArrowApiMixin:
         return schema, Table.from_pydict(raw_data, ArrowSchema(schema))
 
     def test_parquet(self):
-        schema, data = self._create_nested_data()
+        schema, data = self.table_from_data(
+            *self._create_data(block=(ObjectId, Decimal128), nested=False)
+        )
         with tempfile.NamedTemporaryFile(suffix=".parquet") as f:
             f.close()
             write_table(data, f.name)
@@ -328,7 +346,10 @@ class TestArrowApiMixin:
     def test_csv(self):
         # Arrow does not support struct data in csvs
         #  https://arrow.apache.org/docs/python/csv.html#reading-and-writing-csv-files
-        _, data = self._create_data()
+        _, data = self.table_from_data(
+            *self._create_data(block=(ObjectId, Decimal128), nested=False)
+        )
+
         with tempfile.NamedTemporaryFile(suffix=".csv") as f:
             f.close()
             csv.write_csv(data, f.name)
@@ -362,8 +383,9 @@ class TestArrowApiMixin:
 
     def test_auto_schema(self):
         # Create table with random data of various types.
-        _, data = self._create_nested_data()
-
+        _, data = self.table_from_data(
+            *self._create_data(block=(ObjectId, Decimal128), nested=False)
+        )
         self.coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
