@@ -14,12 +14,36 @@
 from datetime import datetime
 from unittest import TestCase
 
-from bson import Int64
-from pyarrow import float64, int64, timestamp
+from bson import Decimal128, Int64, ObjectId
+from pyarrow import Table, float64, int64
+from pyarrow import schema as ArrowSchema
+from pyarrow import timestamp
 from pymongoarrow.schema import Schema
+from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY
 
 
 class TestSchema(TestCase):
+    def test_as_py(self):
+        args = {
+            Decimal128: Decimal128("1.000"),
+            ObjectId: ObjectId(),
+            datetime: datetime(1, 1, 1),
+            str: "hell0",
+            bool: True,
+        }
+        afters = {
+            Decimal128: lambda z: [str(i) for i in z],
+            ObjectId: lambda w: [i.binary for i in w],
+        }
+        for k, v in _TYPE_NORMALIZER_FACTORY.items():
+            a = [args.get(k, 1)] * 4
+            inst = afters.get(k, lambda x: x)(a)
+            t = Table.from_pydict(
+                {"_id": inst},
+                ArrowSchema([("_id", v(True))]),
+            )
+            self.assertEqual(t.to_pylist(), [{"_id": i} for i in a])
+
     def test_initialization(self):
         dict_schema = Schema({"field1": int, "field2": datetime, "field3": float})
         self.assertEqual(
