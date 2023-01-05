@@ -347,12 +347,10 @@ class TestArrowApiMixin:
 
     def test_arrays_sublist(self):
         schema, data = self._create_nested_data((list_(int32()), list(range(3))))
-        print(schema)
         self.round_trip(data, Schema(schema))
 
     def test_arrays_subdoc(self):
         schema, data = self._create_nested_data((struct([field("a", int32())]), {"a": 32}))
-        print(schema)
         self.round_trip(data, Schema(schema))
 
     def test_string_bool(self):

@@ -76,7 +76,7 @@ Nested data (embedded documents) are also supported::
   from pymongoarrow.api import Schema
   schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
 
-Arrays (and embedded arrays) are also supported::
+Arrays (and nested arrays) are also supported::
 
   from pymongoarrow.api import Schema
   schema = Schema({'_id': int, 'amount': float, 'account': list_(int32())})
