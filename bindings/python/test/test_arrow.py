@@ -249,23 +249,20 @@ class TestArrowApiMixin:
             k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items() if k not in block
         }
         data_dict = {
-            **{
-                "Int64": [i for i in range(2)],
-                "float": [i for i in range(2)],
-                "datetime": [i for i in range(2)],
-                "str": [str(i) for i in range(2)],
-                "int": [i for i in range(2)],
-                "bool": [True, False],
-            },
-            **(
+            "Int64": [i for i in range(2)],
+            "float": [i for i in range(2)],
+            "datetime": [i for i in range(2)],
+            "str": [str(i) for i in range(2)],
+            "int": [i for i in range(2)],
+            "bool": [True, False],
+        }
+        if not block:
+            data_dict.update(
                 {
                     "Decimal128": [str(Decimal128("1.00"))] * 2,
                     "ObjectId": [ObjectId().binary] * 2,
                 }
-                if (not block)
-                else {}
-            ),
-        }
+            )
         if nested:
             schema["nested"] = struct(
                 [field(a, b) for (a, b) in schema.items() if a not in [i.__name__ for i in block]]
