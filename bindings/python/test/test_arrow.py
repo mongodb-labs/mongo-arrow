@@ -303,36 +303,6 @@ class TestArrowApiMixin:
         self.round_trip(data, Schema(schema), coll=self.coll)
         self.assertEqual(mock.call_count, 2)
 
-    def _create_nested_data(self):
-        schema = {
-            k.__name__: v(True)
-            for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("ObjectId", "Decimal128")
-        }
-        schema["nested"] = struct([field(a, b) for (a, b) in schema.items()])
-
-        raw_data = {
-            "str": [None] + [str(i) for i in range(2)],
-            "bool": [True for _ in range(3)],
-            "float": [0.1 for _ in range(3)],
-            "Int64": [i for i in range(3)],
-            "int": [i for i in range(3)],
-            "datetime": [datetime(1970 + i, 1, 1) for i in range(3)],
-        }
-
-        raw_data["nested"] = [
-            dict(
-                str=str(i),
-                bool=bool(i),
-                float=i + 0.1,
-                Int64=i,
-                int=i,
-                datetime=datetime(1970 + i, 1, 1),
-            )
-            for i in range(3)
-        ]
-        return schema, Table.from_pydict(raw_data, ArrowSchema(schema))
-
     def test_parquet(self):
         schema, data = self.table_from_data(*self._create_data(block=True, nested=False))
         with tempfile.NamedTemporaryFile(suffix=".parquet") as f:
