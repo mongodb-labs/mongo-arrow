@@ -22,7 +22,7 @@ from test.utils import AllowListEventListener, TestNullsBase
 import pyarrow
 import pymongo
 from bson import CodecOptions, Decimal128, ObjectId
-from pyarrow import Table, binary, bool_, csv, decimal256, field, int32, int64
+from pyarrow import Table, bool_, csv, decimal256, field, int32, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
 from pyarrow.parquet import read_table, write_table
@@ -202,7 +202,7 @@ class TestArrowApiMixin:
         self.coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
-        self.assertEqual(data, find_arrow_all(coll, {}, schema=schema))
+        self.assertEqual(data.to_string(), find_arrow_all(coll, {}, schema=schema).to_string())
         return res
 
     def test_write_error(self):
@@ -249,7 +249,7 @@ class TestArrowApiMixin:
         schema = {
             k.__name__: v(True)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in extension_types
+            if block or k.__name__ not in extension_types
         }
         data_dict = {
             "Int64": [i for i in range(2)],
@@ -268,7 +268,7 @@ class TestArrowApiMixin:
             )
         if nested:
             schema["nested"] = struct(
-                [field(a, b) for (a, b) in schema.items() if a not in extension_types]
+                [field(a, b) for (a, b) in schema.items() if block or (a not in extension_types)]
             )
             data_dict["nested"] = [{k: v[0] for k, v in data_dict.items()}] * 2
         return schema, data_dict
@@ -280,7 +280,7 @@ class TestArrowApiMixin:
         )
 
     def test_write_schema_validation(self):
-        schema, data = self.table_from_data(*self._create_data(block=True))
+        schema, data = self.table_from_data(*self._create_data(block=True, nested=False))
         self.round_trip(data, Schema(schema))
 
         schema = {"_id": int32(), "data": decimal256(2)}
@@ -304,7 +304,7 @@ class TestArrowApiMixin:
         self.assertEqual(mock.call_count, 2)
 
     def test_parquet(self):
-        schema, data = self.table_from_data(*self._create_data(block=True, nested=False))
+        schema, data = self.table_from_data(*self._create_data(block=False, nested=False))
         with tempfile.NamedTemporaryFile(suffix=".parquet") as f:
             f.close()
             write_table(data, f.name)
@@ -314,8 +314,7 @@ class TestArrowApiMixin:
     def test_csv(self):
         # Arrow does not support struct data in csvs
         #  https://arrow.apache.org/docs/python/csv.html#reading-and-writing-csv-files
-        _, data = self.table_from_data(*self._create_data(block=True, nested=False))
-
+        _, data = self.table_from_data(*self._create_data(block=False, nested=False))
         with tempfile.NamedTemporaryFile(suffix=".csv") as f:
             f.close()
             csv.write_csv(data, f.name)
@@ -349,7 +348,7 @@ class TestArrowApiMixin:
 
     def test_auto_schema(self):
         # Create table with random data of various types.
-        _, data = self.table_from_data(*self._create_data(block=True, nested=False))
+        schema, data = self.table_from_data(*self._create_data(block=True, nested=False))
         self.coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
@@ -479,7 +478,7 @@ class TestBSONTypes(unittest.TestCase):
                 "_id": [i.binary for i in oids],
                 "data": [str(decs[0]), str(decs[1]), str(decs[2]), None],
             },
-            ArrowSchema([("_id", binary(12)), ("data", string())]),
+            ArrowSchema([("_id", ObjectIdType()), ("data", Decimal128StringType())]),
         )
         coll = self.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")

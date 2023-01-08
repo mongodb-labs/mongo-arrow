@@ -65,7 +65,7 @@ _builder_type_map = {
     BSON_TYPE_UTF8: StringBuilder,
     BSON_TYPE_BOOL: BoolBuilder,
     BSON_TYPE_DOCUMENT: DocumentBuilder,
-    BSON_TYPE_DECIMAL128: StringBuilder
+    BSON_TYPE_DECIMAL128: Decimal128Builder,
 }
 
 _field_type_map = {
@@ -131,6 +131,7 @@ def process_bson_stream(bson_stream, context):
     t_string = _BsonArrowTypes.string
     t_bool = _BsonArrowTypes.bool
     t_document = _BsonArrowTypes.document
+    t_decimal128 = _BsonArrowTypes.decimal128_str
 
     # initialize count to current length of builders
     for _, builder in builder_map.items():
@@ -199,7 +200,8 @@ def process_bson_stream(bson_stream, context):
                     if value_t == BSON_TYPE_UTF8:
                         bson_str = bson_iter_utf8(&doc_iter, &str_len)
                         builder.append(<bytes>(bson_str)[:str_len])
-                    elif value_t == BSON_TYPE_DECIMAL128:
+                elif ftype == t_decimal128:
+                    if value_t == BSON_TYPE_DECIMAL128:
                         bson_iter_decimal128(&doc_iter, &dec128)
                         bson_decimal128_to_string(&dec128, decimal128_str)
                         builder.append(<bytes>(decimal128_str))
@@ -305,9 +307,36 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)
-        return pyarrow_wrap_array(out)
+        return pyarrow_wrap_array(out).cast(ObjectIdType())
 
     cdef shared_ptr[CFixedSizeBinaryBuilder] unwrap(self):
+        return self.builder
+
+cdef class Decimal128Builder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.decimal128_str
+    cdef:
+        shared_ptr[CStringBuilder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CStringBuilder(pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(tobytes(value))
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out).cast(Decimal128StringType())
+
+    cdef shared_ptr[CStringBuilder] unwrap(self):
         return self.builder
 
 
@@ -478,8 +507,6 @@ cdef object get_field_builder(field, tzinfo):
         if tzinfo and field_type.tz is None:
             field_type = timestamp(field_type.unit, tz=tzinfo)
         field_builder = DatetimeBuilder(field_type)
-    elif _atypes.is_string(field_type):
-        field_builder = StringBuilder()
     elif _atypes.is_boolean(field_type):
         field_builder = BoolBuilder()
     elif _atypes.is_struct(field_type):
@@ -487,7 +514,7 @@ cdef object get_field_builder(field, tzinfo):
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.objectid:
         field_builder = ObjectIdBuilder()
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.decimal128_str:
-        field_builder = StringBuilder()
+        field_builder = Decimal128Builder()
     else:
         field_builder = StringBuilder()
     return field_builder

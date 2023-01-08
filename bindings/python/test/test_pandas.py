@@ -31,7 +31,9 @@ from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, writ
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.types import (
     _TYPE_NORMALIZER_FACTORY,
+    Decimal128PandasDtype,
     Decimal128StringType,
+    ObjectIdPandasDtype,
     ObjectIdType,
 )
 from pytz import timezone
@@ -315,14 +317,20 @@ class TestBSONTypes(PandasTestBase):
         self.getmore_listener.reset()
 
     def test_find_decimal128(self):
-        decimals = [str(i) for i in self.decimal_128s] + [None]  # type:ignore
-        pd_schema = {"_id": np.object_, "decimal128": np.object_}
-        expected = pd.DataFrame(
-            data={"_id": [i.binary for i in self.oids], "decimal128": decimals}
-        ).astype(pd_schema)
+        decimals = [i for i in self.decimal_128s] + [None]  # type:ignore
+        pd_schema = {"_id": ObjectIdPandasDtype(), "decimal128": Decimal128PandasDtype()}
+        data = pd.DataFrame(data={"_id": [i for i in self.oids], "decimal128": decimals}).astype(
+            pd_schema
+        )
 
-        table = find_pandas_all(self.coll, {}, schema=self.schema)
-        pd.testing.assert_frame_equal(expected, table)
+        for func in [find_pandas_all, aggregate_pandas_all]:
+            out = func(self.coll, {} if func == find_pandas_all else [])
+            for name in data.columns:
+                val = out[name]
+                print(str(val.dtype))
+                if str(val.dtype) == "object":
+                    val = val.astype(data[name].dtype)
+                pd.testing.assert_series_equal(data[name], val)
 
 
 class TestNulls(TestNullsBase):

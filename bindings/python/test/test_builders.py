@@ -127,7 +127,7 @@ class TestObjectIdBuilder(TestCase):
         self.assertIsInstance(arr, Array)
         self.assertEqual(arr.null_count, 1)
         self.assertEqual(len(arr), 6)
-        self.assertEqual(arr.to_pylist(), [oid.binary for oid in ids] + [None])
+        self.assertEqual(arr.to_pylist(), ids + [None])
 
 
 class TestStringBuilder(TestCase):

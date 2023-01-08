@@ -145,7 +145,10 @@ class TestNullsBase(unittest.TestCase):
 
     def assertType(self, obj1, arrow_type):
         if isinstance(obj1, pyarrow.ChunkedArray):
-            if "storage_type" in dir(arrow_type):
+            if "storage_type" in dir(arrow_type) and arrow_type not in (
+                ObjectIdType(),
+                Decimal128StringType(),
+            ):
                 self.assertEqual(obj1.type, arrow_type.storage_type)
             else:
                 self.assertEqual(obj1.type, arrow_type)

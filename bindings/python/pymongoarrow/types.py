@@ -15,11 +15,13 @@ import enum
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 import pyarrow.types as _atypes
 from bson import Decimal128, Int64, ObjectId
 from pyarrow import DataType as _ArrowDataType
 from pyarrow import (
+    ExtensionScalar,
     PyExtensionType,
     binary,
     bool_,
@@ -46,6 +48,17 @@ class _BsonArrowTypes(enum.Enum):
 # Custom Extension Types.
 # See https://arrow.apache.org/docs/python/extending_types.html#defining-extension-types-user-defined-types
 # for details.
+class ObjectIdScalar(ExtensionScalar):
+    def as_py(self):
+        if self.value is None:
+            return self.value
+        return ObjectId(self.value.as_py())
+
+
+class Decimal128Scalar(ExtensionScalar):
+    def as_py(self):
+        print(self.value)
+        return Decimal128(self.value.as_py())
 
 
 class ObjectIdType(PyExtensionType):
@@ -57,6 +70,9 @@ class ObjectIdType(PyExtensionType):
     def __reduce__(self):
         return ObjectIdType, ()
 
+    def __arrow_ext_scalar_class__(self):
+        return ObjectIdScalar
+
 
 class Decimal128StringType(PyExtensionType):
     _type_marker = _BsonArrowTypes.decimal128_str
@@ -66,6 +82,37 @@ class Decimal128StringType(PyExtensionType):
 
     def __reduce__(self):
         return Decimal128StringType, ()
+
+    def __arrow_ext_scalar_class__(self):
+        return Decimal128Scalar
+
+
+@pd.api.extensions.register_extension_dtype
+class Decimal128PandasDtype(pd.api.extensions.ExtensionDtype):
+    def __from_arrow__(self, array):
+        return pd.array(array.to_py(), dtype=self)
+
+
+class Decimal128PandasArrayType(pd.api.extensions.ExtensionArray):
+    dtype = Decimal128PandasDtype
+
+    def __arrow_array__(self, type=None):
+        # convert the underlying array values to a pyarrow Array
+        return pa.array(self.to_list(), type=type)
+
+
+@pd.api.extensions.register_extension_dtype
+class ObjectIdPandasDtype(pd.api.extensions.ExtensionDtype):
+    def __from_arrow__(self, array):
+        return pd.array(array.to_py(), dtype=self)
+
+
+class ObjectIdPandasArrayType(pd.api.extensions.ExtensionArray):
+    dtype = ObjectIdPandasDtype
+
+    def __arrow_array__(self, type=None):
+        # convert the underlying array values to a pyarrow Array
+        return pa.array(self.to_list(), type=type)
 
 
 # Internal Type Handling.

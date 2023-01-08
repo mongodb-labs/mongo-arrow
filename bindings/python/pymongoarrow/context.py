@@ -16,6 +16,7 @@ from pyarrow import Table, timestamp
 from pymongoarrow.lib import (
     BoolBuilder,
     DatetimeBuilder,
+    Decimal128Builder,
     DocumentBuilder,
     DoubleBuilder,
     Int32Builder,
@@ -31,7 +32,7 @@ _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.double: DoubleBuilder,
     _BsonArrowTypes.datetime: DatetimeBuilder,
     _BsonArrowTypes.objectid: ObjectIdBuilder,
-    _BsonArrowTypes.decimal128_str: StringBuilder,
+    _BsonArrowTypes.decimal128_str: Decimal128Builder,
     _BsonArrowTypes.string: StringBuilder,
     _BsonArrowTypes.bool: BoolBuilder,
     _BsonArrowTypes.document: DocumentBuilder,
