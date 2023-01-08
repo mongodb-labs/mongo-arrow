@@ -81,7 +81,6 @@ Arrays (and nested arrays) are also supported::
   from pymongoarrow.api import Schema
   schema = Schema({'_id': int, 'amount': float, 'account': list_(int32())})
 
-You would need to insert
 .. note::
 
    For all of the examples below, the schema can be omitted like so::
