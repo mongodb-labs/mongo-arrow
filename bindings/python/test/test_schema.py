@@ -14,12 +14,38 @@
 from datetime import datetime
 from unittest import TestCase
 
-from bson import Int64
-from pyarrow import float64, int64, timestamp
+from bson import Decimal128, Int64, ObjectId
+from pyarrow import Table, float64, int64
+from pyarrow import schema as ArrowSchema
+from pyarrow import timestamp
 from pymongoarrow.schema import Schema
+from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY
 
 
 class TestSchema(TestCase):
+    def test_as_py(self):
+        # Some of the classes want special things in their constructors.
+        instantiated_objs = {
+            datetime: datetime(1, 1, 1),
+            str: "hell0",
+            bool: True,
+        }
+        # The extension types need to be provided to from_pydict as strings or binary,
+        # but we also need the original object for the assertion at the end of the test.
+        oid = ObjectId()
+        dec = Decimal128("1.000")
+        lookup = {Decimal128: dec, ObjectId: oid}
+        instantiated_objs.update({Decimal128: str(dec), ObjectId: oid.binary})
+
+        for k, v in _TYPE_NORMALIZER_FACTORY.items():
+            # Make an array of 4 elements with either the instantiated object or 1.
+            column = [instantiated_objs.get(k, 1)] * 4
+            t = Table.from_pydict(
+                {"value": column},
+                ArrowSchema([("value", v(True))]),
+            )
+            self.assertEqual(t.to_pylist(), [{"value": lookup.get(k, i)} for i in column])
+
     def test_initialization(self):
         dict_schema = Schema({"field1": int, "field2": datetime, "field3": float})
         self.assertEqual(

@@ -20,6 +20,7 @@ import pyarrow.types as _atypes
 from bson import Decimal128, Int64, ObjectId
 from pyarrow import DataType as _ArrowDataType
 from pyarrow import (
+    ExtensionScalar,
     PyExtensionType,
     binary,
     bool_,
@@ -48,6 +49,11 @@ class _BsonArrowTypes(enum.Enum):
 # for details.
 
 
+class ObjectIdScalar(ExtensionScalar):
+    def as_py(self):
+        return ObjectId(self.value.as_py())
+
+
 class ObjectIdType(PyExtensionType):
     _type_marker = _BsonArrowTypes.objectid
 
@@ -56,6 +62,14 @@ class ObjectIdType(PyExtensionType):
 
     def __reduce__(self):
         return ObjectIdType, ()
+
+    def __arrow_ext_scalar_class__(self):
+        return ObjectIdScalar
+
+
+class Decimal128Scalar(ExtensionScalar):
+    def as_py(self):
+        return Decimal128(self.value.as_py())
 
 
 class Decimal128StringType(PyExtensionType):
@@ -66,6 +80,9 @@ class Decimal128StringType(PyExtensionType):
 
     def __reduce__(self):
         return Decimal128StringType, ()
+
+    def __arrow_ext_scalar_class__(self):
+        return Decimal128Scalar
 
 
 # Internal Type Handling.
