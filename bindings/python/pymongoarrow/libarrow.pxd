@@ -37,6 +37,14 @@ cdef extern from "arrow/builder.h" namespace "arrow" nogil:
         int32_t num_fields()
         shared_ptr[CDataType] type()
 
+    cdef cppclass CListBuilder" arrow::ListBuilder"(CArrayBuilder):
+        CListBuilder(CMemoryPool* pool,
+                       shared_ptr[CArrayBuilder] value_builder, shared_ptr[CDataType] dtype)
+        CStatus Append(uint8_t is_valid)
+        CArrayBuilder* value_builder(int i)
+        int32_t num_values()
+        shared_ptr[CDataType] type()
+
 
 cdef extern from "arrow/type_fwd.h" namespace "arrow" nogil:
     shared_ptr[CDataType] fixed_size_binary(int32_t byte_width)

@@ -26,6 +26,7 @@ from pyarrow import (
     bool_,
     float64,
     int64,
+    list_,
     string,
     struct,
     timestamp,
@@ -42,6 +43,7 @@ class _BsonArrowTypes(enum.Enum):
     bool = 7
     decimal128_str = 8
     document = 9
+    array = 10
 
 
 # Custom Extension Types.
@@ -141,6 +143,7 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_string: _BsonArrowTypes.string,
     _atypes.is_boolean: _BsonArrowTypes.bool,
     _atypes.is_struct: _BsonArrowTypes.document,
+    _atypes.is_list: _BsonArrowTypes.array,
 }
 
 
@@ -156,6 +159,8 @@ def _normalize_typeid(typeid, field_name):
         for sub_field_name, sub_typeid in typeid.items():
             fields.append((sub_field_name, _normalize_typeid(sub_typeid, sub_field_name)))
         return struct(fields)
+    elif isinstance(typeid, list):
+        return list_(_normalize_typeid(type(typeid[0]), "0"))
     elif _is_typeid_supported(typeid):
         normalizer = _TYPE_NORMALIZER_FACTORY[typeid]
         return normalizer(typeid)

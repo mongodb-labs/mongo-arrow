@@ -22,7 +22,7 @@ from test.utils import AllowListEventListener, TestNullsBase
 import pyarrow
 import pymongo
 from bson import CodecOptions, Decimal128, ObjectId
-from pyarrow import Table, binary, bool_, csv, decimal256, field, int32, int64
+from pyarrow import Table, binary, bool_, csv, decimal256, field, int32, int64, list_
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
 from pyarrow.parquet import read_table, write_table
@@ -287,14 +287,16 @@ class TestArrowApiMixin:
         self.round_trip(data, Schema(schema), coll=self.coll)
         self.assertEqual(mock.call_count, 2)
 
-    def _create_nested_data(self):
+    def _create_nested_data(self, nested_elem=None):
         schema = {
             k.__name__: v(True)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
             if k.__name__ not in ("ObjectId", "Decimal128")
         }
-        schema["nested"] = struct([field(a, b) for (a, b) in schema.items()])
-
+        if nested_elem:
+            schem_ent, nested_elem = nested_elem
+            schema["list"] = list_(schem_ent)
+        schema["nested"] = struct([field(a, b) for (a, b) in list(schema.items())])
         raw_data = {
             "str": [None] + [str(i) for i in range(2)],
             "bool": [True for _ in range(3)],
@@ -304,17 +306,23 @@ class TestArrowApiMixin:
             "datetime": [datetime(1970 + i, 1, 1) for i in range(3)],
         }
 
-        raw_data["nested"] = [
-            dict(
+        def inner(i):
+            inner_dict = dict(
                 str=str(i),
                 bool=bool(i),
                 float=i + 0.1,
                 Int64=i,
                 int=i,
                 datetime=datetime(1970 + i, 1, 1),
+                list=[nested_elem],
             )
-            for i in range(3)
-        ]
+            if nested_elem:
+                inner_dict["list"] = [nested_elem]
+            return inner_dict
+
+        if nested_elem:
+            raw_data["list"] = [[nested_elem] for _ in range(3)]
+        raw_data["nested"] = [inner(i) for i in range(3)]
         return schema, Table.from_pydict(raw_data, ArrowSchema(schema))
 
     def test_parquet(self):
@@ -336,6 +344,14 @@ class TestArrowApiMixin:
             for name in data.column_names:
                 val = out[name].cast(data[name].type)
                 self.assertEqual(data[name], val)
+
+    def test_arrays_sublist(self):
+        schema, data = self._create_nested_data((list_(int32()), list(range(3))))
+        self.round_trip(data, Schema(schema))
+
+    def test_arrays_subdoc(self):
+        schema, data = self._create_nested_data((struct([field("a", int32())]), {"a": 32}))
+        self.round_trip(data, Schema(schema))
 
     def test_string_bool(self):
         data = Table.from_pydict(

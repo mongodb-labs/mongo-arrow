@@ -20,6 +20,7 @@ from pymongoarrow.lib import (
     DoubleBuilder,
     Int32Builder,
     Int64Builder,
+    ListBuilder,
     ObjectIdBuilder,
     StringBuilder,
 )
@@ -35,6 +36,7 @@ _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.string: StringBuilder,
     _BsonArrowTypes.bool: BoolBuilder,
     _BsonArrowTypes.document: DocumentBuilder,
+    _BsonArrowTypes.array: ListBuilder,
 }
 
 
@@ -71,7 +73,6 @@ class PyMongoArrowContext:
 
         builder_map = {}
         tzinfo = codec_options.tzinfo
-
         str_type_map = _get_internal_typemap(schema.typemap)
         for fname, ftype in str_type_map.items():
             builder_cls = _TYPE_TO_BUILDER_CLS[ftype]
@@ -86,6 +87,10 @@ class PyMongoArrowContext:
             elif builder_cls == DocumentBuilder:
                 arrow_type = schema.typemap[fname]
                 builder_map[encoded_fname] = DocumentBuilder(arrow_type, tzinfo)
+            elif builder_cls == ListBuilder:
+                arrow_type = schema.typemap[fname]
+                builder_map[encoded_fname] = ListBuilder(arrow_type, tzinfo)
+
             else:
                 builder_map[encoded_fname] = builder_cls()
         return cls(schema, builder_map)
