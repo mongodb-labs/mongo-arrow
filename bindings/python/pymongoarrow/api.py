@@ -16,6 +16,7 @@ import warnings
 import numpy as np
 import pymongo.errors
 from bson import encode
+from bson.codec_options import TypeEncoder, TypeRegistry
 from bson.raw_bson import RawBSONDocument
 from pyarrow import Schema as ArrowSchema
 from pyarrow import Table
@@ -26,9 +27,10 @@ except ImportError:
     ndarray = None
 
 try:
-    from pandas import DataFrame
+    from pandas import NA, DataFrame
 except ImportError:
     DataFrame = None
+    NA = None
 
 from pymongo.bulk import BulkWriteError
 from pymongo.common import MAX_WRITE_BATCH_SIZE
@@ -316,6 +318,18 @@ def _tabular_generator(tabular):
             return
 
 
+class _PandasNACodec(TypeEncoder):
+    """A custom type codec for Pandas NA objects."""
+
+    @property
+    def python_type(self):
+        return NA.__class__
+
+    def transform_python(self, _):
+        """Transform an NA object into 'None'"""
+        return None
+
+
 def write(collection, tabular):
     """Write data from `tabular` into the given MongoDB `collection`.
 
@@ -352,6 +366,13 @@ def write(collection, tabular):
         )
 
     tabular_gen = _tabular_generator(tabular)
+
+    # Handle Pandas NA objects.
+    codec_options = collection.codec_options
+    if DataFrame is not None:
+        type_registry = TypeRegistry([_PandasNACodec()])
+        codec_options = codec_options.with_options(type_registry=type_registry)
+
     while cur_offset < tab_size:
         cur_size = 0
         cur_batch = []
@@ -361,9 +382,7 @@ def write(collection, tabular):
             and len(cur_batch) <= _MAX_WRITE_BATCH_SIZE
             and cur_offset + i < tab_size
         ):
-            enc_tab = RawBSONDocument(
-                encode(next(tabular_gen), codec_options=collection.codec_options)
-            )
+            enc_tab = RawBSONDocument(encode(next(tabular_gen), codec_options=codec_options))
             cur_batch.append(enc_tab)
             cur_size += len(enc_tab.raw)
             i += 1
