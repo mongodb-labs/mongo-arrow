@@ -51,10 +51,10 @@ query. We can do so using **PyMongo**::
   from pymongo import MongoClient
   client = MongoClient()
   client.db.data.insert_many([
-      {'_id': 1, 'amount': 21, 'last_updated': datetime(2020, 12, 10, 1, 3, 1)},
-      {'_id': 2, 'amount': 16, 'last_updated': datetime(2020, 7, 23, 6, 7, 11)},
-      {'_id': 3, 'amount': 3, 'last_updated': datetime(2021, 3, 10, 18, 43, 9)},
-      {'_id': 4, 'amount': 0, 'last_updated': datetime(2021, 2, 25, 3, 50, 31)}])
+      {'_id': 1, 'amount': 21, 'last_updated': datetime(2020, 12, 10, 1, 3, 1), 'account': { 'name': "Customer1", 'account_number': 1}}, "txns": [1, 2, 3]},
+      {'_id': 2, 'amount': 16, 'last_updated': datetime(2020, 7, 23, 6, 7, 11), 'account': { 'name': "Customer2", 'account_number': 2}}, "txns": [1, 2, 3]},
+      {'_id': 3, 'amount': 3, 'last_updated': datetime(2021, 3, 10, 18, 43, 9), 'account': { 'name': "Customer3", 'account_number': 3}}, "txns": [1, 2, 3]},
+      {'_id': 4, 'amount': 0, 'last_updated': datetime(2021, 2, 25, 3, 50, 31), 'account': { 'name': "Customer4", 'account_number': 4}}, "txns": [1, 2, 3]}])
 
 Defining the schema
 -------------------
@@ -79,7 +79,7 @@ Nested data (embedded documents) are also supported::
 Arrays (and nested arrays) are also supported::
 
   from pymongoarrow.api import Schema
-  schema = Schema({'_id': int, 'amount': float, 'account': list_(int32())})
+  schema = Schema({'_id': int, 'amount': float, 'txns': list_(int32())})
 
 .. note::
 
@@ -119,7 +119,7 @@ Nested data (embedded documents) are also supported::
 Arrays (and nested arrays) are also supported::
 
   from pymongoarrow.api import Schema
-  schema = Schema({'_id': int, 'amount': float, 'account': list_(int32())})
+  schema = Schema({'_id': int, 'amount': float, 'txns': list_(int32())})
   arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
 
 Aggregate operations
