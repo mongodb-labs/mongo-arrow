@@ -8,6 +8,7 @@ Support for additional types will be added in subsequent releases.
 
 .. note:: PyMongoArrow does not currently support extension types with Pandas. This means that ObjectId
    and Decimal128 are not supported in Pandas DataFrames. Instead, use a string representation of these types.
+   For more information see :doc:`extension_types`.
 
 .. note:: For more information about BSON types, see the
    `BSON specification <http://bsonspec.org/spec.html>`_.
