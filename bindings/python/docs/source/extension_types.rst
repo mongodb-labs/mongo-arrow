@@ -37,4 +37,4 @@ Like so::
         >>>  #   Column      Non-Null Count  Dtype
         >>> ---  ------      --------------  -----
         >>>  0   _id         4 non-null      object
-        >>>  1   decimal128  3 non-null      object
+        >>>  1   data        3 non-null      object
