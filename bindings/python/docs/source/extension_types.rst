@@ -8,8 +8,8 @@ This tutorial is intended as an introduction to working with
 
 Extension types with Arrow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-Both extension types, ObjectId and Decimal128, are supported in Arrow. This means that when using
-a PyArrow table, you can use the corresponding PyMongoArrow extension type like so::
+Both extension types, :class:`pymongoarrow.types.ObjectIdType` and :class:`pymongoarrow.types.Decimal128StringType`, are only partially supported in PyArrow. They will work when used in a
+schema, but will show up in the table as a `fixed_size_binary(12)` or `string` respectively::
 
         schema = Schema({"_id": ObjectIdType(), "data": Decimal128StringType()})
         table = find_arrow_all(coll, {}, schema=schema)
@@ -26,8 +26,8 @@ a PyArrow table, you can use the corresponding PyMongoArrow extension type like 
 
 Extension types with Pandas/NumPy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Extension types with Pandas and NumPy are not supported, and they both use the object representation.
-Like so::
+Extension types with Pandas/NumPy are only partially supported. They will work when used in a
+schema, but will show up in the table as a :py:`pandas.object`::
 
         schema = Schema({"_id": ObjectIdType(), "data": Decimal128StringType()})
         table = find_pandas_all(coll, {}, schema=schema)
