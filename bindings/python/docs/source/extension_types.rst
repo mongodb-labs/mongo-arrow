@@ -2,7 +2,7 @@ Extension Types
 ===============
 
 This tutorial is intended as an introduction to working with
-**PyMongoArrow** and it's corresponding extension types. The reader is assumed to be familiar with basic
+**PyMongoArrow** and its corresponding extension types. The reader is assumed to be familiar with basic
 `PyMongo <https://pymongo.readthedocs.io/en/stable/tutorial.html>`_ and
 `MongoDB <https://docs.mongodb.com>`_ concepts.
 
