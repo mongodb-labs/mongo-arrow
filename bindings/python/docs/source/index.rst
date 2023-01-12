@@ -86,6 +86,7 @@ Indices and tables
    installation
    quickstart
    supported_types
+   extension_types
    faq
    api/index
    changelog
