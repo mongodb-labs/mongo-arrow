@@ -27,7 +27,8 @@ schema, but will show up in the table as a `fixed_size_binary(12)` or `string` r
 Extension types with Pandas/NumPy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Extension types with Pandas/NumPy are only partially supported. They will work when used in a
-schema, but will show up in the table as a :class:`pandas.object`::
+schema, but will show up in the table as a :class:`pandas.object`, but will be converted to either :class:`py.bytes` or
+:class:`py.str` upon accessing the values::
 
         schema = Schema({"_id": ObjectIdType(), "data": Decimal128StringType()})
         table = find_pandas_all(coll, {}, schema=schema)
@@ -38,3 +39,7 @@ schema, but will show up in the table as a :class:`pandas.object`::
         >>> ---  ------      --------------  -----
         >>>  0   _id         4 non-null      object
         >>>  1   data        3 non-null      object
+        print(type(table["_id"][0]))
+        print(type(table["data"][0]))
+        >>> <class 'bytes'>
+        >>> <class 'str'>
