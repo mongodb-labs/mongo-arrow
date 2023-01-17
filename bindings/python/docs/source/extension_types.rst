@@ -9,7 +9,8 @@ This tutorial is intended as an introduction to working with
 Extension types with Arrow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 Both extension types, :class:`pymongoarrow.types.ObjectIdType` and :class:`pymongoarrow.types.Decimal128StringType`, are only partially supported in PyArrow. They will work when used in a
-schema, but will show up in the table as a `fixed_size_binary(12)` or `string` respectively::
+schema, but will show up in the table as a `fixed_size_binary(12)` or `string` respectively, and will be :class:`pyarrow.lib.FixedSizeBinaryScalar` or :class:`pyarrow.lib.StringScalar`
+upon accessing the values::
 
         schema = Schema({"_id": ObjectIdType(), "data": Decimal128StringType()})
         table = find_arrow_all(coll, {}, schema=schema)
@@ -21,7 +22,10 @@ schema, but will show up in the table as a `fixed_size_binary(12)` or `string` r
         >>> _id: [[63C003BF0A1D5281D33B0AFD,63C003BF0A1D5281D33B0AFE,63C003BF0A1D5281D33B0AFF,63C003BF0A1D5281D33B0B00]]
         >>> data: [["0.1","1.0","0.00001",null]]
         >>> ...
-
+        print(type(table["_id"][0]))
+        print(type(table["data"][0]))
+        >>> <class 'pyarrow.lib.FixedSizeBinaryScalar'>
+        >>> <class 'pyarrow.lib.StringScalar'>
 
 
 Extension types with Pandas/NumPy
