@@ -84,7 +84,7 @@ jobs:
         run: |
           # Install the test deps
           python -m pip install -vv -e ".[test]"
-          pytest -vv
+          PYTHONWARNINGS=error python -m pytest -vv
       - name: Check the manifest
         run: |
           pip install check-manifest
