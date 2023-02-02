@@ -76,14 +76,15 @@ jobs:
       - name: Install pymongoarrow
         run: |
           # Install the library with no deps
-          python -m pip install -vv -e "."
+          python -m pip install -v -e "."
       - name: Ensure imports with no test deps
         run: |
           python -c "from pymongoarrow.monkey import patch_all; patch_all()"
-      - name: Run tests
+      - name: Install the test dependencies
         run: |
-          # Install the test deps
-          python -m pip install -vv -e ".[test]"
+          python -m pip install -v -e ".[test]"
+      - name: Run the tests
+        run: |
           PYTHONWARNINGS=error python -m pytest -vv
       - name: Check the manifest
         run: |
