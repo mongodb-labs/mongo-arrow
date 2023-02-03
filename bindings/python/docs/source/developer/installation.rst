@@ -72,7 +72,7 @@ Test
 To run the test suite, you will need a MongoDB instance running on
 ``localhost`` using port ``27017``. To run the entire test suite, do::
 
-  (pymongoarrow) $ python -m unittest discover test
+  (pymongoarrow) $ python -m pytest
 
 Running Linters
 ---------------

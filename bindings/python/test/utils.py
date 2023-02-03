@@ -72,7 +72,7 @@ class AllowListEventListener(EventListener):
             super(AllowListEventListener, self).failed(event)
 
 
-class TestNullsBase(unittest.TestCase):
+class NullsTestMixin:
     def find_fn(self, coll, query, schema):
         raise NotImplementedError
 
@@ -121,7 +121,7 @@ class TestNullsBase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        if cls is TestNullsBase:
+        if cls is NullsTestMixin:
             raise unittest.SkipTest("Base class")
 
         if not client_context.connected:
@@ -193,7 +193,7 @@ class TestNullsBase(unittest.TestCase):
         # arrow/pandas/numpy.
         for gen in [str, float, datetime.datetime, ObjectId, Decimal128]:
             con_type = self.pytype_tab_map[gen]  # Arrow/Pandas/Numpy
-            pytype = TestNullsBase.pytype_tab_map[gen]  # Arrow type specifically
+            pytype = NullsTestMixin.pytype_tab_map[gen]  # Arrow type specifically
 
             other_schema = Schema({"_id": ObjectIdType(), "other": pytype})
             others = [

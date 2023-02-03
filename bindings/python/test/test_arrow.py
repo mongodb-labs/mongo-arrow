@@ -17,7 +17,7 @@ import unittest
 import unittest.mock as mock
 from datetime import datetime
 from test import client_context
-from test.utils import AllowListEventListener, TestNullsBase
+from test.utils import AllowListEventListener, NullsTestMixin
 
 import pyarrow
 import pymongo
@@ -39,7 +39,7 @@ from pymongoarrow.types import (
 from pytz import timezone
 
 
-class TestArrowApiMixin:
+class ArrowApiTestMixin:
     @classmethod
     def setUpClass(cls):
         if not client_context.connected:
@@ -468,7 +468,7 @@ class TestArrowApiMixin:
         self.round_trip(data, Schema(schema))
 
 
-class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
+class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):
     def run_find(self, *args, **kwargs):
         return find_arrow_all(self.coll, *args, **kwargs)
 
@@ -476,7 +476,7 @@ class TestArrowExplicitApi(TestArrowApiMixin, unittest.TestCase):
         return aggregate_arrow_all(self.coll, *args, **kwargs)
 
 
-class TestArrowPatchedApi(TestArrowApiMixin, unittest.TestCase):
+class TestArrowPatchedApi(ArrowApiTestMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         patch_all()
@@ -528,7 +528,7 @@ class TestBSONTypes(unittest.TestCase):
         self.assertEqual(table, expected)
 
 
-class TestNulls(TestNullsBase):
+class TestNulls(NullsTestMixin, unittest.TestCase):
     def find_fn(self, coll, query, schema):
         return find_arrow_all(coll, query, schema=schema)
 
