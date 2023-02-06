@@ -24,12 +24,13 @@ import numpy as np
 import pandas as pd
 import pandas.testing
 import pyarrow
-from bson import CodecOptions, Decimal128, ObjectId
+from bson import Binary, CodecOptions, Decimal128, ObjectId
 from pyarrow import decimal256, int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, write
 from pymongoarrow.errors import ArrowWriteError
+from pymongoarrow.pandas_types import PandasBSONDtype
 from pymongoarrow.types import (
     _TYPE_NORMALIZER_FACTORY,
     Decimal128StringType,
@@ -154,6 +155,7 @@ class TestExplicitPandasApi(PandasTestBase):
                 "datetime": [datetime.datetime(1970 + i, 1, 1) for i in range(2)] + [None],
                 "str": [f"a{i}" for i in range(2)] + [None],
                 "bool": [True, False, None],
+                "Binary": [Binary(bytes(i), 10) for i in range(2)] + [None],
             }
         ).astype(schema)
         return arrow_schema, data
@@ -302,6 +304,10 @@ class TestExplicitPandasApi(PandasTestBase):
         # Pandas csv does not support nested data.
         # cf https://github.com/pandas-dev/pandas/issues/40652
         _, data = self._create_data()
+        for name in data.columns.to_list():
+            if isinstance(data[name].dtype, PandasBSONDtype):
+                data = data.drop(name, 1)
+
         with tempfile.NamedTemporaryFile(suffix=".csv") as f:
             f.close()
             # May give RuntimeWarning due to the nulls.

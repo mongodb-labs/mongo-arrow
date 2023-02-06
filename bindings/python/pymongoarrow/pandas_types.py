@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import numbers
+import re
 from typing import Type, Union
 
 import numpy as np
@@ -28,10 +29,17 @@ from pandas.api.extensions import (
 class PandasBSONDtype(ExtensionDtype):
     na_value = np.nan
 
+    def __init__(self, subtype):
+        self._subtype = subtype
+
+    @property
+    def subtype(self) -> int:
+        return self._subtype
+
     @classmethod
     @property
     def name(cls) -> str:
-        return f"bson_{cls.type}"
+        return f"bson_{cls.type.__name__}[{cls.subtype}]"
 
     def __from_arrow__(self, array: Union[pa.Array, pa.ChunkedArray]) -> ExtensionArray:
 
@@ -42,6 +50,7 @@ class PandasBSONDtype(ExtensionDtype):
             chunks = array.chunks
 
         arr_type = self.construct_array_type()
+        dtype = array.type.to_pandas_dtype()
 
         results = []
         for arr in chunks:
@@ -54,7 +63,7 @@ class PandasBSONDtype(ExtensionDtype):
                 vals.append(val)
             arr = np.array(vals)
             # using _from_sequence to ensure None is converted to NA
-            to_append = arr_type._from_sequence(arr)
+            to_append = arr_type._from_sequence(arr, dtype=dtype)
             results.append(to_append)
 
         if results:
@@ -68,15 +77,20 @@ class PandasBSONExtensionArray(ExtensionArray):
         if not isinstance(values, np.ndarray):
             raise TypeError("Need to pass a numpy array as values")
         for val in values:
-            if not isinstance(val, self.dtype.type) and not pd.isna(val):
-                raise ValueError(f"Values must be either {self.dtype.type} or NA")
+            if not isinstance(val, dtype.type) and not pd.isna(val):
+                raise ValueError(f"Values must be either {dtype.type} or NA")
+        self._dtype = dtype
         self.data = values
+
+    @property
+    def dtype(self):
+        return self._dtype
 
     @classmethod
     def _from_sequence(cls, scalars, dtype=None, copy=False):
         data = np.empty(len(scalars), dtype=object)
         data[:] = scalars
-        return cls(data)
+        return cls(data, dtype=dtype)
 
     @classmethod
     def _from_factorized(cls, values, original):
@@ -88,7 +102,7 @@ class PandasBSONExtensionArray(ExtensionArray):
         else:
             # slice, list-like, mask
             item = pd.api.indexers.check_array_indexer(self, item)
-            return type(self)(self.data[item])
+            return type(self)(self.data[item], dtype=self._dtype)
 
     def __setitem__(self, item, value):
         if (
@@ -146,15 +160,16 @@ class PandasBSONExtensionArray(ExtensionArray):
             except IndexError as err:
                 raise IndexError(msg) from err
 
-        return self._from_sequence(output)
+        return self._from_sequence(output, self.dtype)
 
     def copy(self):
-        return type(self)(self.data.copy())
+        return type(self)(self.data.copy(), dtype=self._dtype)
 
     @classmethod
     def _concat_same_type(cls, to_concat):
         data = np.concatenate([x.data for x in to_concat])
-        return cls(data)
+        dtype = to_concat[0].dtype
+        return cls(data, dtype=dtype)
 
 
 @register_extension_dtype
@@ -165,6 +180,20 @@ class PandasBSONBinary(PandasBSONDtype):
     def construct_array_type(cls) -> Type["PandasBSONArray"]:
         return PandasBSONArray
 
+    @classmethod
+    def construct_from_string(cls, string):
+        if not isinstance(string, str):
+            raise TypeError(f"'construct_from_string' expects a string, got {type(string)}")
+        pattern = re.compile(r"^bson_Binary\[(?P<subtype>.+)\]$")
+        match = pattern.match(string)
+        if match:
+            return cls(**match.groupdict())
+        else:
+            raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
+
 
 class PandasBSONArray(PandasBSONExtensionArray):
-    dtype = PandasBSONBinary()
+    def __arrow_array__(self, type=None):
+        from pymongoarrow.types import BinaryType
+
+        return pa.array(self.data, type=BinaryType(self.dtype.subtype))

@@ -115,7 +115,7 @@ class BinaryType(PyExtensionType):
         return BinaryScalar
 
     def to_pandas_dtype(self):
-        return PandasBSONBinary()
+        return PandasBSONBinary(self.subtype)
 
 
 # Internal Type Handling.

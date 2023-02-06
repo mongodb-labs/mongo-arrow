@@ -18,48 +18,9 @@ import pytest
 # Fixtures for use with Pandas extension types.
 
 
-def make_datum():
-    return None
-
-
-@pytest.fixture
-def dtype():
-    raise NotImplementedError
-
-
-def make_data():
-    return (
-        [make_datum() for _ in range(8)]
-        + [np.nan]
-        + [make_datum() for _ in range(88)]
-        + [np.nan]
-        + [make_datum(), make_datum()]
-    )
-
-
-@pytest.fixture
-def data(dtype):
-    return pd.array(make_data(), dtype=dtype)
-
-
 @pytest.fixture
 def data_for_twos(dtype):
     return pd.array(np.ones(100), dtype=dtype)
-
-
-@pytest.fixture
-def data_missing(dtype):
-    return pd.array([np.nan, make_datum()], dtype=dtype)
-
-
-@pytest.fixture
-def data_for_sorting(dtype):
-    return pd.array([make_datum(), make_datum(), make_datum()], dtype=dtype)
-
-
-@pytest.fixture
-def data_missing_for_sorting(dtype):
-    return pd.array([make_datum(), np.nan, make_datum()], dtype=dtype)
 
 
 @pytest.fixture

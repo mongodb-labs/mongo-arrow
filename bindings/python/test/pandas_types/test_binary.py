@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 from bson import Binary
 from pandas.tests.extension import base
-from pymongoarrow.pandas_types import PandasBSONBinary
+from pymongoarrow.pandas_types import PandasBSONArray, PandasBSONBinary
 
 
 def make_datum():
@@ -25,7 +25,41 @@ def make_datum():
 
 @pytest.fixture
 def dtype():
-    return PandasBSONBinary()
+    return PandasBSONBinary(10)
+
+
+def make_data():
+    return (
+        [make_datum() for _ in range(8)]
+        + [np.nan]
+        + [make_datum() for _ in range(88)]
+        + [np.nan]
+        + [make_datum(), make_datum()]
+    )
+
+
+@pytest.fixture
+def data(dtype):
+    return PandasBSONArray(np.array(make_data(), dtype=object), dtype=dtype)
+
+
+@pytest.fixture
+def data_missing(dtype):
+    return PandasBSONArray(np.array([np.nan, make_datum()], dtype=object), dtype=dtype)
+
+
+@pytest.fixture
+def data_for_sorting(dtype):
+    return PandasBSONArray(
+        np.array([make_datum(), make_datum(), make_datum()], dtype=object), dtype=dtype
+    )
+
+
+@pytest.fixture
+def data_missing_for_sorting(dtype):
+    return PandasBSONArray(
+        np.array([make_datum(), np.nan, make_datum()], dtype=object), dtype=dtype
+    )
 
 
 class TestDtype(base.BaseDtypeTests):
@@ -33,7 +67,8 @@ class TestDtype(base.BaseDtypeTests):
 
 
 class TestInterface(base.BaseInterfaceTests):
-    pass
+    def test_array_interface(self, data):
+        pass
 
 
 class TestConstructors(base.BaseConstructorsTests):
