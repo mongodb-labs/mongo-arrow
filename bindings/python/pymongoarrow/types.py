@@ -17,7 +17,7 @@ from datetime import datetime
 import numpy as np
 import pyarrow as pa
 import pyarrow.types as _atypes
-from bson import Decimal128, Int64, ObjectId
+from bson import Binary, Decimal128, Int64, ObjectId
 from pyarrow import DataType as _ArrowDataType
 from pyarrow import (
     ExtensionScalar,
@@ -31,6 +31,7 @@ from pyarrow import (
     struct,
     timestamp,
 )
+from pymongoarrow.pandas_types import PandasBSONBinary
 
 
 class _BsonArrowTypes(enum.Enum):
@@ -44,6 +45,7 @@ class _BsonArrowTypes(enum.Enum):
     decimal128_str = 8
     document = 9
     array = 10
+    binary = 11
 
 
 # Custom Extension Types.
@@ -87,6 +89,35 @@ class Decimal128StringType(PyExtensionType):
         return Decimal128Scalar
 
 
+class BinaryScalar(ExtensionScalar):
+    def as_py(self):
+        value = self.value
+        if value is None:
+            return None
+        return Binary(self.value.as_py(), self.type.subtype)
+
+
+class BinaryType(PyExtensionType):
+    _type_marker = _BsonArrowTypes.binary
+
+    def __init__(self, subtype):
+        self._subtype = subtype
+        super().__init__(binary())
+
+    @property
+    def subtype(self):
+        return self._subtype
+
+    def __reduce__(self):
+        return BinaryType, (self._subtype,)
+
+    def __arrow_ext_scalar_class__(self):
+        return BinaryScalar
+
+    def to_pandas_dtype(self):
+        return PandasBSONBinary()
+
+
 # Internal Type Handling.
 
 
@@ -98,6 +129,11 @@ def _is_objectid(obj):
 def _is_decimal128_str(obj):
     type_marker = getattr(obj, "_type_marker", "")
     return type_marker == Decimal128StringType._type_marker
+
+
+def _is_binary(obj):
+    type_marker = getattr(obj, "_type_marker", "")
+    return type_marker == BinaryType._type_marker
 
 
 _TYPE_NORMALIZER_FACTORY = {
@@ -112,6 +148,7 @@ _TYPE_NORMALIZER_FACTORY = {
     Decimal128: lambda _: Decimal128StringType(),
     str: lambda _: string(),
     bool: lambda _: bool_(),
+    Binary: lambda subtype: BinaryType(subtype),
 }
 
 
@@ -140,6 +177,7 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_timestamp: _BsonArrowTypes.datetime,
     _is_objectid: _BsonArrowTypes.objectid,
     _is_decimal128_str: _BsonArrowTypes.decimal128_str,
+    _is_binary: _BsonArrowTypes.binary,
     _atypes.is_string: _BsonArrowTypes.string,
     _atypes.is_boolean: _BsonArrowTypes.bool,
     _atypes.is_struct: _BsonArrowTypes.document,

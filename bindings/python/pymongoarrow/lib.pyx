@@ -31,7 +31,7 @@ from pyarrow.lib import (
 
 from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
 from pymongoarrow.context import PyMongoArrowContext
-from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128StringType
+from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128StringType, BinaryType
 
 # Cython imports
 from cpython cimport PyBytes_Size, object
@@ -68,6 +68,7 @@ _builder_type_map = {
     BSON_TYPE_DOCUMENT: DocumentBuilder,
     BSON_TYPE_DECIMAL128: StringBuilder,
     BSON_TYPE_ARRAY: ListBuilder,
+    BSON_TYPE_BINARY: BinaryBuilder
 }
 
 _field_type_map = {
@@ -82,6 +83,10 @@ _field_type_map = {
 
 cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, context):
     """Get the appropropriate data type for a specific field"""
+    cdef const uint8_t *val_buf = NULL
+    cdef uint32_t val_buf_len = 0
+    cdef bson_subtype_t subtype
+
     if value_t in _field_type_map:
         field_type = _field_type_map[value_t]
     elif value_t == BSON_TYPE_ARRAY:
@@ -93,6 +98,10 @@ cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_
         field_type = extract_document_dtype(child_iter, context)
     elif value_t == BSON_TYPE_DATE_TIME:
         field_type = timestamp('ms', tz=context.tzinfo)
+    elif value_t == BSON_TYPE_BINARY:
+        bson_iter_binary (doc_iter, &subtype,
+                            &val_buf_len, &val_buf)
+        field_type = BinaryType(subtype)
     else:
         raise PyMongoArrowError('unknown value type {}'.format(value_t))
     return field_type
@@ -129,10 +138,8 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
     cdef char *decimal128_str = <char *> malloc(
         BSON_DECIMAL128_STRING * sizeof(char))
     cdef uint32_t str_len
-    cdef const uint8_t *doc_buf = NULL
-    cdef uint32_t doc_buf_len = 0;
-    cdef const uint8_t *arr_buf = NULL
-    cdef uint32_t arr_buf_len = 0;
+    cdef const uint8_t *val_buf = NULL
+    cdef uint32_t val_buf_len = 0
     cdef bson_decimal128_t dec128
     cdef bson_type_t value_t
     cdef const char * bson_str
@@ -142,6 +149,7 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
     cdef bson_iter_t child_iter
     cdef const char* key
     cdef Py_ssize_t count = 0
+    cdef bson_subtype_t subtype
 
     builder_map = context.builder_map
 
@@ -155,6 +163,7 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
     t_bool = _BsonArrowTypes.bool
     t_document = _BsonArrowTypes.document
     t_array = _BsonArrowTypes.array
+    t_binary = _BsonArrowTypes.binary
 
 
     # initialize count to current length of builders
@@ -197,6 +206,10 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                         list_dtype = extract_array_dtype(&child_iter, context)
                         list_dtype = list_(list_dtype)
                         builder = ListBuilder(list_dtype, context.tzinfo, value_builder=arr_value_builder)
+                    elif builder_type == BinaryBuilder:
+                        bson_iter_binary (&doc_iter, &subtype,
+                            &val_buf_len, &val_buf)
+                        builder = BinaryBuilder(subtype)
                     else:
                         builder = builder_type()
                     if arr_value_builder is None:
@@ -257,20 +270,25 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                         builder.append_null()
                 elif ftype == t_document:
                     if value_t == BSON_TYPE_DOCUMENT:
-                        bson_iter_document(&doc_iter, &doc_buf_len, &doc_buf)
-                        if doc_buf_len <= 0:
+                        bson_iter_document(&doc_iter, &val_buf_len, &val_buf)
+                        if val_buf_len <= 0:
                             raise ValueError("Subdocument is invalid")
-                        builder.append(<bytes>doc_buf[:doc_buf_len])
+                        builder.append(<bytes>val_buf[:val_buf_len])
                     else:
                         builder.append_null()
                 elif ftype == t_array:
                     if value_t == BSON_TYPE_ARRAY:
-                        bson_iter_array(&doc_iter, &doc_buf_len, &doc_buf)
-                        if doc_buf_len <= 0:
+                        bson_iter_array(&doc_iter, &val_buf_len, &val_buf)
+                        if val_buf_len <= 0:
                             raise ValueError("Subarray is invalid")
-                        builder.append(<bytes>doc_buf[:doc_buf_len])
+                        builder.append(<bytes>val_buf[:val_buf_len])
                     else:
                         builder.append_null()
+                elif ftype == t_binary:
+                    if value_t == BSON_TYPE_BINARY:
+                        bson_iter_binary (&doc_iter, &subtype,
+                            &val_buf_len, &val_buf)
+                        builder.append(<bytes>val_buf[:val_buf_len])
                 else:
                     raise PyMongoArrowError('unknown ftype {}'.format(ftype))
             count += 1
@@ -534,6 +552,8 @@ cdef object get_field_builder(field, tzinfo):
         field_builder = ObjectIdBuilder()
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.decimal128_str:
         field_builder = StringBuilder()
+    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.binary:
+        field_builder = BinaryBuilder(field_type.subtype)
     else:
         field_builder = StringBuilder()
     return field_builder
@@ -596,6 +616,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     cdef shared_ptr[CStructBuilder] unwrap(self):
         return self.builder
 
+
 cdef class ListBuilder(_ArrayBuilderBase):
     type_marker = _BsonArrowTypes.array
 
@@ -646,4 +667,37 @@ cdef class ListBuilder(_ArrayBuilderBase):
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CListBuilder] unwrap(self):
+        return self.builder
+
+
+cdef class BinaryBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.binary
+    cdef:
+        shared_ptr[CBinaryBuilder] builder
+        uint8_t _subtype
+
+    def __cinit__(self, uint8_t subtype):
+        self._subtype = subtype
+        self.builder.reset(new CBinaryBuilder())
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    @property
+    def subtype(self):
+        return self._subtype
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(<bytes>value, len(value))
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out).cast(BinaryType(self._subtype))
+
+    cdef shared_ptr[CBinaryBuilder] unwrap(self):
         return self.builder

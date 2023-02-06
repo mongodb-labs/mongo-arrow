@@ -14,6 +14,7 @@
 from bson.codec_options import DEFAULT_CODEC_OPTIONS
 from pyarrow import Table, timestamp
 from pymongoarrow.lib import (
+    BinaryBuilder,
     BoolBuilder,
     DatetimeBuilder,
     DocumentBuilder,
@@ -37,6 +38,7 @@ _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.bool: BoolBuilder,
     _BsonArrowTypes.document: DocumentBuilder,
     _BsonArrowTypes.array: ListBuilder,
+    _BsonArrowTypes.binary: BinaryBuilder,
 }
 
 
@@ -90,7 +92,9 @@ class PyMongoArrowContext:
             elif builder_cls == ListBuilder:
                 arrow_type = schema.typemap[fname]
                 builder_map[encoded_fname] = ListBuilder(arrow_type, tzinfo)
-
+            elif builder_cls == BinaryBuilder:
+                subtype = schema.typemap[fname].subtype
+                builder_map[encoded_fname] = BinaryBuilder(subtype)
             else:
                 builder_map[encoded_fname] = builder_cls()
         return cls(schema, builder_map)
