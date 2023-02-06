@@ -395,8 +395,6 @@ class ArrowApiTestMixin:
             for name in out.column_names:
                 self.assertEqual(data[name], out[name].cast(data[name].type))
 
-        _, data = self._create_data()
-
     def test_auto_schema(self):
         _, data = self._create_data()
         self.coll.drop()
