@@ -306,7 +306,7 @@ class TestExplicitPandasApi(PandasTestBase):
         _, data = self._create_data()
         for name in data.columns.to_list():
             if isinstance(data[name].dtype, PandasBSONDtype):
-                data = data.drop(name, 1)
+                data = data.drop(labels=[name], axis=1)
 
         with tempfile.NamedTemporaryFile(suffix=".csv") as f:
             f.close()

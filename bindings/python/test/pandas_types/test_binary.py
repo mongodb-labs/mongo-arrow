@@ -17,6 +17,11 @@ from bson import Binary
 from pandas.tests.extension import base
 from pymongoarrow.pandas_types import PandasBSONArray, PandasBSONBinary
 
+try:
+    base.BaseIndexTests
+except AttributeError:
+    pytest.skip("Not available", allow_module_level=True)
+
 
 def make_datum():
     value = np.random.rand()
@@ -63,7 +68,13 @@ def data_missing_for_sorting(dtype):
 
 
 class TestDtype(base.BaseDtypeTests):
-    pass
+    def test_is_not_string_type(self, data):
+        # Override to not return a value, which raises a warning.
+        super().test_is_not_string_type(data)
+
+    def test_is_not_object_type(self, data):
+        # Override to not return a value, which raises a warning.
+        super().test_is_not_object_type(data)
 
 
 class TestInterface(base.BaseInterfaceTests):
