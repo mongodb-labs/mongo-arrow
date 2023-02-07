@@ -67,12 +67,19 @@ class TestDtype(base.BaseDtypeTests):
 
 
 class TestInterface(base.BaseInterfaceTests):
-    def test_array_interface(self, data):
+    def test_array_interface(self):
+        # Not implemented
+        pass
+
+    def test_contains(self, data):
+        # We cannot compare a Binary object to an array.
         pass
 
 
 class TestConstructors(base.BaseConstructorsTests):
-    pass
+    def test_array_from_scalars(self):
+        # Not applicable, must use dtype.
+        pass
 
 
 class TestGetitem(base.BaseGetitemTests):
@@ -80,7 +87,18 @@ class TestGetitem(base.BaseGetitemTests):
 
 
 class TestSetitem(base.BaseSetitemTests):
-    pass
+    def test_setitem_mask_boolean_array_with_na(self):
+        # We cannot compare a Binary object to an array.
+        pass
+
+    def test_setitem_sequence_mismatched_length_raises(self):
+        # Dtype used for array must be non-None
+        pass
+
+    def test_setitem_frame_2d_values(self):
+        # Results in passing an integer as a value, which
+        # cannot be converted to Binary type.
+        pass
 
 
 class TestIndex(base.BaseIndexTests):

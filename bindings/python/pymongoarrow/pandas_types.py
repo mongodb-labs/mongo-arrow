@@ -73,9 +73,11 @@ class PandasBSONDtype(ExtensionDtype):
 
 
 class PandasBSONExtensionArray(ExtensionArray):
-    def __init__(self, values, dtype=None, copy=False) -> None:
+    def __init__(self, values, dtype, copy=False) -> None:
         if not isinstance(values, np.ndarray):
             raise TypeError("Need to pass a numpy array as values")
+        if dtype is None:
+            raise ValueError("dtype must be a valid data type")
         for val in values:
             if not isinstance(val, dtype.type) and not pd.isna(val):
                 raise ValueError(f"Values must be either {dtype.type} or NA")
