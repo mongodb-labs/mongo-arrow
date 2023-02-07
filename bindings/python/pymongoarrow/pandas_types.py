@@ -41,10 +41,9 @@ class PandasBSONDtype(ExtensionDtype):
     def subtype(self) -> int:
         return self._subtype
 
-    @classmethod
     @property
-    def name(cls) -> str:
-        return f"bson_{cls.type.__name__}[{cls.subtype}]"
+    def name(self) -> str:
+        return f"bson_{self.type.__name__}[{self.subtype}]"
 
     def __from_arrow__(self, array: Union[pa.Array, pa.ChunkedArray]) -> ExtensionArray:
 
