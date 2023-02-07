@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# Pandas Extension Types
+
 import numbers
 import re
 from typing import Type, Union
@@ -27,6 +30,8 @@ from pandas.api.extensions import (
 
 
 class PandasBSONDtype(ExtensionDtype):
+    """The base class for BSON Pandas extension data types."""
+
     na_value = np.nan
 
     def __init__(self, subtype):
@@ -73,6 +78,8 @@ class PandasBSONDtype(ExtensionDtype):
 
 
 class PandasBSONExtensionArray(ExtensionArray):
+    """The base class for Pandas BSON extension arrays."""
+
     def __init__(self, values, dtype, copy=False) -> None:
         if not isinstance(values, np.ndarray):
             raise TypeError("Need to pass a numpy array as values")
@@ -176,6 +183,8 @@ class PandasBSONExtensionArray(ExtensionArray):
 
 @register_extension_dtype
 class PandasBSONBinary(PandasBSONDtype):
+    """A pandas extension type for BSON Binary data type."""
+
     type = Binary
 
     @classmethod
@@ -195,6 +204,8 @@ class PandasBSONBinary(PandasBSONDtype):
 
 
 class PandasBSONArray(PandasBSONExtensionArray):
+    """A pandas extension type for BSON Binary data arrays."""
+
     def __arrow_array__(self, type=None):
         from pymongoarrow.types import BinaryType
 

@@ -68,10 +68,10 @@ class TestDtype(base.BaseDtypeTests):
 
 class TestInterface(base.BaseInterfaceTests):
     def test_array_interface(self):
-        # Not implemented
+        # Not implemented.
         pass
 
-    def test_contains(self, data):
+    def test_contains(self):
         # We cannot compare a Binary object to an array.
         pass
 
@@ -92,7 +92,7 @@ class TestSetitem(base.BaseSetitemTests):
         pass
 
     def test_setitem_sequence_mismatched_length_raises(self):
-        # Dtype used for array must be non-None
+        # Dtype used for array must be non-None.
         pass
 
     def test_setitem_frame_2d_values(self):
