@@ -484,6 +484,27 @@ class ArrowApiTestMixin:
         data = Table.from_pydict(raw_data, ArrowSchema(schema))
         self.round_trip(data, Schema(schema))
 
+    def test_malformed_embedded_documents(self):
+        schema = Schema({"data": struct([field("a", int32()), field("b", bool_())])})
+        data = [
+            dict(data=dict(a=1, b=True)),
+            dict(data=dict(a=1, b=True, c="bar")),
+            dict(data=dict(a=1)),
+            dict(data=dict(a=True, b=False)),
+        ]
+        self.coll.drop()
+        self.coll.insert_many(data)
+        res = find_arrow_all(self.coll, {}, schema=schema)["data"].to_pylist()
+        self.assertEqual(
+            res,
+            [
+                dict(a=1, b=True),
+                dict(a=1, b=True),
+                dict(a=1, b=None),
+                dict(a=None, b=False),
+            ],
+        )
+
     def test_mixed_subtype(self):
         schema = Schema({"data": BinaryType(10)})
         coll = self.client.pymongoarrow_test.get_collection(
@@ -492,9 +513,8 @@ class ArrowApiTestMixin:
 
         coll.drop()
         coll.insert_many([{"data": Binary(b"1", 10)}, {"data": Binary(b"2", 20)}])
-        with self.assertRaises(ValueError) as e:
-            find_arrow_all(coll, {}, schema=schema)
-            self.assertEqual(str(e), "Expected Binary subtype 10, got 20")
+        res = find_arrow_all(coll, {}, schema=schema)
+        self.assertEqual(res["data"].to_pylist(), [Binary(b"1", 10), None])
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):

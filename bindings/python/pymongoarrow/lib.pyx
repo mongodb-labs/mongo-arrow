@@ -288,8 +288,9 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                         bson_iter_binary (&doc_iter, &subtype,
                             &val_buf_len, &val_buf)
                         if subtype != builder.subtype:
-                            raise ValueError(f'Expected Binary subtype {builder.subtype}, got {subtype}')
-                        builder.append(<bytes>val_buf[:val_buf_len])
+                            builder.append_null()
+                        else:
+                            builder.append(<bytes>val_buf[:val_buf_len])
                 else:
                     raise PyMongoArrowError('unknown ftype {}'.format(ftype))
             count += 1
