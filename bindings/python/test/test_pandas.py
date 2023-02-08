@@ -137,7 +137,7 @@ class TestExplicitPandasApi(PandasTestBase):
 
     def _create_data(self):
         arrow_schema = {
-            k.__name__: v(True)
+            k.__name__: v(True) if k != Binary else v(10)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
             if k.__name__ not in ("ObjectId", "Decimal128")
         }
