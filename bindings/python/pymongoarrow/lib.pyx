@@ -99,8 +99,7 @@ cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_
     elif value_t == BSON_TYPE_DATE_TIME:
         field_type = timestamp('ms', tz=context.tzinfo)
     elif value_t == BSON_TYPE_BINARY:
-        bson_iter_binary (doc_iter, &subtype,
-                            &val_buf_len, &val_buf)
+        bson_iter_binary (doc_iter, &subtype, &val_buf_len, &val_buf)
         field_type = BinaryType(subtype)
     else:
         raise PyMongoArrowError('unknown value type {}'.format(value_t))
@@ -288,6 +287,8 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                     if value_t == BSON_TYPE_BINARY:
                         bson_iter_binary (&doc_iter, &subtype,
                             &val_buf_len, &val_buf)
+                        if subtype != builder.subtype:
+                            raise ValueError(f'Expected Binary subtype {builder.subtype}, got {subtype}')
                         builder.append(<bytes>val_buf[:val_buf_len])
                 else:
                     raise PyMongoArrowError('unknown ftype {}'.format(ftype))

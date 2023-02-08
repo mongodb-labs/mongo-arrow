@@ -21,7 +21,7 @@ from test.utils import AllowListEventListener, NullsTestMixin
 
 import pyarrow
 import pymongo
-from bson import CodecOptions, Decimal128, ObjectId
+from bson import Binary, CodecOptions, Decimal128, ObjectId
 from pyarrow import Table, binary, bool_, csv, decimal256, field, int32, int64, list_
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
@@ -483,6 +483,18 @@ class ArrowApiTestMixin:
         raw_data = dict(top=[{}, {}, {}])
         data = Table.from_pydict(raw_data, ArrowSchema(schema))
         self.round_trip(data, Schema(schema))
+
+    def test_mixed_subtype(self):
+        schema = Schema({"data": BinaryType(10)})
+        coll = self.client.pymongoarrow_test.get_collection(
+            "test", write_concern=WriteConcern(w="majority")
+        )
+
+        coll.drop()
+        coll.insert_many([{"data": Binary(b"1", 10)}, {"data": Binary(b"2", 20)}])
+        with self.assertRaises(ValueError) as e:
+            find_arrow_all(coll, {}, schema=schema)
+            self.assertEqual(str(e), "Expected Binary subtype 10, got 20")
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):
