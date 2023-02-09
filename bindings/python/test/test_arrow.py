@@ -21,7 +21,7 @@ from test.utils import AllowListEventListener, NullsTestMixin
 
 import pyarrow
 import pymongo
-from bson import CodecOptions, Decimal128, ObjectId
+from bson import Binary, CodecOptions, Decimal128, ObjectId
 from pyarrow import Table, binary, bool_, csv, decimal256, field, int32, int64, list_
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
@@ -33,6 +33,7 @@ from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
 from pymongoarrow.types import (
     _TYPE_NORMALIZER_FACTORY,
+    BinaryType,
     Decimal128StringType,
     ObjectIdType,
 )
@@ -250,6 +251,7 @@ class ArrowApiTestMixin:
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
             if k.__name__ not in ("ObjectId", "Decimal128")
         }
+        schema["Binary"] = BinaryType(10)
         data = Table.from_pydict(
             {
                 "Int64": [i for i in range(2)],
@@ -258,6 +260,7 @@ class ArrowApiTestMixin:
                 "str": [str(i) for i in range(2)],
                 "int": [i for i in range(2)],
                 "bool": [True, False],
+                "Binary": [b"1", b"23"],
             },
             ArrowSchema(schema),
         )
@@ -291,7 +294,7 @@ class ArrowApiTestMixin:
         schema = {
             k.__name__: v(True)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("ObjectId", "Decimal128")
+            if k.__name__ not in ("ObjectId", "Decimal128", "Binary")
         }
         if nested_elem:
             schem_ent, nested_elem = nested_elem
@@ -337,6 +340,10 @@ class ArrowApiTestMixin:
         # Arrow does not support struct data in csvs
         #  https://arrow.apache.org/docs/python/csv.html#reading-and-writing-csv-files
         _, data = self._create_data()
+        for i in reversed(range(len(data.columns))):
+            if hasattr(data.columns[i].type, "extension_name"):
+                data = data.remove_column(i)
+
         with tempfile.NamedTemporaryFile(suffix=".csv") as f:
             f.close()
             csv.write_csv(data, f.name)
@@ -376,10 +383,20 @@ class ArrowApiTestMixin:
             ),
         )
 
-    def test_auto_schema(self):
+    def test_auto_schema_nested(self):
         # Create table with random data of various types.
         _, data = self._create_nested_data()
 
+        self.coll.drop()
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        for func in [find_arrow_all, aggregate_arrow_all]:
+            out = func(self.coll, {} if func == find_arrow_all else []).drop(["_id"])
+            for name in out.column_names:
+                self.assertEqual(data[name], out[name].cast(data[name].type))
+
+    def test_auto_schema(self):
+        _, data = self._create_data()
         self.coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
@@ -466,6 +483,38 @@ class ArrowApiTestMixin:
         raw_data = dict(top=[{}, {}, {}])
         data = Table.from_pydict(raw_data, ArrowSchema(schema))
         self.round_trip(data, Schema(schema))
+
+    def test_malformed_embedded_documents(self):
+        schema = Schema({"data": struct([field("a", int32()), field("b", bool_())])})
+        data = [
+            dict(data=dict(a=1, b=True)),
+            dict(data=dict(a=1, b=True, c="bar")),
+            dict(data=dict(a=1)),
+            dict(data=dict(a=True, b=False)),
+        ]
+        self.coll.drop()
+        self.coll.insert_many(data)
+        res = find_arrow_all(self.coll, {}, schema=schema)["data"].to_pylist()
+        self.assertEqual(
+            res,
+            [
+                dict(a=1, b=True),
+                dict(a=1, b=True),
+                dict(a=1, b=None),
+                dict(a=None, b=False),
+            ],
+        )
+
+    def test_mixed_subtype(self):
+        schema = Schema({"data": BinaryType(10)})
+        coll = self.client.pymongoarrow_test.get_collection(
+            "test", write_concern=WriteConcern(w="majority")
+        )
+
+        coll.drop()
+        coll.insert_many([{"data": Binary(b"1", 10)}, {"data": Binary(b"2", 20)}])
+        res = find_arrow_all(coll, {}, schema=schema)
+        self.assertEqual(res["data"].to_pylist(), [Binary(b"1", 10), None])
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):

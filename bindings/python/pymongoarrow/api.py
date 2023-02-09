@@ -18,20 +18,10 @@ import pymongo.errors
 from bson import encode
 from bson.codec_options import TypeEncoder, TypeRegistry
 from bson.raw_bson import RawBSONDocument
+from numpy import ndarray
+from pandas import NA, DataFrame
 from pyarrow import Schema as ArrowSchema
 from pyarrow import Table
-
-try:
-    from numpy import ndarray
-except ImportError:
-    ndarray = None
-
-try:
-    from pandas import NA, DataFrame
-except ImportError:
-    DataFrame = None
-    NA = None
-
 from pymongo.bulk import BulkWriteError
 from pymongo.common import MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext

@@ -15,15 +15,17 @@ import calendar
 from datetime import datetime, timedelta
 from unittest import TestCase
 
-from bson.objectid import ObjectId
-from pyarrow import Array, bool_, field, int32, int64, struct, timestamp
+from bson import Binary, ObjectId
+from pyarrow import Array, bool_, field, int32, int64, list_, struct, timestamp
 from pymongoarrow.lib import (
+    BinaryBuilder,
     BoolBuilder,
     DatetimeBuilder,
     DocumentBuilder,
     DoubleBuilder,
     Int32Builder,
     Int64Builder,
+    ListBuilder,
     ObjectIdBuilder,
     StringBuilder,
 )
@@ -184,6 +186,42 @@ class TestDocumentBuilder(TestCase):
         self.assertIsInstance(arr, Array)
         self.assertEqual(arr.null_count, 1)
         self.assertEqual(len(arr), 9)
+
+
+class TestListBuilder(TestCase):
+    def test_simple(self):
+        dtype = list_(int32())
+        builder = ListBuilder(dtype)
+        builder.append({"1": 1, "2": 3})
+        builder.append_values(
+            [
+                {"1": 1, "2": 4},
+                {"1": 2},
+                {"1": None},  # Null
+                None,
+                {"a": 5, "b": 1},
+            ]
+        )
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 6)
+
+
+class TestBinaryBuilder(TestCase):
+    def test_simple(self):
+        data = [Binary(bytes(i), 10) for i in range(5)]
+        builder = BinaryBuilder(10)
+        builder.append(data[0])
+        builder.append_values(data[1:])
+        builder.append_null()
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 6)
+        self.assertEqual(arr.to_pylist(), data + [None])
 
 
 class BoolBuilderTestMixin:

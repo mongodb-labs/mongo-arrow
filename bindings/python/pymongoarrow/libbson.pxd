@@ -48,6 +48,9 @@ cdef extern from "<bson/bson.h>":
     ctypedef struct bson_iter_t:
         pass
 
+    ctypedef enum bson_subtype_t:
+        pass
+
     ctypedef struct bson_oid_t:
         uint8_t bytes[12]
 
@@ -137,6 +140,10 @@ cdef extern from "<bson/bson.h>":
                  uint32_t *array_len,     # OUT
                  const uint8_t **array)
 
+    void bson_iter_binary (const bson_iter_t *iter, # IN
+                  bson_subtype_t *subtype, # OUT
+                  uint32_t *binary_len,    # OUT
+                  const uint8_t **binary)  # OUT
 
 # bson_reader_t API
 cdef extern from "<bson/bson.h>":
