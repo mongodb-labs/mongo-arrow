@@ -22,7 +22,7 @@ from test.utils import AllowListEventListener, NullsTestMixin
 import pyarrow
 import pymongo
 from bson import Binary, CodecOptions, Decimal128, ObjectId
-from pyarrow import Table, binary, bool_, csv, decimal256, field, int32, int64, list_
+from pyarrow import Table, bool_, csv, decimal256, field, int32, int64, list_
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
 from pyarrow.parquet import read_table, write_table
@@ -558,7 +558,7 @@ class TestBSONTypes(unittest.TestCase):
                 "_id": [i.binary for i in oids],
                 "data": [str(decs[0]), str(decs[1]), str(decs[2]), None],
             },
-            ArrowSchema([("_id", binary(12)), ("data", string())]),
+            ArrowSchema([("_id", ObjectIdType()), ("data", string())]),
         )
         coll = self.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")

@@ -31,7 +31,7 @@ from pyarrow import (
     struct,
     timestamp,
 )
-from pymongoarrow.pandas_types import PandasBSONBinary
+from pymongoarrow.pandas_types import PandasBSONBinary, PandasBSONObjectId
 
 
 class _BsonArrowTypes(enum.Enum):
@@ -69,6 +69,9 @@ class ObjectIdType(PyExtensionType):
 
     def __arrow_ext_scalar_class__(self):
         return ObjectIdScalar
+
+    def to_pandas_dtype(self):
+        return PandasBSONObjectId()
 
 
 class Decimal128Scalar(ExtensionScalar):

@@ -13,9 +13,9 @@
 # limitations under the License.
 import numpy as np
 import pytest
-from bson import Binary
+from bson import ObjectId
 from pandas.tests.extension import base
-from pymongoarrow.pandas_types import PandasBSONBinary, PandasBSONBinaryArray
+from pymongoarrow.pandas_types import PandasBSONObjectId, PandasBSONObjectIdArray
 
 try:
     base.BaseIndexTests
@@ -24,13 +24,12 @@ except AttributeError:
 
 
 def make_datum():
-    value = np.random.rand()
-    return Binary(str(value).encode("utf8"), 10)
+    return ObjectId()
 
 
 @pytest.fixture
 def dtype():
-    return PandasBSONBinary(10)
+    return PandasBSONObjectId()
 
 
 def make_data():
@@ -45,52 +44,38 @@ def make_data():
 
 @pytest.fixture
 def data(dtype):
-    return PandasBSONBinaryArray(np.array(make_data(), dtype=object), dtype=dtype)
+    return PandasBSONObjectIdArray(np.array(make_data(), dtype=object), dtype=dtype)
 
 
 @pytest.fixture
 def data_missing(dtype):
-    return PandasBSONBinaryArray(np.array([np.nan, make_datum()], dtype=object), dtype=dtype)
+    return PandasBSONObjectIdArray(np.array([np.nan, make_datum()], dtype=object), dtype=dtype)
 
 
 @pytest.fixture
 def data_for_sorting(dtype):
-    return PandasBSONBinaryArray(
+    return PandasBSONObjectIdArray(
         np.array([make_datum(), make_datum(), make_datum()], dtype=object), dtype=dtype
     )
 
 
 @pytest.fixture
 def data_missing_for_sorting(dtype):
-    return PandasBSONBinaryArray(
+    return PandasBSONObjectIdArray(
         np.array([make_datum(), np.nan, make_datum()], dtype=object), dtype=dtype
     )
 
 
 class TestDtype(base.BaseDtypeTests):
-    def test_is_not_string_type(self, data):
-        # Override to not return a value, which raises a warning.
-        super().test_is_not_string_type(data)
-
-    def test_is_not_object_type(self, data):
-        # Override to not return a value, which raises a warning.
-        super().test_is_not_object_type(data)
+    pass
 
 
 class TestInterface(base.BaseInterfaceTests):
-    def test_array_interface(self):
-        # Not implemented.
-        pass
-
-    def test_contains(self):
-        # We cannot compare a Binary object to an array.
-        pass
+    pass
 
 
 class TestConstructors(base.BaseConstructorsTests):
-    def test_array_from_scalars(self):
-        # Not applicable, must use dtype.
-        pass
+    pass
 
 
 class TestGetitem(base.BaseGetitemTests):
@@ -98,18 +83,7 @@ class TestGetitem(base.BaseGetitemTests):
 
 
 class TestSetitem(base.BaseSetitemTests):
-    def test_setitem_mask_boolean_array_with_na(self):
-        # We cannot compare a Binary object to an array.
-        pass
-
-    def test_setitem_sequence_mismatched_length_raises(self):
-        # Dtype used for array must be non-None.
-        pass
-
-    def test_setitem_frame_2d_values(self):
-        # Results in passing an integer as a value, which
-        # cannot be converted to Binary type.
-        pass
+    pass
 
 
 class TestIndex(base.BaseIndexTests):

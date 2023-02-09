@@ -365,7 +365,7 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)
-        return pyarrow_wrap_array(out)
+        return pyarrow_wrap_array(out).cast(ObjectIdType())
 
     cdef shared_ptr[CFixedSizeBinaryBuilder] unwrap(self):
         return self.builder
