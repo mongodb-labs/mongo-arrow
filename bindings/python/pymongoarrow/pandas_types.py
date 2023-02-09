@@ -56,7 +56,9 @@ class PandasBSONDtype(ExtensionDtype):
             vals = []
             typ = self.type
             for val in np.array(arr):
-                if not pd.isna(val) and not isinstance(val, typ):
+                if val is None:
+                    val = np.nan
+                elif not pd.isna(val) and not isinstance(val, typ):
                     val = typ(val)
                 vals.append(val)
             arr = np.array(vals)

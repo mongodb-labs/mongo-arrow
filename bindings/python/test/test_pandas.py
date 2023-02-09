@@ -386,7 +386,7 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         int: None,
         float: None,
         datetime.datetime: ValueError,
-        ObjectId: None,
+        ObjectId: pyarrow.lib.ArrowInvalid,
         Decimal128: pyarrow.lib.ArrowInvalid,
         bool: None,
     }

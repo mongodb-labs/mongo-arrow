@@ -55,6 +55,8 @@ class _BsonArrowTypes(enum.Enum):
 
 class ObjectIdScalar(ExtensionScalar):
     def as_py(self):
+        if self.value is None:
+            return None
         return ObjectId(self.value.as_py())
 
 
