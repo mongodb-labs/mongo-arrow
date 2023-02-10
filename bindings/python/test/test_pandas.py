@@ -345,9 +345,7 @@ class TestBSONTypes(PandasTestBase):
     def test_find_decimal128(self):
         decimals = [str(i) for i in self.decimal_128s] + [None]  # type:ignore
         pd_schema = {"_id": PandasBSONObjectId(), "decimal128": np.object_}
-        expected = pd.DataFrame(
-            data={"_id": [i for i in self.oids], "decimal128": decimals}
-        ).astype(pd_schema)
+        expected = pd.DataFrame(data={"_id": self.oids, "decimal128": decimals}).astype(pd_schema)
 
         table = find_pandas_all(self.coll, {}, schema=self.schema)
         pd.testing.assert_frame_equal(expected, table)

@@ -120,7 +120,7 @@ class TestNonAsciiFieldName(TestBsonToArrowConversionBase):
             {"_id": ids[2], "dätá": 30},
             {"_id": ids[3], "dätá": 40},
         ]
-        as_dict = {"_id": [oid for oid in ids], "dätá": [10, 20, 30, 40]}
+        as_dict = {"_id": ids, "dätá": [10, 20, 30, 40]}
 
         self._run_test(docs, as_dict)
 
