@@ -56,12 +56,10 @@ class PandasBSONDtype(ExtensionDtype):
             vals = []
             typ = self.type
             for val in np.array(arr):
-                if val is None:
-                    val = np.nan
-                elif not pd.isna(val) and not isinstance(val, typ):
+                if not pd.isna(val) and not isinstance(val, typ):
                     val = typ(val)
                 vals.append(val)
-            arr = np.array(vals)
+            arr = np.array(vals, dtype=object)
             # using _from_sequence to ensure None is converted to NA
             to_append = arr_type._from_sequence(arr, dtype=dtype)
             results.append(to_append)
@@ -131,7 +129,7 @@ class PandasBSONExtensionArray(ExtensionArray):
     def isna(self):
         return np.array(
             [
-                x is not None and not isinstance(x, self.dtype.type) and np.isnan(x)
+                x is None or (x is not None and not isinstance(x, self.dtype.type) and np.isnan(x))
                 for x in self.data
             ],
             dtype=bool,

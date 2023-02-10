@@ -67,7 +67,13 @@ def data_missing_for_sorting(dtype):
 
 
 class TestDtype(base.BaseDtypeTests):
-    pass
+    def test_is_not_string_type(self, data):
+        # Override to not return a value, which raises a warning.
+        super().test_is_not_string_type(data)
+
+    def test_is_not_object_type(self, data):
+        # Override to not return a value, which raises a warning.
+        super().test_is_not_object_type(data)
 
 
 class TestInterface(base.BaseInterfaceTests):
