@@ -34,10 +34,9 @@ class PandasBSONDtype(ExtensionDtype):
 
     na_value = np.nan
 
-    @classmethod
     @property
-    def name(cls) -> str:
-        return f"bson_{cls.__name__}"
+    def name(self) -> str:
+        return f"bson_{self.__class__.__name__}"
 
     def __from_arrow__(self, array: Union[pa.Array, pa.ChunkedArray]) -> ExtensionArray:
 
@@ -68,6 +67,15 @@ class PandasBSONDtype(ExtensionDtype):
             return arr_type._concat_same_type(results)
         else:
             return arr_type(np.array([], dtype="object"))
+
+    @classmethod
+    def construct_from_string(cls, string):
+        if not isinstance(string, str):
+            raise TypeError(f"'construct_from_string' expects a string, got {type(string)}")
+        default = cls()
+        if string != default.name:
+            raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
+        return default
 
 
 class PandasBSONExtensionArray(ExtensionArray):
