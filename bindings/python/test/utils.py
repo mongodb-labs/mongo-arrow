@@ -26,7 +26,7 @@ from pymongoarrow.api import write
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import (
     _TYPE_NORMALIZER_FACTORY,
-    Decimal128StringType,
+    Decimal128Type,
     ObjectIdType,
     _in_type_map,
 )
@@ -95,7 +95,7 @@ class NullsTestMixin:
         float: float,
         datetime.datetime: lambda x: datetime.datetime(x + 1970, 1, 1),
         ObjectId: lambda _: ObjectId(),
-        Decimal128: lambda x: Decimal128(str(x)),
+        Decimal128: lambda x: Decimal128([x, x]),
     }
 
     # Map Python types to types for table we are comparing.
@@ -105,7 +105,7 @@ class NullsTestMixin:
         float: float64(),
         datetime.datetime: timestamp("ms"),
         ObjectId: ObjectIdType(),
-        Decimal128: Decimal128StringType(),
+        Decimal128: Decimal128Type(),
         bool: bool_(),
     }
 
@@ -145,7 +145,7 @@ class NullsTestMixin:
 
     def assertType(self, obj1, arrow_type):
         if isinstance(obj1, pyarrow.ChunkedArray):
-            if "storage_type" in dir(arrow_type):
+            if "storage_type" in dir(arrow_type) and obj1.type != arrow_type:
                 self.assertEqual(obj1.type, arrow_type.storage_type)
             else:
                 self.assertEqual(obj1.type, arrow_type)

@@ -34,7 +34,7 @@ from pymongoarrow.monkey import patch_all
 from pymongoarrow.types import (
     _TYPE_NORMALIZER_FACTORY,
     BinaryType,
-    Decimal128StringType,
+    Decimal128Type,
     ObjectIdType,
 )
 from pytz import timezone
@@ -552,13 +552,13 @@ class TestBSONTypes(unittest.TestCase):
     def test_find_decimal128(self):
         oids = list(ObjectId() for i in range(4))
         decs = [Decimal128(i) for i in ["0.1", "1.0", "1e-5"]]
-        schema = Schema({"_id": ObjectIdType(), "data": Decimal128StringType()})
+        schema = Schema({"_id": ObjectIdType(), "data": Decimal128Type()})
         expected = Table.from_pydict(
             {
                 "_id": [i.binary for i in oids],
-                "data": [str(decs[0]), str(decs[1]), str(decs[2]), None],
+                "data": [decs[0].bid, decs[1].bid, decs[2].bid, None],
             },
-            ArrowSchema([("_id", binary(12)), ("data", string())]),
+            ArrowSchema([("_id", binary(12)), ("data", Decimal128Type())]),
         )
         coll = self.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")

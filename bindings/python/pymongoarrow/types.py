@@ -42,7 +42,7 @@ class _BsonArrowTypes(enum.Enum):
     objectid = 5
     string = 6
     bool = 7
-    decimal128_str = 8
+    decimal128 = 8
     document = 9
     array = 10
     binary = 11
@@ -73,17 +73,17 @@ class ObjectIdType(PyExtensionType):
 
 class Decimal128Scalar(ExtensionScalar):
     def as_py(self):
-        return Decimal128(self.value.as_py())
+        return Decimal128.from_bid(self.value.as_py())
 
 
-class Decimal128StringType(PyExtensionType):
-    _type_marker = _BsonArrowTypes.decimal128_str
+class Decimal128Type(PyExtensionType):
+    _type_marker = _BsonArrowTypes.decimal128
 
     def __init__(self):
-        super().__init__(string())
+        super().__init__(binary(16))
 
     def __reduce__(self):
-        return Decimal128StringType, ()
+        return Decimal128Type, ()
 
     def __arrow_ext_scalar_class__(self):
         return Decimal128Scalar
@@ -126,9 +126,9 @@ def _is_objectid(obj):
     return type_marker == ObjectIdType._type_marker
 
 
-def _is_decimal128_str(obj):
+def _is_decimal128(obj):
     type_marker = getattr(obj, "_type_marker", "")
-    return type_marker == Decimal128StringType._type_marker
+    return type_marker == Decimal128Type._type_marker
 
 
 def _is_binary(obj):
@@ -145,7 +145,7 @@ _TYPE_NORMALIZER_FACTORY = {
     # must be used directly.
     datetime: lambda _: timestamp("ms"),
     ObjectId: lambda _: ObjectIdType(),
-    Decimal128: lambda _: Decimal128StringType(),
+    Decimal128: lambda _: Decimal128Type(),
     str: lambda _: string(),
     bool: lambda _: bool_(),
     Binary: lambda subtype: BinaryType(subtype),
@@ -176,7 +176,7 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_float64: _BsonArrowTypes.double,
     _atypes.is_timestamp: _BsonArrowTypes.datetime,
     _is_objectid: _BsonArrowTypes.objectid,
-    _is_decimal128_str: _BsonArrowTypes.decimal128_str,
+    _is_decimal128: _BsonArrowTypes.decimal128,
     _is_binary: _BsonArrowTypes.binary,
     _atypes.is_string: _BsonArrowTypes.string,
     _atypes.is_boolean: _BsonArrowTypes.bool,

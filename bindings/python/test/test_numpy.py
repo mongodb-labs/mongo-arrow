@@ -25,11 +25,7 @@ from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all, write
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.types import (
-    _TYPE_NORMALIZER_FACTORY,
-    Decimal128StringType,
-    ObjectIdType,
-)
+from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
 from pytz import timezone
 
 
@@ -279,7 +275,7 @@ class TestBSONTypes(NumpyTestBase):
     @classmethod
     def setUpClass(cls):
         NumpyTestBase.setUpClass()
-        cls.schema = Schema({"_id": ObjectIdType(), "decimal128": Decimal128StringType()})
+        cls.schema = Schema({"_id": ObjectIdType(), "decimal128": Decimal128Type()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
         )
