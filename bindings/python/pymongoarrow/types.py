@@ -73,6 +73,8 @@ class ObjectIdType(PyExtensionType):
 
 class Decimal128Scalar(ExtensionScalar):
     def as_py(self):
+        if self.value is None:
+            return None
         return Decimal128.from_bid(self.value.as_py())
 
 

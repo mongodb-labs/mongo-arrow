@@ -15,12 +15,13 @@ import calendar
 from datetime import datetime, timedelta
 from unittest import TestCase
 
-from bson import Binary, ObjectId
+from bson import Binary, Decimal128, ObjectId
 from pyarrow import Array, bool_, field, int32, int64, list_, struct, timestamp
 from pymongoarrow.lib import (
     BinaryBuilder,
     BoolBuilder,
     DatetimeBuilder,
+    Decimal128Builder,
     DocumentBuilder,
     DoubleBuilder,
     Int32Builder,
@@ -215,6 +216,21 @@ class TestBinaryBuilder(TestCase):
         builder = BinaryBuilder(10)
         builder.append(data[0])
         builder.append_values(data[1:])
+        builder.append_null()
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 6)
+        self.assertEqual(arr.to_pylist(), data + [None])
+
+
+class TestDecimal128Builder(TestCase):
+    def test_simple(self):
+        data = [Decimal128([i, i]) for i in range(5)]
+        builder = Decimal128Builder()
+        builder.append(data[0].bid)
+        builder.append_values([item.bid for item in data[1:]])
         builder.append_null()
         arr = builder.finish()
 
