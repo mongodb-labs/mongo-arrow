@@ -31,7 +31,7 @@ know to use **PyMongoArrow**.
   The complete API documentation, organized by module.
 
 :doc:`schemas`
-  Important notes about the usage of PyMongoArrow Schemas.
+  Important notes about the usage of PyMongoArrow Schemas with nested data.
 
 Getting Help
 ------------
