@@ -4,13 +4,79 @@ PyMongoArrow Schemas and Their Usage
 ====================================
 
 While there are many similarities between `MongoDB Projections <https://www.mongodb.com/docs/manual/reference/operator/projection/positional/>`_
-and :class:`pymongoarrow.api.Schema`'s, there are a few important differences:
+and :class:`pymongoarrow.api.Schema`'s, there are a few important differences.
+Schemas do not support `"dotted" notation <https://www.mongodb.com/docs/manual/core/document/#dot-notation>`_, instead
+you must either specify a nested schema, or flatten your data using projections.
 
-* Schemas do not support `"dotted" notation <https://www.mongodb.com/docs/manual/core/document/#dot-notation>`_,
-  instead they require that there can be only one type for any field name in a document **or any of its subdocuments**.
-* Sub documents must either follow the same Schema as their parent document, or must use field names that do not conflict
-  with any of the field names in the parent document.
 
+Nested Data With Schema
+-----------------------
+
+With aggregate or find methods, you can provide a schema using the struct object. Note that there can be conflicting
+names in sub-documents compared to their parent documents.
+
+.. code-block:: python
+
+   >>> from pymongo import MongoClient
+   >>> from pymongoarrow.api import Schema, find_arrow_all
+   >>> from pyarrow import struct, field, int32
+   >>> coll = MongoClient().db.coll
+   >>> coll.insert_many([{
+   >>>     "start": "string",
+   >>>     "prop": {
+   >>>         "name": "foo",
+   >>>         "start": 0,
+   >>>     }
+   >>>   }, {
+   >>>       "start": "string",
+   >>>       "prop": {
+   >>>         "name": "bar",
+   >>>         "start": 10,
+   >>>     }
+   >>>   },])
+   >>> df=find_arrow_all(coll,{}, schema=Schema({"start": str, "prop": struct([field("start", int32())])}))
+   >>> print(df)
+   pyarrow.Table
+   start: string
+   prop: struct<start: int32>
+     child 0, start: int32
+   ----
+   start: [["string","string"]]
+   prop: [
+     -- is_valid: all not null
+     -- child 0 type: int32
+   [0,10]]
+
+For Pandas and NumPy you can do the same exact thing:
+
+.. code-block:: python
+
+   >>> from pymongo import MongoClient
+   >>> from pymongoarrow.api import Schema, find_arrow_all
+   >>> from pyarrow import struct, field, int32
+   >>> coll = MongoClient().db.coll
+   >>> coll.insert_many([{
+   >>>     "start": "string",
+   >>>     "prop": {
+   >>>         "name": "foo",
+   >>>         "start": 0,
+   >>>     }
+   >>>   }, {
+   >>>       "start": "string",
+   >>>       "prop": {
+   >>>         "name": "bar",
+   >>>         "start": 10,
+   >>>     }
+   >>>   },])
+   >>> df = find_pandas_all(coll, {}, schema=Schema({"start": str, "prop": struct([field("start", int32())])}))
+   >>> print(df)
+       start           prop
+   0  string   {'start': 0}
+   1  string  {'start': 10}
+
+
+Nested Data With Projections
+----------------------------
 
 One can also use projections to flatten the data prior to ingesting into PyMongoArrow.
 The following example illustrates how to do it with a very simple nested document structure.
@@ -18,27 +84,26 @@ The following example illustrates how to do it with a very simple nested documen
 .. code-block:: python
 
    >>> from pymongo import MongoClient
-   >>> from pymongoarrow.api import Schema, find_pandas_all
-   >>> from pymongoarrow.types import (
-   >>>     ObjectIdType,
-   >>> )
-   >>> coll = MongoClient(username="user", password="password").db.coll
+   >>> from pymongoarrow.api import Schema, find_pandas_all, aggregate_pandas_all
+   >>> from pymongoarrow.types import ObjectIdType
+   >>>
+   >>> coll = MongoClient().db.coll
    >>> coll.insert_many([{
    >>>     "prop": {
-   >>>         "Name": "foo",
-   >>>         "Start": 0,
-   >>>     }
+   >>>         "name": "foo",
+   >>>         "start": 0,
+   >>>    }
    >>> }, {
    >>>     "prop": {
-   >>>         "Name": "bar",
-   >>>         "Start": 10,
+   >>>         "name": "bar",
+   >>>         "start": 10,
    >>>     }
-   >>> },])
+   >>> }])
    >>> df=find_pandas_all(coll,
-   >>> {"prop.Start": {'$gte':0,'$lte':10,}},
-   >>> projection={
-   >>>     "propName": "$prop.Name",
-   >>>     "propStart": "$prop.Start"
+   >>>     {"prop.start": {'$gte':0,'$lte':10,}},
+   >>>     projection={
+   >>>         "propName": "$prop.name",
+   >>>         "propStart": "$prop.start"
    >>> },
    >>> schema=Schema({"_id": ObjectIdType(), "propStart": int, "propName": str}))
    >>> print(df)
@@ -52,12 +117,12 @@ The same thing can also be accomplished using aggregation:
 .. code-block:: python
 
    >>> from pymongo import MongoClient
-   >>> from pymongoarrow.api import Schema, find_pandas_all, aggregate_pandas_all
+   >>> from pymongoarrow.api import Schema, aggregate_pandas_all
    ...
    >>> df=aggregate_pandas_all(coll, pipeline=[
    >>> {
    >>>   "$match": {
-   >>>     "prop.Start": {
+   >>>     "prop.start": {
    >>>       "$gte": 0,
    >>>       "$lte": 10
    >>>     }
@@ -65,8 +130,8 @@ The same thing can also be accomplished using aggregation:
    >>> },
    >>> {
    >>>   "$project": {
-   >>>     "propStart": "$prop.Start",
-   >>>     "propName": "$prop.Name",
+   >>>     "propStart": "$prop.start",
+   >>>     "propName": "$prop.name",
    >>>
    >>>   }
    >>> }
