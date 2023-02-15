@@ -45,3 +45,28 @@ The following example illustrates how to do it with a very simple nested documen
                                     _id  propStart propName
    0  b'c\xec2\x98R(\xc9\x1e@#\xcc\xbb'          0      foo
    1  b'c\xec2\x98R(\xc9\x1e@#\xcc\xbc'         10      bar
+
+ The same thing can also be accomplished using aggregation:
+
+.. code-block:: python
+
+   >>> from pymongo import MongoClient
+   >>> from pymongoarrow.api import Schema, find_pandas_all, aggregate_pandas_all
+   ...
+   >>> df=aggregate_pandas_all(coll, pipeline=[
+   >>> {
+   >>>   "$match": {
+   >>>     "prop.Start": {
+   >>>       "$gte": 0,
+   >>>       "$lte": 10
+   >>>     }
+   >>>   }
+   >>> },
+   >>> {
+   >>>   "$project": {
+   >>>     "propStart": "$prop.Start",
+   >>>     "propName": "$prop.Name",
+   >>>
+   >>>   }
+   >>> }
+   >>> ])
