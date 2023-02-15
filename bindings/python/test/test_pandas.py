@@ -242,7 +242,7 @@ class TestExplicitPandasApi(PandasTestBase):
             return dict(
                 string=str(i),
                 bool=bool(i),
-                double="wrong type",
+                double=i + 0.1,
                 int32=i,
                 dt=datetime.datetime(1970 + i, 1, 1),
             )
