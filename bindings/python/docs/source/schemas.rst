@@ -46,7 +46,8 @@ The following example illustrates how to do it with a very simple nested documen
    0  b'c\xec2\x98R(\xc9\x1e@#\xcc\xbb'          0      foo
    1  b'c\xec2\x98R(\xc9\x1e@#\xcc\xbc'         10      bar
 
- The same thing can also be accomplished using aggregation:
+
+The same thing can also be accomplished using aggregation:
 
 .. code-block:: python
 
