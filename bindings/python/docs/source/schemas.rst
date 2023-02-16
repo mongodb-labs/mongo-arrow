@@ -71,22 +71,6 @@ The following example illustrates how to do it with a very simple nested documen
 
 .. code-block:: python
 
-   >>> from pymongo import MongoClient
-   >>> from pymongoarrow.api import Schema, find_pandas_all, aggregate_pandas_all
-   >>> from pymongoarrow.types import ObjectIdType
-   >>>
-   >>> coll = MongoClient().db.coll
-   >>> coll.insert_many([{
-   >>>     "prop": {
-   >>>         "name": "foo",
-   >>>         "start": 0,
-   >>>    }
-   >>> }, {
-   >>>     "prop": {
-   >>>         "name": "bar",
-   >>>         "start": 10,
-   >>>     }
-   >>> }])
    >>> df=find_pandas_all(coll,
    >>>     {"prop.start": {'$gte':0,'$lte':10,}},
    >>>     projection={
@@ -104,7 +88,6 @@ For aggregate you can flatten the fields using the `$project` stage, like so:
 
 .. code-block:: python
 
-   ...
    >>> df=aggregate_pandas_all(coll, pipeline=[
    >>> {
    >>>   "$match": {
