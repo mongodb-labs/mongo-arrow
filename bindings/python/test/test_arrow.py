@@ -22,7 +22,7 @@ from test.utils import AllowListEventListener, NullsTestMixin
 import pyarrow
 import pymongo
 from bson import Binary, CodecOptions, Decimal128, ObjectId
-from pyarrow import Table, binary, bool_, csv, decimal256, field, int32, int64, list_
+from pyarrow import Table, bool_, csv, decimal256, field, int32, int64, list_
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
 from pyarrow.parquet import read_table, write_table
@@ -249,9 +249,10 @@ class ArrowApiTestMixin:
         schema = {
             k.__name__: v(True)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("ObjectId", "Decimal128")
+            if k.__name__ not in ("Decimal128")
         }
         schema["Binary"] = BinaryType(10)
+        schema["ObjectId"] = ObjectIdType()
         data = Table.from_pydict(
             {
                 "Int64": [i for i in range(2)],
@@ -261,6 +262,7 @@ class ArrowApiTestMixin:
                 "int": [i for i in range(2)],
                 "bool": [True, False],
                 "Binary": [b"1", b"23"],
+                "ObjectId": [ObjectId().binary, ObjectId().binary],
             },
             ArrowSchema(schema),
         )
@@ -294,12 +296,20 @@ class ArrowApiTestMixin:
         schema = {
             k.__name__: v(True)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("ObjectId", "Decimal128", "Binary")
+            if k.__name__ not in ("Decimal128")
         }
         if nested_elem:
             schem_ent, nested_elem = nested_elem
             schema["list"] = list_(schem_ent)
-        schema["nested"] = struct([field(a, b) for (a, b) in list(schema.items())])
+
+        # PyArrow does not support from_pydict with nested extension types.
+        schema["nested"] = struct(
+            [
+                field(a, b)
+                for (a, b) in list(schema.items())
+                if not isinstance(b, pyarrow.PyExtensionType)
+            ]
+        )
         raw_data = {
             "str": [None] + [str(i) for i in range(2)],
             "bool": [True for _ in range(3)],
@@ -307,6 +317,8 @@ class ArrowApiTestMixin:
             "Int64": [i for i in range(3)],
             "int": [i for i in range(3)],
             "datetime": [datetime(1970 + i, 1, 1) for i in range(3)],
+            "Binary": [Binary(bytes(i), 10) for i in range(3)],
+            "ObjectId": [ObjectId().binary for i in range(3)],
         }
 
         def inner(i):
@@ -318,6 +330,8 @@ class ArrowApiTestMixin:
                 int=i,
                 datetime=datetime(1970 + i, 1, 1),
                 list=[nested_elem],
+                Binary=Binary(bytes(i), 10),
+                ObjectId=ObjectId().binary,
             )
             if nested_elem:
                 inner_dict["list"] = [nested_elem]
@@ -558,7 +572,8 @@ class TestBSONTypes(unittest.TestCase):
                 "_id": [i.binary for i in oids],
                 "data": [decs[0].bid, decs[1].bid, decs[2].bid, None],
             },
-            ArrowSchema([("_id", binary(12)), ("data", Decimal128Type())]),
+            ArrowSchema([("_id", ObjectIdType()), ("data", Decimal128Type())]),
+            ArrowSchema([("_id", ObjectIdType()), ("data", string())]),
         )
         coll = self.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")

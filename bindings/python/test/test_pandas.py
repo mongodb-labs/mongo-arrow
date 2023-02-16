@@ -30,7 +30,7 @@ from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, write
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.pandas_types import PandasBSONDtype, PandasBSONObjectId
+from pymongoarrow.pandas_types import PandasBSONDtype, PandasObjectId
 from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
 from pytz import timezone
 
@@ -135,7 +135,7 @@ class TestExplicitPandasApi(PandasTestBase):
         arrow_schema = {
             k.__name__: v(True) if k != Binary else v(10)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("ObjectId", "Decimal128")
+            if k.__name__ not in ("Decimal128")
         }
         schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
         schema["Int64"] = pd.Int64Dtype()
@@ -145,6 +145,7 @@ class TestExplicitPandasApi(PandasTestBase):
 
         data = pd.DataFrame(
             data={
+                "ObjectId": [ObjectId() for i in range(2)] + [None],
                 "Int64": [i for i in range(2)] + [None],
                 "float": [i for i in range(2)] + [None],
                 "int": [i for i in range(2)] + [None],
@@ -340,7 +341,7 @@ class TestBSONTypes(PandasTestBase):
 
     def test_find_decimal128(self):
         decimals = [str(i) for i in self.decimal_128s] + [None]  # type:ignore
-        pd_schema = {"_id": PandasBSONObjectId(), "decimal128": np.object_}
+        pd_schema = {"_id": PandasObjectId(), "decimal128": np.object_}
         expected = pd.DataFrame(data={"_id": self.oids, "decimal128": decimals}).astype(pd_schema)
 
         table = find_pandas_all(self.coll, {}, schema=self.schema)
@@ -370,7 +371,7 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         int: ["int64", "float64"],
         float: "float64",
         datetime.datetime: "datetime64[ns]",
-        ObjectId: "bson_PandasBSONObjectId",
+        ObjectId: "bson_PandasObjectId",
         Decimal128: "object",
         bool: "object",
     }
