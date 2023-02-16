@@ -54,7 +54,7 @@ class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
             {"_id": ids[3], "data": 40, "title": "ê"},
         ]
         as_dict = {
-            "_id": [oid.binary for oid in ids],
+            "_id": ids,
             "data": [10, 20, 30, 40],
             "title": ["ä", "b", "č", "ê"],
         }
@@ -72,7 +72,7 @@ class TestValidBsonToArrowConversion(TestBsonToArrowConversionBase):
             {},
         ]
         as_dict = {
-            "_id": [oid.binary for oid in ids] + [None, None],
+            "_id": ids + [None, None],
             "data": [10, 20, None, 40, None, None],
             "title": ["a", None, None, None, None, None],
         }
@@ -120,7 +120,7 @@ class TestNonAsciiFieldName(TestBsonToArrowConversionBase):
             {"_id": ids[2], "dätá": 30},
             {"_id": ids[3], "dätá": 40},
         ]
-        as_dict = {"_id": [oid.binary for oid in ids], "dätá": [10, 20, 30, 40]}
+        as_dict = {"_id": ids, "dätá": [10, 20, 30, 40]}
 
         self._run_test(docs, as_dict)
 
