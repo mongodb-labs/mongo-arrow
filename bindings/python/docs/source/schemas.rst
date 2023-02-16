@@ -18,19 +18,10 @@ names in sub-documents compared to their parent documents.
    >>> from pymongoarrow.api import Schema, find_arrow_all
    >>> from pyarrow import struct, field, int32
    >>> coll = MongoClient().db.coll
-   >>> coll.insert_many([{
-   >>>     "start": "string",
-   >>>     "prop": {
-   >>>         "name": "foo",
-   >>>         "start": 0,
-   >>>     }
-   >>>   }, {
-   >>>       "start": "string",
-   >>>       "prop": {
-   >>>         "name": "bar",
-   >>>         "start": 10,
-   >>>     }
-   >>>   },])
+   >>> coll.insert_many([
+   >>> {"start": "string","prop": { "name": "foo", "start": 0}},
+   >>> {"start": "string", "prop": {"name": "bar", "start": 10}}
+   >>> ])
    >>> arrow_table = find_arrow_all(coll,{}, schema=Schema({"start": str, "prop": struct([field("start", int32())])}))
    >>> print(arrow_table)
    pyarrow.Table
