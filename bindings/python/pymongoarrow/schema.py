@@ -27,7 +27,7 @@ class Schema:
     Each key in ``schema`` is a field name and its corresponding value
     is the expected type of the data contained in the named field.
 
-    For more details about Schemas and their usage see :ref:`schema usage`.
+    For more examples, see :ref:`schema usage`.
 
     Data types can be specified as pyarrow type instances (e.g.
     an instance of :class:`pyarrow.int64`), bson types (e.g.
