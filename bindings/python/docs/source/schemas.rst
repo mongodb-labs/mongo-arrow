@@ -48,14 +48,6 @@ For Pandas and NumPy you can do the same exact thing:
 
 .. code-block:: python
 
-   >>> from pymongo import MongoClient
-   >>> from pymongoarrow.api import Schema, find_arrow_all
-   >>> from pyarrow import struct, field, int32
-   >>> coll = MongoClient().db.coll
-   >>> coll.insert_many([
-   >>>    {"start": "string","prop": {"name": "foo", "start": 0}},
-   >>>    {"start": "string", "prop": {"name": "bar", "start": 10}}
-   >>>   ])
    >>> df = find_pandas_all(coll, {}, schema=Schema({"start": str, "prop": struct([field("start", int32())])}))
    >>> print(df)
        start           prop
@@ -90,18 +82,14 @@ For aggregate you can flatten the fields using the `$project` stage, like so:
 
    >>> df=aggregate_pandas_all(coll, pipeline=[
    >>> {
-   >>>   "$match": {
+   >>> "$match": {
    >>>     "prop.start": {
    >>>       "$gte": 0,
    >>>       "$lte": 10
-   >>>     }
-   >>>   }
-   >>> },
+   >>> }}},
    >>> {
-   >>>   "$project": {
+   >>> "$project": {
    >>>     "propStart": "$prop.start",
    >>>     "propName": "$prop.name",
    >>>
-   >>>   }
-   >>> }
-   >>> ])
+   >>> }}])
