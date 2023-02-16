@@ -59,6 +59,8 @@ jobs:
         run: |
           mkdir data
           mongod --fork --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
+          # Install pkg-config
+          brew install pkg-config
       - name: Start MongoDB on Windows
         if: ${{ startsWith(runner.os, 'Windows') }}
         shell: powershell
