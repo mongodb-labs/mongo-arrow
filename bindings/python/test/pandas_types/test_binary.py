@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 from bson import Binary
 from pandas.tests.extension import base
-from pymongoarrow.pandas_types import PandasBSONBinary, PandasBSONBinaryArray
+from pymongoarrow.pandas_types import PandasBinary, PandasBinaryArray
 
 try:
     base.BaseIndexTests
@@ -30,7 +30,7 @@ def make_datum():
 
 @pytest.fixture
 def dtype():
-    return PandasBSONBinary(10)
+    return PandasBinary(10)
 
 
 def make_data():
@@ -45,24 +45,24 @@ def make_data():
 
 @pytest.fixture
 def data(dtype):
-    return PandasBSONBinaryArray(np.array(make_data(), dtype=object), dtype=dtype)
+    return PandasBinaryArray(np.array(make_data(), dtype=object), dtype=dtype)
 
 
 @pytest.fixture
 def data_missing(dtype):
-    return PandasBSONBinaryArray(np.array([np.nan, make_datum()], dtype=object), dtype=dtype)
+    return PandasBinaryArray(np.array([np.nan, make_datum()], dtype=object), dtype=dtype)
 
 
 @pytest.fixture
 def data_for_sorting(dtype):
-    return PandasBSONBinaryArray(
+    return PandasBinaryArray(
         np.array([make_datum(), make_datum(), make_datum()], dtype=object), dtype=dtype
     )
 
 
 @pytest.fixture
 def data_missing_for_sorting(dtype):
-    return PandasBSONBinaryArray(
+    return PandasBinaryArray(
         np.array([make_datum(), np.nan, make_datum()], dtype=object), dtype=dtype
     )
 

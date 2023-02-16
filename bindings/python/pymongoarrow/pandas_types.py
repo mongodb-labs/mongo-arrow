@@ -186,7 +186,7 @@ class PandasBSONExtensionArray(ExtensionArray):
 
 
 @register_extension_dtype
-class PandasBSONBinary(PandasBSONDtype):
+class PandasBinary(PandasBSONDtype):
     """A pandas extension type for BSON Binary data type."""
 
     type = Binary
@@ -203,8 +203,8 @@ class PandasBSONBinary(PandasBSONDtype):
         return f"bson_{self.type.__name__}[{self.subtype}]"
 
     @classmethod
-    def construct_array_type(cls) -> Type["PandasBSONBinaryArray"]:
-        return PandasBSONBinaryArray
+    def construct_array_type(cls) -> Type["PandasBinaryArray"]:
+        return PandasBinaryArray
 
     @classmethod
     def construct_from_string(cls, string):
@@ -218,7 +218,7 @@ class PandasBSONBinary(PandasBSONDtype):
             raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
 
 
-class PandasBSONBinaryArray(PandasBSONExtensionArray):
+class PandasBinaryArray(PandasBSONExtensionArray):
     """A pandas extension type for BSON Binary data arrays."""
 
     def __arrow_array__(self, type=None):
@@ -228,22 +228,22 @@ class PandasBSONBinaryArray(PandasBSONExtensionArray):
 
 
 @register_extension_dtype
-class PandasBSONObjectId(PandasBSONDtype):
+class PandasObjectId(PandasBSONDtype):
     """A pandas extension type for BSON ObjectId data type."""
 
     type = ObjectId
 
     @classmethod
-    def construct_array_type(cls) -> Type["PandasBSONObjectIdArray"]:
-        return PandasBSONObjectIdArray
+    def construct_array_type(cls) -> Type["PandasObjectIdArray"]:
+        return PandasObjectIdArray
 
 
-class PandasBSONObjectIdArray(PandasBSONExtensionArray):
+class PandasObjectIdArray(PandasBSONExtensionArray):
     """A pandas extension type for BSON Binary data arrays."""
 
     @property
     def _default_dtype(self):
-        return PandasBSONObjectId()
+        return PandasObjectId()
 
     def __arrow_array__(self, type=None):
         from pymongoarrow.types import ObjectIdType

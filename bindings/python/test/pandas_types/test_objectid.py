@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 from bson import ObjectId
 from pandas.tests.extension import base
-from pymongoarrow.pandas_types import PandasBSONObjectId, PandasBSONObjectIdArray
+from pymongoarrow.pandas_types import PandasObjectId, PandasObjectIdArray
 
 try:
     base.BaseIndexTests
@@ -29,7 +29,7 @@ def make_datum():
 
 @pytest.fixture
 def dtype():
-    return PandasBSONObjectId()
+    return PandasObjectId()
 
 
 def make_data():
@@ -44,24 +44,24 @@ def make_data():
 
 @pytest.fixture
 def data(dtype):
-    return PandasBSONObjectIdArray(np.array(make_data(), dtype=object), dtype=dtype)
+    return PandasObjectIdArray(np.array(make_data(), dtype=object), dtype=dtype)
 
 
 @pytest.fixture
 def data_missing(dtype):
-    return PandasBSONObjectIdArray(np.array([np.nan, make_datum()], dtype=object), dtype=dtype)
+    return PandasObjectIdArray(np.array([np.nan, make_datum()], dtype=object), dtype=dtype)
 
 
 @pytest.fixture
 def data_for_sorting(dtype):
-    return PandasBSONObjectIdArray(
+    return PandasObjectIdArray(
         np.array([make_datum(), make_datum(), make_datum()], dtype=object), dtype=dtype
     )
 
 
 @pytest.fixture
 def data_missing_for_sorting(dtype):
-    return PandasBSONObjectIdArray(
+    return PandasObjectIdArray(
         np.array([make_datum(), np.nan, make_datum()], dtype=object), dtype=dtype
     )
 
