@@ -573,7 +573,6 @@ class TestBSONTypes(unittest.TestCase):
                 "data": [decs[0].bid, decs[1].bid, decs[2].bid, None],
             },
             ArrowSchema([("_id", ObjectIdType()), ("data", Decimal128Type())]),
-            ArrowSchema([("_id", ObjectIdType()), ("data", string())]),
         )
         coll = self.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
