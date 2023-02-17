@@ -40,7 +40,6 @@ from cython.operator cimport dereference
 from libcpp cimport bool as cbool
 from libcpp.map cimport map
 from libcpp.vector cimport vector
-from libc.stdlib cimport malloc, free
 from pyarrow.lib cimport *
 from pymongoarrow.libarrow cimport *
 from pymongoarrow.libbson cimport *
