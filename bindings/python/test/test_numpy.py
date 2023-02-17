@@ -136,11 +136,7 @@ class TestExplicitNumPyApi(NumpyTestBase):
                 raise awe
 
     def test_write_schema_validation(self):
-        arrow_schema = {
-            k.__name__: v(True)
-            for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("Decimal128")
-        }
+        arrow_schema = {k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items()}
         schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
         schema["str"] = "str"
         schema["datetime"] = "datetime64[ms]"

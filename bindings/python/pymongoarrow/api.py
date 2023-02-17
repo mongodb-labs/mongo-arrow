@@ -359,9 +359,8 @@ def write(collection, tabular):
 
     # Handle Pandas NA objects.
     codec_options = collection.codec_options
-    if DataFrame is not None:
-        type_registry = TypeRegistry([_PandasNACodec()])
-        codec_options = codec_options.with_options(type_registry=type_registry)
+    type_registry = TypeRegistry([_PandasNACodec()])
+    codec_options = codec_options.with_options(type_registry=type_registry)
 
     while cur_offset < tab_size:
         cur_size = 0

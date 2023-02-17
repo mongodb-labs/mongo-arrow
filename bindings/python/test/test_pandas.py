@@ -135,7 +135,6 @@ class TestExplicitPandasApi(PandasTestBase):
         arrow_schema = {
             k.__name__: v(True) if k != Binary else v(10)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("Decimal128")
         }
         schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
         schema["Int64"] = pd.Int64Dtype()
@@ -153,6 +152,7 @@ class TestExplicitPandasApi(PandasTestBase):
                 "str": [f"a{i}" for i in range(2)] + [None],
                 "bool": [True, False, None],
                 "Binary": [Binary(bytes(i), 10) for i in range(2)] + [None],
+                "Decimal128": [Decimal128(str(i)) for i in range(2)] + [None],
             }
         ).astype(schema)
         return arrow_schema, data
