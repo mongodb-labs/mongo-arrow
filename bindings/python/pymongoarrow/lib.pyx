@@ -67,7 +67,7 @@ _builder_type_map = {
     BSON_TYPE_UTF8: StringBuilder,
     BSON_TYPE_BOOL: BoolBuilder,
     BSON_TYPE_DOCUMENT: DocumentBuilder,
-    BSON_TYPE_DECIMAL128: StringBuilder,
+    BSON_TYPE_DECIMAL128: Decimal128Builder,
     BSON_TYPE_ARRAY: ListBuilder,
     BSON_TYPE_BINARY: BinaryBuilder
 }
