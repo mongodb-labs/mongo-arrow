@@ -246,7 +246,7 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                 elif ftype == t_decimal128:
                     if value_t == BSON_TYPE_DECIMAL128:
                         bson_iter_decimal128(&doc_iter, &dec128)
-                        val = pstruct.pack('L', dec128.low) + pstruct.pack('L', dec128.high)
+                        val = pstruct.pack('=QQ', dec128.low, dec128.high)
                         builder.append(val)
                     else:
                         builder.append_null()
