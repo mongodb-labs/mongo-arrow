@@ -296,10 +296,9 @@ class TestBSONTypes(NumpyTestBase):
         self.getmore_listener.reset()
 
     def test_find_decimal128(self):
-        decimals = [str(i) for i in self.decimal_128s] + [None]  # type:ignore
         expected = {
             "_id": np.array([i.binary for i in self.oids], dtype=np.object_),
-            "decimal128": np.array(decimals),
+            "decimal128": np.array([i.bid for i in self.decimal_128s] + [None], dtype=np.object_),
         }
         actual = find_numpy_all(self.coll, {}, schema=self.schema)
         self.assert_numpy_equal(actual, expected)
