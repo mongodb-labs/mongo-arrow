@@ -145,7 +145,7 @@ class NullsTestMixin:
 
     def assertType(self, obj1, arrow_type):
         if isinstance(obj1, pyarrow.ChunkedArray):
-            if "storage_type" in dir(arrow_type):
+            if "storage_type" in dir(arrow_type) and obj1.type != arrow_type:
                 self.assertEqual(obj1.type, arrow_type.storage_type)
             else:
                 self.assertEqual(obj1.type, arrow_type)
