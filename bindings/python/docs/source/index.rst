@@ -30,6 +30,9 @@ know to use **PyMongoArrow**.
 :doc:`api/index`
   The complete API documentation, organized by module.
 
+:doc:`schemas`
+  Important notes about the usage of PyMongoArrow Schemas.
+
 Getting Help
 ------------
 If you're having trouble or have questions about PyMongoArrow, ask your question on
@@ -91,3 +94,4 @@ Indices and tables
    api/index
    changelog
    developer/index
+   schemas
