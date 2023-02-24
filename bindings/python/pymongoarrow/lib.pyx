@@ -20,7 +20,8 @@
 import copy
 import datetime
 import enum
-import struct as pstruct
+import struct as pystruct
+import sys
 
 # Python imports
 import bson
@@ -246,7 +247,10 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                 elif ftype == t_decimal128:
                     if value_t == BSON_TYPE_DECIMAL128:
                         bson_iter_decimal128(&doc_iter, &dec128)
-                        val = pstruct.pack('=QQ', dec128.low, dec128.high)
+                        if sys.byteorder == 'little':
+                            val = pystruct.pack('<QQ', dec128.low, dec128.high)
+                        else:
+                            val = pystruct.pack('<QQ', dec128.high, dec128.low)
                         builder.append(val)
                     else:
                         builder.append_null()

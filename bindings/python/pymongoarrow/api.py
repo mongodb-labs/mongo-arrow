@@ -338,7 +338,7 @@ def write(collection, tabular):
     tab_size = len(tabular)
     if isinstance(tabular, Table):
         _validate_schema(tabular.schema.types)
-    elif DataFrame is not None and isinstance(tabular, DataFrame):
+    elif isinstance(tabular, DataFrame):
         _validate_schema(ArrowSchema.from_pandas(tabular).types)
     elif (
         isinstance(tabular, dict)
