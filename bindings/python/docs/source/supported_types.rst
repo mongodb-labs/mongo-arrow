@@ -53,3 +53,33 @@ respectively, and '_id' that is an `ObjectId`, your schema can be defined as::
 
 Unsupported data types in a schema cause a ``ValueError`` identifying the
 field and its data type.
+
+Null Values and Conversion to Pandas DataFrames
+-----------------------------------------------
+
+In Arrow, all Arrays are always nullable. 
+Pandas has experimental nullable data types as, e.g., "Int64" (note the capital "I").
+You can instruct Arrow to create a pandas DataFrame using nullable dtypes 
+with the code below (taken from `here <https://arrow.apache.org/docs/python/pandas.html>`_)
+
+.. code-block:: pycon
+
+   >>> dtype_mapping = {
+   ...     pa.int8(): pd.Int8Dtype(),
+   ...     pa.int16(): pd.Int16Dtype(),
+   ...     pa.int32(): pd.Int32Dtype(),
+   ...     pa.int64(): pd.Int64Dtype(),
+   ...     pa.uint8(): pd.UInt8Dtype(),
+   ...     pa.uint16(): pd.UInt16Dtype(),
+   ...     pa.uint32(): pd.UInt32Dtype(),
+   ...     pa.uint64(): pd.UInt64Dtype(),
+   ...     pa.bool_(): pd.BooleanDtype(),
+   ...     pa.float32(): pd.Float32Dtype(),
+   ...     pa.float64(): pd.Float64Dtype(),
+   ...     pa.string(): pd.StringDtype(),
+   ... }
+   ... 
+   ... df = arrow_table.to_pandas(types_mapper=dtype_mapping.get, split_blocks=True, self_destruct=True)
+   ... del arrow_table
+
+Defining a conversion for `pa.string()` in addition converts Arrow strings to NumPy strings, and not objects.
