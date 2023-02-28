@@ -93,6 +93,34 @@ jobs:
           pip install check-manifest
           check-manifest -v
 
+  build_big_endian:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Setup multiarch/qemu-user-static
+      run: |
+        docker run --rm --privileged multiarch/qemu-user-static:register --reset
+    - uses: actions/checkout@v3
+    - name: Start MongoDB
+      uses: supercharge/mongodb-github-action@1.3.0
+      with:
+        mongodb-version: 4.4
+    - name: ubuntu-core:s390x-focal
+      uses: docker://multiarch/ubuntu-core:s390x-focal
+      with:
+        args: >
+          bash -c
+          "uname -a &&
+          lscpu | grep Endian &&
+          apt-get -y update &&
+          apt-get -y install python3 git python3.8-venv &&
+          python3 --version &&
+          python3 -c 'import sys; print(sys.byteorder)' &&
+          cd bindings/python &&
+          ./build-libbson &&
+          python -m pip install -v -e ".[test]"
+          python -m pytest -vv
+          "
+
   docs:
     runs-on: ubuntu-latest
     steps:
