@@ -109,12 +109,14 @@ jobs:
       with:
         args: >
           bash -c
-          "uname -a &&
+          "set -eux &&
+          uname -a &&
           lscpu | grep Endian &&
           apt-get -y update &&
           apt-get -y install python3 git python3.8-venv &&
           python3 --version &&
           python3 -c 'import sys; print(sys.byteorder)' &&
+          ls &&
           cd bindings/python &&
           ./build-libbson &&
           python -m pip install -v -e ".[test]"
