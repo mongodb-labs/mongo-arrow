@@ -108,12 +108,12 @@ jobs:
         uses: docker://multiarch/ubuntu-core:s390x-focal
         with:
           args: >
-            bash -c
+            --net=host bash -c
             "set -eux &&
             uname -a &&
             lscpu | grep Endian &&
             apt-get -y update &&
-            apt-get -y install python3 git python3.8-venv cmake &&
+            DEBIAN_FRONTEND=noninteractive apt-get -y install python3 git python3.8-venv cmake &&
             python3 --version &&
             python3 -c 'import sys; print(sys.byteorder)' &&
             ls &&
