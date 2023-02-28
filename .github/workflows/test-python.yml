@@ -119,7 +119,7 @@ jobs:
             ls &&
             cd bindings/python &&
             ./build-libbson.sh &&
-            python3 -m pip install -v -e ".[test]"
+            python3 -m pip install -v -e ".[test]" &&
             python3 -m pytest -vv
             "
 
