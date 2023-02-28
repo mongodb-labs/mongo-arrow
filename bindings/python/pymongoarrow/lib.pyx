@@ -249,9 +249,9 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                         bson_iter_decimal128(&doc_iter, &dec128)
                         if sys.byteorder == 'little':
                             val = pystruct.pack('<QQ', dec128.low, dec128.high)
+                            builder.append(val)
                         else:
-                            val = pystruct.pack('<QQ', dec128.high, dec128.low)
-                        builder.append(val)
+                            builder.append_null()
                     else:
                         builder.append_null()
                 elif ftype == t_double:

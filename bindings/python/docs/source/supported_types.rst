@@ -6,14 +6,12 @@ Supported Types
 PyMongoArrow currently supports a small subset of all BSON types.
 Support for additional types will be added in subsequent releases.
 
-.. note:: PyMongoArrow does not currently fully support extension types with Pandas/NumPy or Arrow.
-   However, they can be used in schemas.
-   This means that ObjectId and Decimal128 are not fully supported in Pandas DataFrames or Arrow Tables.
-   Instead, the schema type will be converted to a string or object representation of the type.
-   For more information see :doc:`extension_types`.
 
 .. note:: For more information about BSON types, see the
    `BSON specification <http://bsonspec.org/spec.html>`_.
+
+.. note:: ``Decimal128`` types are only supported on little-endian systems.
+   On big-endian systems, ``null`` will be used.
 
 .. list-table::
    :widths: auto
@@ -28,7 +26,9 @@ Support for additional types will be added in subsequent releases.
    * - Embedded array
      - :class:`py.list`, an instance of :class:`pyarrow.list_`,
    * - ObjectId
-     - :class:`py.bytes`, :class:`bson.ObjectId`, an instance of :class:`pymongoarrow.types.ObjectIdType`, an instance of :class:`pyarrow.FixedSizeBinaryScalar`
+     - :class:`py.bytes`, :class:`bson.ObjectId`, an instance of :class:`pymongoarrow.types.ObjectIdType`, an instance of :class:`pymongoarrow.pandas_types.PandasObjectId`
+   * - Decimal128
+     - :class:`bson.Decimal128`, an instance of :class:`pymongoarrow.types.Decimal128Type`, an instance of :class:`pymongoarrow.pandas_types.PandasDecimal128`.
    * - Boolean
      - an instance of :class:`~pyarrow.bool_`, :class:`~py.bool`
    * - 64-bit binary floating point
