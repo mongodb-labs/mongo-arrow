@@ -51,7 +51,7 @@ For Pandas and NumPy you can do the same exact thing:
    0  string   {'start': 0}
    1  string  {'start': 10}
 
-To get a flat pandas dataframe with, e.g., "prop.name" and "prop.start", you can flatten the arrow_table before conversion
+To get a flat Pandas DataFrame with, e.g., "prop.name" and "prop.start", you can flatten the arrow_table before conversion
 
 .. code-block:: pycon
 
