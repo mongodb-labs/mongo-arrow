@@ -118,7 +118,7 @@ jobs:
             python3 -c 'import sys; print(sys.byteorder)' &&
             ls &&
             cd bindings/python &&
-            ./build-libbson &&
+            ./build-libbson.sh &&
             python -m pip install -v -e ".[test]"
             python -m pytest -vv
             "
