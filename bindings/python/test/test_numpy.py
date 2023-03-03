@@ -25,11 +25,7 @@ from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all, write
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.types import (
-    _TYPE_NORMALIZER_FACTORY,
-    Decimal128StringType,
-    ObjectIdType,
-)
+from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
 from pytz import timezone
 
 
@@ -140,11 +136,7 @@ class TestExplicitNumPyApi(NumpyTestBase):
                 raise awe
 
     def test_write_schema_validation(self):
-        arrow_schema = {
-            k.__name__: v(True)
-            for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("Decimal128")
-        }
+        arrow_schema = {k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items()}
         schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
         schema["str"] = "str"
         schema["datetime"] = "datetime64[ms]"
@@ -279,7 +271,7 @@ class TestBSONTypes(NumpyTestBase):
     @classmethod
     def setUpClass(cls):
         NumpyTestBase.setUpClass()
-        cls.schema = Schema({"_id": ObjectIdType(), "decimal128": Decimal128StringType()})
+        cls.schema = Schema({"_id": ObjectIdType(), "decimal128": Decimal128Type()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
         )
@@ -300,10 +292,9 @@ class TestBSONTypes(NumpyTestBase):
         self.getmore_listener.reset()
 
     def test_find_decimal128(self):
-        decimals = [str(i) for i in self.decimal_128s] + [None]  # type:ignore
         expected = {
             "_id": np.array([i.binary for i in self.oids], dtype=np.object_),
-            "decimal128": np.array(decimals),
+            "decimal128": np.array([i.bid for i in self.decimal_128s] + [None], dtype=np.object_),
         }
         actual = find_numpy_all(self.coll, {}, schema=self.schema)
         self.assert_numpy_equal(actual, expected)

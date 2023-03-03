@@ -21,7 +21,7 @@ from typing import Type, Union
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from bson import Binary, ObjectId
+from bson import Binary, Decimal128, ObjectId
 from pandas.api.extensions import (
     ExtensionArray,
     ExtensionDtype,
@@ -56,7 +56,10 @@ class PandasBSONDtype(ExtensionDtype):
             typ = self.type
             for val in np.array(arr):
                 if not pd.isna(val) and not isinstance(val, typ):
-                    val = typ(val)
+                    if typ == Decimal128:
+                        val = Decimal128.from_bid(val)
+                    else:
+                        val = typ(val)
                 vals.append(val)
             arr = np.array(vals, dtype=object)
             # using _from_sequence to ensure None is converted to NA
@@ -249,3 +252,27 @@ class PandasObjectIdArray(PandasBSONExtensionArray):
         from pymongoarrow.types import ObjectIdType
 
         return pa.array(self.data, type=ObjectIdType())
+
+
+@register_extension_dtype
+class PandasDecimal128(PandasBSONDtype):
+    """A pandas extension type for BSON ObjectId data type."""
+
+    type = Decimal128
+
+    @classmethod
+    def construct_array_type(cls) -> Type["PandasDecimal128Array"]:
+        return PandasDecimal128Array
+
+
+class PandasDecimal128Array(PandasBSONExtensionArray):
+    """A pandas extension type for BSON Binary data arrays."""
+
+    @property
+    def _default_dtype(self):
+        return PandasDecimal128()
+
+    def __arrow_array__(self, type=None):
+        from pymongoarrow.types import Decimal128Type
+
+        return pa.array(self.data, type=Decimal128Type())

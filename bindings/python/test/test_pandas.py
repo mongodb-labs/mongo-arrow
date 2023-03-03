@@ -30,12 +30,8 @@ from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, write
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.pandas_types import PandasBSONDtype, PandasObjectId
-from pymongoarrow.types import (
-    _TYPE_NORMALIZER_FACTORY,
-    Decimal128StringType,
-    ObjectIdType,
-)
+from pymongoarrow.pandas_types import PandasBSONDtype, PandasDecimal128, PandasObjectId
+from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
 from pytz import timezone
 
 
@@ -139,7 +135,6 @@ class TestExplicitPandasApi(PandasTestBase):
         arrow_schema = {
             k.__name__: v(True) if k != Binary else v(10)
             for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("Decimal128")
         }
         schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
         schema["Int64"] = pd.Int64Dtype()
@@ -157,6 +152,7 @@ class TestExplicitPandasApi(PandasTestBase):
                 "str": [f"a{i}" for i in range(2)] + [None],
                 "bool": [True, False, None],
                 "Binary": [Binary(bytes(i), 10) for i in range(2)] + [None],
+                "Decimal128": [Decimal128(str(i)) for i in range(2)] + [None],
             }
         ).astype(schema)
         return arrow_schema, data
@@ -323,7 +319,7 @@ class TestBSONTypes(PandasTestBase):
     @classmethod
     def setUpClass(cls):
         PandasTestBase.setUpClass()
-        cls.schema = Schema({"_id": ObjectIdType(), "decimal128": Decimal128StringType()})
+        cls.schema = Schema({"_id": ObjectIdType(), "decimal128": Decimal128Type()})
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
         )
@@ -344,8 +340,8 @@ class TestBSONTypes(PandasTestBase):
         self.getmore_listener.reset()
 
     def test_find_decimal128(self):
-        decimals = [str(i) for i in self.decimal_128s] + [None]  # type:ignore
-        pd_schema = {"_id": PandasObjectId(), "decimal128": np.object_}
+        decimals = self.decimal_128s + [None]  # type:ignore
+        pd_schema = {"_id": PandasObjectId(), "decimal128": PandasDecimal128()}
         expected = pd.DataFrame(data={"_id": self.oids, "decimal128": decimals}).astype(pd_schema)
 
         table = find_pandas_all(self.coll, {}, schema=self.schema)
@@ -376,7 +372,7 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         float: "float64",
         datetime.datetime: "datetime64[ns]",
         ObjectId: "bson_PandasObjectId",
-        Decimal128: "object",
+        Decimal128: "bson_PandasDecimal128",
         bool: "object",
     }
 

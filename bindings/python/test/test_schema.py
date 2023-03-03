@@ -36,7 +36,7 @@ class TestSchema(TestCase):
         dec = Decimal128("1.000")
         binary = Binary(bytes(10), 10)
         lookup = {Decimal128: dec, ObjectId: oid, Binary: binary}
-        instantiated_objs.update({Decimal128: str(dec), ObjectId: oid.binary, Binary: binary})
+        instantiated_objs.update({Decimal128: dec.bid, ObjectId: oid.binary, Binary: binary})
 
         for k, v in _TYPE_NORMALIZER_FACTORY.items():
             # Make an array of 4 elements with either the instantiated object or 1.

@@ -338,7 +338,7 @@ def write(collection, tabular):
     tab_size = len(tabular)
     if isinstance(tabular, Table):
         _validate_schema(tabular.schema.types)
-    elif DataFrame is not None and isinstance(tabular, DataFrame):
+    elif isinstance(tabular, DataFrame):
         _validate_schema(ArrowSchema.from_pandas(tabular).types)
     elif (
         isinstance(tabular, dict)
@@ -359,9 +359,8 @@ def write(collection, tabular):
 
     # Handle Pandas NA objects.
     codec_options = collection.codec_options
-    if DataFrame is not None:
-        type_registry = TypeRegistry([_PandasNACodec()])
-        codec_options = codec_options.with_options(type_registry=type_registry)
+    type_registry = TypeRegistry([_PandasNACodec()])
+    codec_options = codec_options.with_options(type_registry=type_registry)
 
     while cur_offset < tab_size:
         cur_size = 0

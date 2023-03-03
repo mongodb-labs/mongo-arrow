@@ -38,7 +38,8 @@ cdef extern from "<bson/bson.h>":
         pass
 
     ctypedef struct bson_decimal128_t:
-        pass
+        uint64_t high
+        uint64_t low
 
     ctypedef struct bson_error_t:
         uint32_t domain
