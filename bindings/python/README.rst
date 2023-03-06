@@ -61,6 +61,9 @@ installed::
 
      $ python -m pip install pandas
 
+Note:  ``pymongoarrow`` is not supported or tested on big-endian systems
+(e.g. Linux s390x).
+
 Development Install
 ===================
 

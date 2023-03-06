@@ -194,7 +194,7 @@ class TestStringType(TestBsonToArrowConversionBase):
         self._run_test(docs, as_dict)
 
 
-class TestDecimal128StringType(TestBsonToArrowConversionBase):
+class TestDecimal128Type(TestBsonToArrowConversionBase):
     def setUp(self):
         self.schema = Schema({"data": Decimal128})
         self.context = PyMongoArrowContext.from_schema(self.schema)
@@ -205,7 +205,7 @@ class TestDecimal128StringType(TestBsonToArrowConversionBase):
             {"data": Decimal128("1e-5")},
             {"data": Decimal128("1.0e+5")},
         ]
-        as_dict = {"data": ["0.01", "0.00001", "1.0E+5"]}
+        as_dict = {"data": [Decimal128(i) for i in ["0.01", "0.00001", "1.0E+5"]]}
         self._run_test(docs, as_dict)
 
 

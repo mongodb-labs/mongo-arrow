@@ -34,7 +34,7 @@ from pymongoarrow.monkey import patch_all
 from pymongoarrow.types import (
     _TYPE_NORMALIZER_FACTORY,
     BinaryType,
-    Decimal128StringType,
+    Decimal128Type,
     ObjectIdType,
 )
 from pytz import timezone
@@ -246,13 +246,10 @@ class ArrowApiTestMixin:
         )
 
     def _create_data(self):
-        schema = {
-            k.__name__: v(True)
-            for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("Decimal128")
-        }
+        schema = {k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items()}
         schema["Binary"] = BinaryType(10)
         schema["ObjectId"] = ObjectIdType()
+        schema["Decimal128"] = Decimal128Type()
         data = Table.from_pydict(
             {
                 "Int64": [i for i in range(2)],
@@ -263,6 +260,7 @@ class ArrowApiTestMixin:
                 "bool": [True, False],
                 "Binary": [b"1", b"23"],
                 "ObjectId": [ObjectId().binary, ObjectId().binary],
+                "Decimal128": [Decimal128(str(i)).bid for i in range(2)],
             },
             ArrowSchema(schema),
         )
@@ -293,11 +291,7 @@ class ArrowApiTestMixin:
         self.assertEqual(mock.call_count, 2)
 
     def _create_nested_data(self, nested_elem=None):
-        schema = {
-            k.__name__: v(True)
-            for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            if k.__name__ not in ("Decimal128")
-        }
+        schema = {k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items()}
         if nested_elem:
             schem_ent, nested_elem = nested_elem
             schema["list"] = list_(schem_ent)
@@ -319,6 +313,7 @@ class ArrowApiTestMixin:
             "datetime": [datetime(1970 + i, 1, 1) for i in range(3)],
             "Binary": [Binary(bytes(i), 10) for i in range(3)],
             "ObjectId": [ObjectId().binary for i in range(3)],
+            "Decimal128": [Decimal128(str(i)).bid for i in range(3)],
         }
 
         def inner(i):
@@ -566,13 +561,13 @@ class TestBSONTypes(unittest.TestCase):
     def test_find_decimal128(self):
         oids = list(ObjectId() for i in range(4))
         decs = [Decimal128(i) for i in ["0.1", "1.0", "1e-5"]]
-        schema = Schema({"_id": ObjectIdType(), "data": Decimal128StringType()})
+        schema = Schema({"_id": ObjectIdType(), "data": Decimal128Type()})
         expected = Table.from_pydict(
             {
                 "_id": [i.binary for i in oids],
-                "data": [str(decs[0]), str(decs[1]), str(decs[2]), None],
+                "data": [decs[0].bid, decs[1].bid, decs[2].bid, None],
             },
-            ArrowSchema([("_id", ObjectIdType()), ("data", string())]),
+            ArrowSchema([("_id", ObjectIdType()), ("data", Decimal128Type())]),
         )
         coll = self.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")

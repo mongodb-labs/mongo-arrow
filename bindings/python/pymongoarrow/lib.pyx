@@ -20,6 +20,8 @@
 import copy
 import datetime
 import enum
+import struct as pystruct
+import sys
 
 # Python imports
 import bson
@@ -31,7 +33,7 @@ from pyarrow.lib import (
 
 from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
 from pymongoarrow.context import PyMongoArrowContext
-from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128StringType, BinaryType
+from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128Type as Decimal128Type_, BinaryType
 
 # Cython imports
 from cpython cimport PyBytes_Size, object
@@ -39,7 +41,6 @@ from cython.operator cimport dereference
 from libcpp cimport bool as cbool
 from libcpp.map cimport map
 from libcpp.vector cimport vector
-from libc.stdlib cimport malloc, free
 from pyarrow.lib cimport *
 from pymongoarrow.libarrow cimport *
 from pymongoarrow.libbson cimport *
@@ -66,7 +67,7 @@ _builder_type_map = {
     BSON_TYPE_UTF8: StringBuilder,
     BSON_TYPE_BOOL: BoolBuilder,
     BSON_TYPE_DOCUMENT: DocumentBuilder,
-    BSON_TYPE_DECIMAL128: StringBuilder,
+    BSON_TYPE_DECIMAL128: Decimal128Builder,
     BSON_TYPE_ARRAY: ListBuilder,
     BSON_TYPE_BINARY: BinaryBuilder
 }
@@ -78,7 +79,7 @@ _field_type_map = {
     BSON_TYPE_OID: ObjectIdType(),
     BSON_TYPE_UTF8: string(),
     BSON_TYPE_BOOL: bool_(),
-    BSON_TYPE_DECIMAL128: Decimal128StringType(),
+    BSON_TYPE_DECIMAL128: Decimal128Type_(),
 }
 
 cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, context):
@@ -134,8 +135,6 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
     cdef size_t length = <size_t>PyBytes_Size(bson_stream)
     cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
-    cdef char *decimal128_str = <char *> malloc(
-        BSON_DECIMAL128_STRING * sizeof(char))
     cdef uint32_t str_len
     cdef const uint8_t *val_buf = NULL
     cdef uint32_t val_buf_len = 0
@@ -163,7 +162,7 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
     t_document = _BsonArrowTypes.document
     t_array = _BsonArrowTypes.array
     t_binary = _BsonArrowTypes.binary
-
+    t_decimal128 = _BsonArrowTypes.decimal128
 
     # initialize count to current length of builders
     for _, builder in builder_map.items():
@@ -243,10 +242,17 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                     if value_t == BSON_TYPE_UTF8:
                         bson_str = bson_iter_utf8(&doc_iter, &str_len)
                         builder.append(<bytes>(bson_str)[:str_len])
-                    elif value_t == BSON_TYPE_DECIMAL128:
+                    else:
+                        builder.append_null()
+                elif ftype == t_decimal128:
+                    if value_t == BSON_TYPE_DECIMAL128:
                         bson_iter_decimal128(&doc_iter, &dec128)
-                        bson_decimal128_to_string(&dec128, decimal128_str)
-                        builder.append(<bytes>(decimal128_str))
+                        if sys.byteorder == 'little':
+                            val = pystruct.pack('<QQ', dec128.low, dec128.high)
+                            builder.append(val)
+                        else:
+                            # We do not support big-endian systems.
+                            builder.append_null()
                     else:
                         builder.append_null()
                 elif ftype == t_double:
@@ -300,7 +306,6 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                     builder.append_null()
     finally:
         bson_reader_destroy(stream_reader)
-        free(decimal128_str)
 
 
 # Builders
@@ -523,6 +528,35 @@ cdef class BoolBuilder(_ArrayBuilderBase):
         return self.builder
 
 
+cdef class Decimal128Builder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.decimal128
+
+    cdef:
+        shared_ptr[CFixedSizeBinaryBuilder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef shared_ptr[CDataType] dtype = fixed_size_binary(16)
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CFixedSizeBinaryBuilder(dtype, pool))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, value):
+        self.builder.get().Append(value)
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out).cast(Decimal128Type_())
+
+    cdef shared_ptr[CFixedSizeBinaryBuilder] unwrap(self):
+        return self.builder
+
 
 cdef object get_field_builder(field, tzinfo):
     """"Find the appropriate field builder given a pyarrow field"""
@@ -552,8 +586,8 @@ cdef object get_field_builder(field, tzinfo):
         field_builder = ListBuilder(field_type, tzinfo)
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.objectid:
         field_builder = ObjectIdBuilder()
-    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.decimal128_str:
-        field_builder = StringBuilder()
+    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.decimal128:
+        field_builder = Decimal128Builder()
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.binary:
         field_builder = BinaryBuilder(field_type.subtype)
     else:
