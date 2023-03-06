@@ -83,3 +83,8 @@ with the code below (taken from `here <https://arrow.apache.org/docs/python/pand
    ... del arrow_table
 
 Defining a conversion for `pa.string()` in addition converts Arrow strings to NumPy strings, and not objects.
+
+.. note::
+   There are currently two open issues for Null types: 
+   - `ARROW-113 <https://jira.mongodb.org/browse/ARROW-113>`_ NaNs are replaced by pandas with int64 minimum
+   - `ARROW-136 <https://jira.mongodb.org/browse/ARROW-136>`_ Add a workaround in write() for Pandas NA datetime objects
