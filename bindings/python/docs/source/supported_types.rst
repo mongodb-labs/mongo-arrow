@@ -57,9 +57,9 @@ field and its data type.
 Null Values and Conversion to Pandas DataFrames
 -----------------------------------------------
 
-In Arrow, all Arrays are always nullable. 
+In Arrow, all Arrays are always nullable.
 Pandas has experimental nullable data types as, e.g., "Int64" (note the capital "I").
-You can instruct Arrow to create a pandas DataFrame using nullable dtypes 
+You can instruct Arrow to create a pandas DataFrame using nullable dtypes
 with the code below (taken from `here <https://arrow.apache.org/docs/python/pandas.html>`_)
 
 .. code-block:: pycon
@@ -78,8 +78,9 @@ with the code below (taken from `here <https://arrow.apache.org/docs/python/pand
    ...     pa.float64(): pd.Float64Dtype(),
    ...     pa.string(): pd.StringDtype(),
    ... }
-   ... 
-   ... df = arrow_table.to_pandas(types_mapper=dtype_mapping.get, split_blocks=True, self_destruct=True)
+   ... df = arrow_table.to_pandas(
+   ...     types_mapper=dtype_mapping.get, split_blocks=True, self_destruct=True
+   ... )
    ... del arrow_table
 
 Defining a conversion for `pa.string()` in addition converts Arrow strings to NumPy strings, and not objects.
