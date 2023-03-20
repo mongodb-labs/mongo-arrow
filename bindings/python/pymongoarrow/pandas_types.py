@@ -147,7 +147,10 @@ class PandasBSONExtensionArray(ExtensionArray):
         )
 
     def __eq__(self, other):
-        return self.data == other
+        try:
+            return self.data == other
+        except Exception:
+            return self.data == np.array(other, dtype=object)
 
     def nbytes(self):
         return self.data.nbytes
