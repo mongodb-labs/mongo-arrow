@@ -24,6 +24,8 @@ assert pymongo.has_c()
 # Use large document in tests? If SMALL, no, if LARGE, then yes.
 SMALL = False
 LARGE = True
+LIST = 2
+
 db = None
 raw_bson = None
 large_doc_keys = None
@@ -52,12 +54,19 @@ def _setup():
     )
 
     small.insert_many(
-        [collections.OrderedDict([("x", 1), ("y", math.pi)]) for _ in range(N_SMALL_DOCS)]
+        [
+            collections.OrderedDict(
+                [("x", 1), ("y", math.pi), ("list", [math.pi for _ in range(256)])]
+            )
+            for _ in range(N_SMALL_DOCS)
+        ]
     )
 
     dtypes[SMALL] = np.dtype([("x", np.int64), ("y", np.float64)])
     schemas[SMALL] = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
-
+    schemas[LIST] = Schema(
+        {"x": pyarrow.int64(), "y": pyarrow.float64(), "list": pyarrow.list_(pyarrow.float64())}
+    )
     large = db[collection_names[LARGE]]
     large.drop()
     # 2600 keys: 'a', 'aa', 'aaa', .., 'zz..z'
@@ -89,7 +98,6 @@ def _setup():
             "cursor": {"id": Int64(1234), "ns": "db.collection", "firstBatch": raw_bson_docs_large},
         }
     )
-
     raw_bsons[SMALL] = raw_bson_small
     raw_bsons[LARGE] = raw_bson_large
     arrow_tables[SMALL] = find_arrow_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
@@ -157,6 +165,30 @@ def to_arrow(use_large):
     c = db[collection_names[use_large]]
     schema = schemas[use_large]
     find_arrow_all(c, {}, schema=schema)
+
+
+@bench("pymongoarrow-to-arrow-arr")
+def to_arrow_arrays(use_large):
+    c = db[collection_names[use_large]]
+    schema = schemas[LIST]
+    table = find_arrow_all(c, {}, schema=schema, projection={"_id": 0})
+    [
+        [[n for n in i.values] if isinstance(i, pyarrow.ListScalar) else i for i in column]
+        for column in table.columns
+    ]
+
+
+@bench("conventional-to-arrow-arr")
+def to_conventional_arrays(use_large):
+    c = db[collection_names[use_large]]
+    f = list(c.find({}, projection={"_id": 0}))
+    # for doc in f:
+    #    doc.update({"list": [n.to_decimal() for n in doc["list"]]})
+    table = pyarrow.Table.from_pylist(f)
+    [
+        [[n for n in i.values] if isinstance(i, pyarrow.ListScalar) else i for i in column]
+        for column in table.columns
+    ]
 
 
 @bench("insert_arrow")
