@@ -182,8 +182,6 @@ def to_arrow_arrays(use_large):
 def to_conventional_arrays(use_large):
     c = db[collection_names[use_large]]
     f = list(c.find({}, projection={"_id": 0}))
-    # for doc in f:
-    #    doc.update({"list": [n.to_decimal() for n in doc["list"]]})
     table = pyarrow.Table.from_pylist(f)
     [
         [[n for n in i.values] if isinstance(i, pyarrow.ListScalar) else i for i in column]
