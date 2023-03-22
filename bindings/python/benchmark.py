@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pyarrow
 import pymongo
-from bson import BSON, Int64, ObjectId
+from bson import BSON, Int64
 from pymongoarrow.api import (
     Schema,
     find_arrow_all,
@@ -47,20 +47,11 @@ def _setup():
     db = pymongo.MongoClient().pymongoarrow_test
     small = db[collection_names[SMALL]]
     small.drop()
-
-    print(
-        "%d small docs, %d bytes each with 3 keys"
-        % (N_SMALL_DOCS, len(BSON.encode({"_id": ObjectId(), "x": 1, "y": math.pi})))
+    base_small = collections.OrderedDict(
+        [("x", 1), ("y", math.pi), ("list", [math.pi for _ in range(64)])]
     )
-
-    small.insert_many(
-        [
-            collections.OrderedDict(
-                [("x", 1), ("y", math.pi), ("list", [math.pi for _ in range(256)])]
-            )
-            for _ in range(N_SMALL_DOCS)
-        ]
-    )
+    small.insert_many([{**base_small} for _ in range(N_SMALL_DOCS)])
+    print("%d small docs, %d bytes each with 3 keys" % (N_SMALL_DOCS, len(BSON.encode(base_small))))
 
     dtypes[SMALL] = np.dtype([("x", np.int64), ("y", np.float64)])
     schemas[SMALL] = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
@@ -169,6 +160,8 @@ def to_arrow(use_large):
 
 @bench("pymongoarrow-to-arrow-arr")
 def to_arrow_arrays(use_large):
+    if use_large:
+        return
     c = db[collection_names[use_large]]
     schema = schemas[LIST]
     table = find_arrow_all(c, {}, schema=schema, projection={"_id": 0})
@@ -180,6 +173,8 @@ def to_arrow_arrays(use_large):
 
 @bench("conventional-to-arrow-arr")
 def to_conventional_arrays(use_large):
+    if use_large:
+        return
     c = db[collection_names[use_large]]
     f = list(c.find({}, projection={"_id": 0}))
     table = pyarrow.Table.from_pylist(f)
