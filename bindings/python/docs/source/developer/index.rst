@@ -7,3 +7,4 @@ Technical guide for contributors to PyMongoArrow.
    :maxdepth: 1
 
    installation
+   benchmarks
