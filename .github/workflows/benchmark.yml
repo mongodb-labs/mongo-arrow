@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ["macos-latest"]
+        os: ["ubuntu-22.04"]
         python-version: ["3.10"]
       fail-fast: false
     steps:
@@ -28,7 +28,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
           cache-dependency-path: '**/setup.cfg'
-      - name: Start MongoDB on MacOS
+      - name: Start MongoDB
         run: |
           mkdir data
           mongod --fork --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
