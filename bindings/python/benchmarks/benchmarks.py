@@ -17,6 +17,8 @@ import math
 import os
 import string
 
+import numpy as np
+import pandas as pd
 import pyarrow
 import pymongo
 from bson import BSON
@@ -54,6 +56,8 @@ small.insert_many(
 
 large_doc_keys = [c * i for c in string.ascii_lowercase for i in range(1, 101)]
 schemas[SMALL] = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
+dtypes[SMALL] = np.dtype([("x", np.int64), ("y", np.float64)])
+dtypes[LARGE] = np.dtype([(k, np.float64) for k in large_doc_keys])
 schemas[LARGE] = Schema({k: pyarrow.float64() for k in large_doc_keys})
 large = db[collection_names[LARGE]]
 large.drop()
@@ -95,3 +99,44 @@ class ProfileInsert:
 
     def time_insert_numpy(self):
         write(db[collection_names[CUR_SIZE]], numpy_arrays[CUR_SIZE])
+
+
+class ProfileRead:
+    """
+    A benchmark that times the performance of various kinds
+    of reading MongoDB data.
+    """
+
+    def setup(self):
+        db[collection_names[CUR_SIZE]].drop()
+
+    def time_conventional_ndarray(self):
+        collection = db[collection_names[CUR_SIZE]]
+        cursor = collection.find()
+        dtype = dtypes[CUR_SIZE]
+
+        if CUR_SIZE == LARGE:
+            np.array([tuple(doc[k] for k in large_doc_keys) for doc in cursor], dtype=dtype)
+        else:
+            np.array([(doc["x"], doc["y"]) for doc in cursor], dtype=dtype)
+
+    def time_to_numpy(self):
+        c = db[collection_names[CUR_SIZE]]
+        schema = schemas[CUR_SIZE]
+        find_numpy_all(c, {}, schema=schema)
+
+    def time_conventional_pandas(self):
+        collection = db[collection_names[CUR_SIZE]]
+        _ = dtypes[CUR_SIZE]
+        cursor = collection.find(projection={"_id": 0})
+        _ = pd.DataFrame(list(cursor))
+
+    def time_to_pandas(self):
+        c = db[collection_names[CUR_SIZE]]
+        schema = schemas[CUR_SIZE]
+        find_pandas_all(c, {}, schema=schema)
+
+    def time_to_arrow(self):
+        c = db[collection_names[CUR_SIZE]]
+        schema = schemas[CUR_SIZE]
+        find_arrow_all(c, {}, schema=schema)
