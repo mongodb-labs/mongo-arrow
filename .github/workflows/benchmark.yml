@@ -32,8 +32,6 @@ jobs:
         uses: supercharge/mongodb-github-action@1.9.0
         with:
           mongodb-version: 6.0
-      - name: Install pkg-config
-        run: brew install pkg-config
       - name: Install libbson
         run: |
           LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
