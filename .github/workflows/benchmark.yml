@@ -40,7 +40,9 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install -U pip
-      - name: Run tests
+          python -m pip install asv virtualenv
+
+      - name: Run benchmarks
         run: |
           set -eu
           run_asv () {
@@ -53,7 +55,6 @@ jobs:
               asv run --strict --verbose --show-stderr -E existing --set-commit-hash $(git rev-parse HEAD)
           }
 
-          pip install asv virtualenv
           asv machine --yes
           git fetch origin main:main
           git update-ref refs/bm/pr HEAD
@@ -62,15 +63,17 @@ jobs:
           git update-ref refs/bm/merge-target $(git log -n 1 --pretty=format:"%H" main --)
           git checkout --force refs/bm/pr --
           # Install the library
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -e ".[test]"
           run_asv
 
 
           git checkout --force refs/bm/merge-target --
           # Install the library
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -vvv -e ".[test]"
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -e ".[test]"
           run_asv
 
+      - name: Compare benchmarks
+        run: |
           asv compare refs/bm/merge-target refs/bm/pr --
       - name: Fail if any benchmarks have slowed down too much
         run: |
