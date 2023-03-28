@@ -17,7 +17,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: ["macos-latest"]
+        os: ["ubuntu-22.04"]
         python-version: ["3.10"]
       fail-fast: false
     steps:
@@ -28,12 +28,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
           cache-dependency-path: '**/setup.cfg'
-      - name: Start MongoDB on MacOS
-        run: |
-          mkdir data
-          mongod --fork --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
-      - name: Install pkg-config
-        run: brew install pkg-config
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.9.0
+        with:
+          mongodb-version: 6.0
       - name: Install libbson
         run: |
           LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
