@@ -29,9 +29,9 @@ jobs:
           cache: 'pip'
           cache-dependency-path: '**/setup.cfg'
       - name: Start MongoDB
-        run: |
-          mkdir data
-          mongod --fork --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
+        uses: supercharge/mongodb-github-action@1.8.0
+        with:
+          mongodb-version: 6.0
       - name: Install pkg-config
         run: brew install pkg-config
       - name: Install libbson
