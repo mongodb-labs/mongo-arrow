@@ -15,7 +15,6 @@
 import collections
 import math
 import os
-import string
 
 import numpy as np
 import pandas as pd
@@ -34,9 +33,9 @@ CUR_SIZE = True if os.environ.get("BENCHMARK_SIZE") == "LARGE" else False
 N_LARGE_DOCS = 1000
 N_SMALL_DOCS = 100000
 assert pymongo.has_c()
-SMALL = False
-LARGE = True
-LIST = 2
+SMALL = 1
+LARGE = 2
+LIST = 3
 collection_names = {LARGE: "large", SMALL: "small", LIST: "list"}
 dtypes = {}
 schemas = {}
@@ -57,9 +56,9 @@ small.insert_many(
 base_small = collections.OrderedDict(
     [("x", 1), ("y", math.pi), ("list", [math.pi for _ in range(64)])]
 )
-small.insert_many([{**base_small} for _ in range(N_SMALL_DOCS)])
+small.insert_many([base_small.copy() for _ in range(N_SMALL_DOCS)])
 
-large_doc_keys = [c * i for c in string.ascii_lowercase for i in range(1, 101)]
+large_doc_keys = [f"a{i}" for i in range(2600)]
 schemas[SMALL] = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
 schemas[LIST + SMALL] = Schema({"list": pyarrow.list_(pyarrow.float64())})
 dtypes[SMALL] = np.dtype([("x", np.int64), ("y", np.float64)])
@@ -70,7 +69,6 @@ schemas[LIST + LARGE] = Schema(
 )
 large = db[collection_names[LARGE]]
 large.drop()
-# 2600 keys: 'a', 'aa', 'aaa', .., 'zz..z'
 large_doc = {k: math.pi for k in large_doc_keys}
 large_doc.update({k + "_list": [math.pi for _ in range(64)] for k in large_doc_keys})
 print(
@@ -117,6 +115,7 @@ class ProfileRead:
     of reading MongoDB data.
     """
 
+    # We need this because the naive methods don't always convert nested objects.
     @staticmethod
     def exercise_table(table):
         [
