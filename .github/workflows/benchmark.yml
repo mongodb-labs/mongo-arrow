@@ -29,7 +29,7 @@ jobs:
           cache: 'pip'
           cache-dependency-path: '**/setup.cfg'
       - name: Start MongoDB
-        uses: supercharge/mongodb-github-action@1.8.0
+        uses: supercharge/mongodb-github-action@1.9.0
         with:
           mongodb-version: 6.0
       - name: Install pkg-config
