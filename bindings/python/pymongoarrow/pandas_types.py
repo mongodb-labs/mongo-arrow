@@ -147,9 +147,6 @@ class PandasBSONExtensionArray(ExtensionArray):
         )
 
     def __eq__(self, other):
-        # Binary types do not support element-wise comparison.
-        if isinstance(other, Binary):
-            other = np.array(other, dtype=object)
         return self.data == other
 
     def nbytes(self):
@@ -222,6 +219,12 @@ class PandasBinary(PandasBSONDtype):
             return cls(**match.groupdict())
         else:
             raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
+
+    def __eq__(self, other):
+        # Binary types do not support element-wise comparison.
+        if isinstance(other, Binary):
+            other = np.array(other, dtype=object)
+        return super().__eq__(other)
 
 
 class PandasBinaryArray(PandasBSONExtensionArray):
