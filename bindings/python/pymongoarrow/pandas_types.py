@@ -147,10 +147,10 @@ class PandasBSONExtensionArray(ExtensionArray):
         )
 
     def __eq__(self, other):
-        try:
-            return self.data == other
-        except Exception:
-            return self.data == np.array(other, dtype=object)
+        # Binary types do not support element-wise comparison.
+        if isinstance(other, Binary):
+            other = np.array(other, dtype=object)
+        return self.data == other
 
     def nbytes(self):
         return self.data.nbytes
