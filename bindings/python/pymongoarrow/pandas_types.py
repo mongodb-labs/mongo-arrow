@@ -220,12 +220,6 @@ class PandasBinary(PandasBSONDtype):
         else:
             raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
 
-    def __eq__(self, other):
-        # Binary types do not support element-wise comparison.
-        if isinstance(other, Binary):
-            other = np.array(other, dtype=object)
-        return super().__eq__(other)
-
 
 class PandasBinaryArray(PandasBSONExtensionArray):
     """A pandas extension type for BSON Binary data arrays."""
@@ -234,6 +228,12 @@ class PandasBinaryArray(PandasBSONExtensionArray):
         from pymongoarrow.types import BinaryType
 
         return pa.array(self.data, type=BinaryType(self.dtype.subtype))
+
+    def __eq__(self, other):
+        # Binary types do not support element-wise comparison.
+        if isinstance(other, Binary):
+            other = np.array(other, dtype=object)
+        return super().__eq__(other)
 
 
 @register_extension_dtype
