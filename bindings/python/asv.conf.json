@@ -13,7 +13,9 @@
              "Cython": [],
              "numpy": []
          },
-         "env": {"BENCHMARK_SIZE": ["LARGE", "SMALL"]},
+         "env": {
+             "N_DOCS": ["100000", "1000"],
+         },
     },
     "environment_type": "virtualenv",
 }
