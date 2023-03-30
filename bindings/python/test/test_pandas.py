@@ -139,7 +139,7 @@ class TestExplicitPandasApi(PandasTestBase):
         schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
         schema["Int64"] = pd.Int64Dtype()
         schema["int"] = pd.Int32Dtype()
-        schema["str"] = "U8"
+        schema["str"] = "string"
         schema["datetime"] = "datetime64[ns]"
 
         data = pd.DataFrame(

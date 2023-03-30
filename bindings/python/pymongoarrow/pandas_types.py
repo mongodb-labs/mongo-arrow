@@ -229,6 +229,12 @@ class PandasBinaryArray(PandasBSONExtensionArray):
 
         return pa.array(self.data, type=BinaryType(self.dtype.subtype))
 
+    def __eq__(self, other):
+        # Binary types do not support element-wise comparison.
+        if isinstance(other, Binary):
+            other = np.array(other, dtype=object)
+        return super().__eq__(other)
+
 
 @register_extension_dtype
 class PandasObjectId(PandasBSONDtype):
