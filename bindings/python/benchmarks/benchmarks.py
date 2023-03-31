@@ -131,6 +131,7 @@ class ProfileReadArray(Read):
             for column in table.columns
         ]
 
+    # All of the following tests are being skipped because NumPy/Pandas do not work with nested arrays.
     def time_to_numpy(self):
         pass
 
