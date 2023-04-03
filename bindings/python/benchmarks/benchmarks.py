@@ -11,11 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import abc
 import collections
 import math
 import os
-from abc import ABC, abstractmethod
+from abc import ABC
 
 import numpy as np
 import pandas as pd
@@ -42,7 +42,7 @@ class Insert(ABC):
     of inserting tabular data.
     """
 
-    @abstractmethod
+    @abc.abstractmethod
     def setup(self):
         raise NotImplementedError
 
@@ -66,7 +66,7 @@ class Read(ABC):
     of reading MongoDB data.
     """
 
-    @abstractmethod
+    @abc.abstractmethod
     def setup(self):
         raise NotImplementedError
 
@@ -149,6 +149,9 @@ class ProfileReadArray(Read):
 
 
 class ProfileReadSmall(Read):
+    schema = None
+    dtypes = None
+
     def setup(self):
         coll = db.benchmark
         coll.drop()
@@ -170,6 +173,9 @@ class ProfileReadSmall(Read):
 
 
 class ProfileReadLarge(Read):
+    schema = None
+    dtypes = None
+
     def setup(self):
         coll = db.benchmark
         coll.drop()
@@ -187,6 +193,11 @@ class ProfileReadLarge(Read):
 
 
 class ProfileInsertSmall(Insert):
+    arrow_table = None
+    pandas_table = None
+    numpy_arrays = None
+    dtypes = None
+
     def setup(self):
         coll = db.benchmark
         coll.drop()
@@ -206,6 +217,11 @@ class ProfileInsertSmall(Insert):
 
 
 class ProfileInsertLarge(Insert):
+    arrow_table = None
+    pandas_table = None
+    numpy_arrays = None
+    dtypes = None
+
     def setup(self):
         coll = db.benchmark
         coll.drop()
