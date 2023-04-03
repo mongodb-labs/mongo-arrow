@@ -46,20 +46,16 @@ class Insert(ABC):
     def setup(self):
         raise NotImplementedError
 
-    @abstractmethod
     def time_insert_arrow(self):
         write(db.benchmark, self.arrow_table)
 
-    @abstractmethod
     def time_insert_conventional(self):
         tab = self.arrow_table.to_pylist()
         db.benchmark.insert_many(tab)
 
-    @abstractmethod
     def time_insert_pandas(self):
         write(db.benchmark, self.pandas_table)
 
-    @abstractmethod
     def time_insert_numpy(self):
         write(db.benchmark, self.numpy_arrays)
 
@@ -70,6 +66,7 @@ class Read(ABC):
     of reading MongoDB data.
     """
 
+    @abstractmethod
     def setup(self):
         raise NotImplementedError
 
@@ -78,7 +75,6 @@ class Read(ABC):
     def exercise_table(table):
         pass
 
-    @abstractmethod
     def time_conventional_ndarray(self):
         collection = db.benchmark
         cursor = collection.find()
@@ -88,29 +84,24 @@ class Read(ABC):
         else:
             np.array([(doc["x"], doc["y"]) for doc in cursor], dtype=dtype)
 
-    @abstractmethod
     def time_to_numpy(self):
         c = db.benchmark
         find_numpy_all(c, {}, schema=self.schema)
 
-    @abstractmethod
     def time_conventional_pandas(self):
         collection = db.benchmark
         cursor = collection.find(projection={"_id": 0})
         _ = pd.DataFrame(list(cursor))
 
-    @abstractmethod
     def time_to_pandas(self):
         c = db.benchmark
         find_pandas_all(c, {}, schema=self.schema, projection={"_id": 0})
 
-    @abstractmethod
     def time_to_arrow(self):
         c = db.benchmark
         table = find_arrow_all(c, {}, schema=self.schema)
         self.exercise_table(table)
 
-    @abstractmethod
     def time_conventional_arrow(self):
         c = db.benchmark
         f = list(c.find({}, projection={"_id": 0}))
