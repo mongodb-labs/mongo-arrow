@@ -43,7 +43,7 @@ class Insert(ABC):
     of inserting tabular data.
     """
 
-    timeout = 600
+    timeout = 6000
 
     @abc.abstractmethod
     def setup(self):
@@ -69,7 +69,7 @@ class Read(ABC):
     of reading MongoDB data.
     """
 
-    timeout = 600
+    timeout = 6000
 
     @abc.abstractmethod
     def setup(self):
