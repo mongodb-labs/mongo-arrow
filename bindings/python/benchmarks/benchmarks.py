@@ -36,11 +36,14 @@ assert pymongo.has_c()
 db = pymongo.MongoClient().pymongoarrow_test
 
 
+# We have to use ABCs because ASV doesn't support any other way of skipping tests.
 class Insert(ABC):
     """
     A benchmark that times the performance of various kinds
     of inserting tabular data.
     """
+
+    timeout = 600
 
     @abc.abstractmethod
     def setup(self):
@@ -65,6 +68,8 @@ class Read(ABC):
     A benchmark that times the performance of various kinds
     of reading MongoDB data.
     """
+
+    timeout = 600
 
     @abc.abstractmethod
     def setup(self):
