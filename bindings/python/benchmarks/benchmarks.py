@@ -35,6 +35,8 @@ name_to_obj = {"list": list, "dict": dict}
 assert pymongo.has_c()
 db = pymongo.MongoClient().pymongoarrow_test
 
+LARGE_DOC_SIZE = 100
+
 
 # We have to use ABCs because ASV doesn't support any other way of skipping tests.
 class Insert(ABC):
@@ -184,7 +186,7 @@ class ProfileReadLarge(Read):
     def setup(self):
         coll = db.benchmark
         coll.drop()
-        large_doc_keys = self.large_doc_keys = [f"a{i}" for i in range(2600)]
+        large_doc_keys = self.large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
         base_dict = collections.OrderedDict([(k, math.pi) for k in large_doc_keys])
         dtypes_list = np.dtype([(k, np.float64) for k in large_doc_keys])
         schema_dict = {k: pyarrow.float64() for k in large_doc_keys}
@@ -230,7 +232,7 @@ class ProfileInsertLarge(Insert):
     def setup(self):
         coll = db.benchmark
         coll.drop()
-        large_doc_keys = [f"a{i}" for i in range(2600)]
+        large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
         base_dict = collections.OrderedDict([(k, math.pi) for k in large_doc_keys])
         dtypes_list = np.dtype([(k, np.float64) for k in large_doc_keys])
         self.dtypes = np.dtype(dtypes_list)
