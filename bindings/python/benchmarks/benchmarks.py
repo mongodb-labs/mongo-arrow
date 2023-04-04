@@ -35,7 +35,7 @@ name_to_obj = {"list": list, "dict": dict}
 assert pymongo.has_c()
 db = pymongo.MongoClient().pymongoarrow_test
 
-LARGE_DOC_SIZE = 100
+LARGE_DOC_SIZE = 50
 
 
 # We have to use ABCs because ASV doesn't support any other way of skipping tests.
