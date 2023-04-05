@@ -89,8 +89,9 @@ class Read(ABC):
     """
 
     timeout = 100000  # The setup sometimes times out.
-    number = 5
-    repeat = (1, 10, 10.0)  # Min repeat, max repeat, time limit (will stop sampling after this)
+    number = 3
+    repeat = (1, 10, 30.0)  # Min repeat, max repeat, time limit (will stop sampling after this)
+    rounds = 1
 
     @abc.abstractmethod
     def setup_cache(self):
