@@ -31,13 +31,12 @@ from pymongoarrow.api import (
 )
 
 N_DOCS = int(os.environ.get("N_DOCS"))
-name_to_obj = {"list": list, "dict": dict}
 assert pymongo.has_c()
 db = pymongo.MongoClient().pymongoarrow_test
 
-LARGE_DOC_SIZE = 50
+LARGE_DOC_SIZE = 20
 EMBEDDED_OBJECT_SIZE = (
-    64  # The number of values or key/value pairs in the embedded object (array or document).
+    20  # The number of values or key/value pairs in the embedded object (array or document).
 )
 
 
@@ -48,7 +47,10 @@ class Insert(ABC):
     of inserting tabular data.
     """
 
-    timeout = 100000
+    timeout = 100000  # The setup sometimes times out.
+    number = 1
+    repeat = (1, 10, 10.0)  # Min repeat, max repeat, time limit (will stop sampling after this)
+    rounds = 1
 
     @abc.abstractmethod
     def setup_cache(self):
@@ -86,7 +88,9 @@ class Read(ABC):
     of reading MongoDB data.
     """
 
-    timeout = 100000
+    timeout = 100000  # The setup sometimes times out.
+    number = 5
+    repeat = (1, 10, 10.0)  # Min repeat, max repeat, time limit (will stop sampling after this)
 
     @abc.abstractmethod
     def setup_cache(self):
