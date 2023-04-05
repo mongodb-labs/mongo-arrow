@@ -33,13 +33,14 @@ from pyarrow.lib import (
 
 from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
 from pymongoarrow.context import PyMongoArrowContext
-from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128Type as Decimal128Type_, BinaryType
+from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128Type as Decimal128Type_, BinaryType, CodeType, RegexType
 
 # Cython imports
 from cpython cimport PyBytes_Size, object
 from cython.operator cimport dereference
 from libcpp cimport bool as cbool
 from libcpp.map cimport map
+from libc.string cimport strlen
 from libcpp.vector cimport vector
 from pyarrow.lib cimport *
 from pymongoarrow.libarrow cimport *
@@ -69,7 +70,9 @@ _builder_type_map = {
     BSON_TYPE_DOCUMENT: DocumentBuilder,
     BSON_TYPE_DECIMAL128: Decimal128Builder,
     BSON_TYPE_ARRAY: ListBuilder,
-    BSON_TYPE_BINARY: BinaryBuilder
+    BSON_TYPE_BINARY: BinaryBuilder,
+    BSON_TYPE_CODE: CodeBuilder,
+    BSON_TYPE_REGEX: RegexBuilder,
 }
 
 _field_type_map = {
@@ -80,7 +83,10 @@ _field_type_map = {
     BSON_TYPE_UTF8: string(),
     BSON_TYPE_BOOL: bool_(),
     BSON_TYPE_DECIMAL128: Decimal128Type_(),
+    BSON_TYPE_CODE: string(),
+    BSON_TYPE_REGEX: RegexType(),
 }
+
 
 cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, context):
     """Get the appropropriate data type for a specific field"""
@@ -140,7 +146,8 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
     cdef uint32_t val_buf_len = 0
     cdef bson_decimal128_t dec128
     cdef bson_type_t value_t
-    cdef const char * bson_str
+    cdef const char * bson_str = NULL
+    cdef const char * options = NULL
     cdef StructType struct_dtype
     cdef const bson_t * doc = NULL
     cdef bson_iter_t doc_iter
@@ -163,6 +170,8 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
     t_array = _BsonArrowTypes.array
     t_binary = _BsonArrowTypes.binary
     t_decimal128 = _BsonArrowTypes.decimal128
+    t_code = _BsonArrowTypes.code
+    t_regex = _BsonArrowTypes.regex
 
     # initialize count to current length of builders
     for _, builder in builder_map.items():
@@ -242,6 +251,18 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                     if value_t == BSON_TYPE_UTF8:
                         bson_str = bson_iter_utf8(&doc_iter, &str_len)
                         builder.append(<bytes>(bson_str)[:str_len])
+                    else:
+                        builder.append_null()
+                elif ftype == t_code:
+                    if value_t == BSON_TYPE_CODE:
+                        bson_str = bson_iter_code(&doc_iter, &str_len)
+                        builder.append(<bytes>(bson_str)[:str_len])
+                    else:
+                        builder.append_null()
+                elif ftype == t_regex:
+                    if value_t == BSON_TYPE_REGEX:
+                        bson_str = bson_iter_regex(&doc_iter, &options)
+                        builder.append(<bytes>(bson_str)[:strlen(bson_str)], <bytes>(options)[:strlen(options)])
                     else:
                         builder.append_null()
                 elif ftype == t_decimal128:
@@ -344,6 +365,70 @@ cdef class StringBuilder(_ArrayBuilderBase):
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CStringBuilder] unwrap(self):
+        return self.builder
+
+
+cdef class CodeBuilder(StringBuilder):
+    type_marker = _BsonArrowTypes.code
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out).cast(CodeType())
+
+
+cdef class RegexBuilder(_ArrayBuilderBase):
+    type_marker = _BsonArrowTypes.regex
+
+    cdef:
+        shared_ptr[CStructBuilder] builder
+        StringBuilder pattern_builder
+        StringBuilder flags_builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef vector[shared_ptr[CArrayBuilder]] c_field_builders
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+
+        fields = []
+        for name in ['pattern', 'flags']:
+            field_obj = field(name, string())
+            fields.append(field_obj)
+            if name == 'pattern':
+                self.pattern_builder = StringBuilder()
+                c_field_builders.push_back(<shared_ptr[CArrayBuilder]>self.pattern_builder.builder)
+            else:
+                self.flags_builder = StringBuilder()
+                c_field_builders.push_back(<shared_ptr[CArrayBuilder]>self.flags_builder.builder)
+
+        dtype = struct(fields)
+
+        self.builder.reset(new CStructBuilder(pyarrow_unwrap_data_type(dtype), pool, c_field_builders))
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef append(self, pattern, flags):
+        self.pattern_builder.append(pattern)
+        if flags:
+            self.flags_builder.append(flags)
+        else:
+            self.flags_builder.append_null()
+        # Append an element to the Struct. "All child-builders' Append method
+        # must be called independently to maintain data-structure consistency."
+        # Pass "true" for is_valid.
+        self.builder.get().Append(True)
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out).cast(RegexType())
+
+    cdef shared_ptr[CStructBuilder] unwrap(self):
         return self.builder
 
 
@@ -590,6 +675,8 @@ cdef object get_field_builder(field, tzinfo):
         field_builder = Decimal128Builder()
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.binary:
         field_builder = BinaryBuilder(field_type.subtype)
+    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.regex:
+        field_builder = RegexBuilder()
     else:
         field_builder = StringBuilder()
     return field_builder

@@ -16,6 +16,7 @@ from pyarrow import Table, timestamp
 from pymongoarrow.lib import (
     BinaryBuilder,
     BoolBuilder,
+    CodeBuilder,
     DatetimeBuilder,
     Decimal128Builder,
     DocumentBuilder,
@@ -24,6 +25,7 @@ from pymongoarrow.lib import (
     Int64Builder,
     ListBuilder,
     ObjectIdBuilder,
+    RegexBuilder,
     StringBuilder,
 )
 from pymongoarrow.types import _BsonArrowTypes, _get_internal_typemap
@@ -40,6 +42,8 @@ _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.document: DocumentBuilder,
     _BsonArrowTypes.array: ListBuilder,
     _BsonArrowTypes.binary: BinaryBuilder,
+    _BsonArrowTypes.code: CodeBuilder,
+    _BsonArrowTypes.regex: RegexBuilder,
 }
 
 

@@ -21,7 +21,7 @@ from typing import Type, Union
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from bson import Binary, Decimal128, ObjectId
+from bson import Binary, Code, Decimal128, ObjectId, Regex
 from pandas.api.extensions import (
     ExtensionArray,
     ExtensionDtype,
@@ -262,7 +262,7 @@ class PandasObjectIdArray(PandasBSONExtensionArray):
 
 @register_extension_dtype
 class PandasDecimal128(PandasBSONDtype):
-    """A pandas extension type for BSON ObjectId data type."""
+    """A pandas extension type for BSON Decimal128 data type."""
 
     type = Decimal128
 
@@ -282,3 +282,57 @@ class PandasDecimal128Array(PandasBSONExtensionArray):
         from pymongoarrow.types import Decimal128Type
 
         return pa.array(self.data, type=Decimal128Type())
+
+
+@register_extension_dtype
+class PandasRegex(PandasBSONDtype):
+    """A pandas extension type for BSON Regex data type."""
+
+    type = Regex
+
+    @classmethod
+    def construct_array_type(cls) -> Type["PandasRegexArray"]:
+        return PandasRegexArray
+
+
+class PandasRegexArray(PandasBSONExtensionArray):
+    """A pandas extension type for BSON Regex Type."""
+
+    @property
+    def _default_dtype(self):
+        return PandasRegex()
+
+    def __arrow_array__(self, type=None):
+        from pymongoarrow.types import RegexType
+
+        return pa.array(self.data, type=RegexType())
+
+
+@register_extension_dtype
+class PandasCode(PandasBSONDtype):
+    """A pandas extension type for BSON Code data type."""
+
+    type = Code
+
+    @classmethod
+    def construct_array_type(cls) -> Type["PandasCodeArray"]:
+        return PandasCodeArray
+
+
+class PandasCodeArray(PandasBSONExtensionArray):
+    """A pandas extension type for BSON Code Type."""
+
+    @property
+    def _default_dtype(self):
+        return PandasCode()
+
+    def __eq__(self, other):
+        # Code types do not support element-wise comparison.
+        if isinstance(other, Code):
+            other = np.array(other, dtype=object)
+        return super().__eq__(other)
+
+    def __arrow_array__(self, type=None):
+        from pymongoarrow.types import CodeType
+
+        return pa.array(self.data, type=CodeType())

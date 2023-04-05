@@ -17,13 +17,14 @@ from datetime import datetime
 import numpy as np
 import pyarrow as pa
 import pyarrow.types as _atypes
-from bson import Binary, Decimal128, Int64, ObjectId
+from bson import Binary, Code, Decimal128, Int64, ObjectId, Regex
 from pyarrow import DataType as _ArrowDataType
 from pyarrow import (
     ExtensionScalar,
     PyExtensionType,
     binary,
     bool_,
+    field,
     float64,
     int64,
     list_,
@@ -31,7 +32,13 @@ from pyarrow import (
     struct,
     timestamp,
 )
-from pymongoarrow.pandas_types import PandasBinary, PandasDecimal128, PandasObjectId
+from pymongoarrow.pandas_types import (
+    PandasBinary,
+    PandasCode,
+    PandasDecimal128,
+    PandasObjectId,
+    PandasRegex,
+)
 
 
 class _BsonArrowTypes(enum.Enum):
@@ -46,6 +53,8 @@ class _BsonArrowTypes(enum.Enum):
     document = 9
     array = 10
     binary = 11
+    regex = 12
+    code = 13
 
 
 # Custom Extension Types.
@@ -53,11 +62,15 @@ class _BsonArrowTypes(enum.Enum):
 # for details.
 
 
-class ObjectIdScalar(ExtensionScalar):
+class BSONExtensionScalar(ExtensionScalar):
     def as_py(self):
         if self.value is None:
             return None
-        return ObjectId(self.value.as_py())
+        return self._klass(self.value.as_py())
+
+
+class ObjectIdScalar(BSONExtensionScalar):
+    _klass = ObjectId
 
 
 class ObjectIdType(PyExtensionType):
@@ -128,6 +141,49 @@ class BinaryType(PyExtensionType):
         return PandasBinary(self.subtype)
 
 
+class RegexScalar(ExtensionScalar):
+    def as_py(self):
+        if self.value is None:
+            return None
+        return Regex(**self.value.as_py())
+
+
+class RegexType(PyExtensionType):
+    _type_marker = _BsonArrowTypes.regex
+
+    def __init__(self):
+        super().__init__(struct([field("pattern", string()), field("flags", string())]))
+
+    def __reduce__(self):
+        return RegexType, ()
+
+    def __arrow_ext_scalar_class__(self):
+        return RegexScalar
+
+    def to_pandas_dtype(self):
+        return PandasRegex()
+
+
+class CodeScalar(BSONExtensionScalar):
+    _klass = Code
+
+
+class CodeType(PyExtensionType):
+    _type_marker = _BsonArrowTypes.code
+
+    def __init__(self):
+        super().__init__(string())
+
+    def __reduce__(self):
+        return CodeType, ()
+
+    def __arrow_ext_scalar_class__(self):
+        return CodeScalar
+
+    def to_pandas_dtype(self):
+        return PandasCode()
+
+
 # Internal Type Handling.
 
 
@@ -146,6 +202,16 @@ def _is_binary(obj):
     return type_marker == BinaryType._type_marker
 
 
+def _is_regex(obj):
+    type_marker = getattr(obj, "_type_marker", "")
+    return type_marker == RegexType._type_marker
+
+
+def _is_code(obj):
+    type_marker = getattr(obj, "_type_marker", "")
+    return type_marker == CodeType._type_marker
+
+
 _TYPE_NORMALIZER_FACTORY = {
     Int64: lambda _: int64(),
     float: lambda _: float64(),
@@ -159,6 +225,8 @@ _TYPE_NORMALIZER_FACTORY = {
     str: lambda _: string(),
     bool: lambda _: bool_(),
     Binary: lambda subtype: BinaryType(subtype),
+    Regex: lambda _: struct([field("pattern", string()), field("flags", string())]),
+    Code: lambda _: string(),
 }
 
 
@@ -188,6 +256,8 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _is_objectid: _BsonArrowTypes.objectid,
     _is_decimal128: _BsonArrowTypes.decimal128,
     _is_binary: _BsonArrowTypes.binary,
+    _is_code: _BsonArrowTypes.code,
+    _is_regex: _BsonArrowTypes.regex,
     _atypes.is_string: _BsonArrowTypes.string,
     _atypes.is_boolean: _BsonArrowTypes.bool,
     _atypes.is_struct: _BsonArrowTypes.document,
