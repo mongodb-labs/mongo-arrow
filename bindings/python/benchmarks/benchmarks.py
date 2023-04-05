@@ -11,11 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import abc
 import collections
 import math
 import os
-import string
+from abc import ABC
 
 import numpy as np
 import pandas as pd
@@ -30,113 +30,218 @@ from pymongoarrow.api import (
     write,
 )
 
-CUR_SIZE = True if os.environ.get("BENCHMARK_SIZE") == "LARGE" else False
-N_LARGE_DOCS = 1000
-N_SMALL_DOCS = 100000
+N_DOCS = int(os.environ.get("N_DOCS"))
+name_to_obj = {"list": list, "dict": dict}
 assert pymongo.has_c()
-SMALL = False
-LARGE = True
-collection_names = {LARGE: "large", SMALL: "small"}
-dtypes = {}
-schemas = {}
-
-arrow_tables = {}
-pandas_tables = {}
-numpy_arrays = {}
-
-large_doc_keys = None
-
 db = pymongo.MongoClient().pymongoarrow_test
-small = db[collection_names[SMALL]]
-small.drop()
 
-small.insert_many(
-    [collections.OrderedDict([("x", 1), ("y", math.pi)]) for _ in range(N_SMALL_DOCS)]
-)
-
-large_doc_keys = [c * i for c in string.ascii_lowercase for i in range(1, 101)]
-schemas[SMALL] = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
-dtypes[SMALL] = np.dtype([("x", np.int64), ("y", np.float64)])
-dtypes[LARGE] = np.dtype([(k, np.float64) for k in large_doc_keys])
-schemas[LARGE] = Schema({k: pyarrow.float64() for k in large_doc_keys})
-large = db[collection_names[LARGE]]
-large.drop()
-# 2600 keys: 'a', 'aa', 'aaa', .., 'zz..z'
-large_doc = collections.OrderedDict([(k, math.pi) for k in large_doc_keys])
-print(
-    "%d large docs, %dk each with %d keys"
-    % (N_LARGE_DOCS, len(BSON.encode(large_doc)) // 1024, len(large_doc_keys))
-)
-
-large.insert_many([large_doc.copy() for _ in range(N_LARGE_DOCS)])
-
-arrow_tables[SMALL] = find_arrow_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
-arrow_tables[LARGE] = find_arrow_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
-pandas_tables[SMALL] = find_pandas_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
-pandas_tables[LARGE] = find_pandas_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
-numpy_arrays[SMALL] = find_numpy_all(db[collection_names[SMALL]], {}, schema=schemas[SMALL])
-numpy_arrays[LARGE] = find_numpy_all(db[collection_names[LARGE]], {}, schema=schemas[LARGE])
+LARGE_DOC_SIZE = 50
 
 
-class ProfileInsert:
+# We have to use ABCs because ASV doesn't support any other way of skipping tests.
+class Insert(ABC):
     """
     A benchmark that times the performance of various kinds
     of inserting tabular data.
     """
 
+    timeout = 100000
+
+    @abc.abstractmethod
     def setup(self):
-        db[collection_names[CUR_SIZE]].drop()
+        raise NotImplementedError
 
     def time_insert_arrow(self):
-        write(db[collection_names[CUR_SIZE]], arrow_tables[CUR_SIZE])
+        write(db.benchmark, self.arrow_table)
 
     def time_insert_conventional(self):
-        tab = arrow_tables[CUR_SIZE].to_pylist()
-        db[collection_names[CUR_SIZE]].insert_many(tab)
+        tab = self.arrow_table.to_pylist()
+        db.benchmark.insert_many(tab)
 
     def time_insert_pandas(self):
-        write(db[collection_names[CUR_SIZE]], pandas_tables[CUR_SIZE])
+        write(db.benchmark, self.pandas_table)
 
     def time_insert_numpy(self):
-        write(db[collection_names[CUR_SIZE]], numpy_arrays[CUR_SIZE])
+        write(db.benchmark, self.numpy_arrays)
 
 
-class ProfileRead:
+class Read(ABC):
     """
     A benchmark that times the performance of various kinds
     of reading MongoDB data.
     """
 
+    timeout = 100000
+
+    @abc.abstractmethod
     def setup(self):
-        db[collection_names[CUR_SIZE]].drop()
+        raise NotImplementedError
+
+    # We need this because the naive methods don't always convert nested objects.
+    @staticmethod
+    def exercise_table(table):
+        pass
 
     def time_conventional_ndarray(self):
-        collection = db[collection_names[CUR_SIZE]]
+        collection = db.benchmark
         cursor = collection.find()
-        dtype = dtypes[CUR_SIZE]
-
-        if CUR_SIZE == LARGE:
-            np.array([tuple(doc[k] for k in large_doc_keys) for doc in cursor], dtype=dtype)
+        dtype = self.dtypes
+        if "Large" in type(self).__name__:
+            np.array([tuple(doc[k] for k in self.large_doc_keys) for doc in cursor], dtype=dtype)
         else:
             np.array([(doc["x"], doc["y"]) for doc in cursor], dtype=dtype)
 
     def time_to_numpy(self):
-        c = db[collection_names[CUR_SIZE]]
-        schema = schemas[CUR_SIZE]
-        find_numpy_all(c, {}, schema=schema)
+        c = db.benchmark
+        find_numpy_all(c, {}, schema=self.schema)
 
     def time_conventional_pandas(self):
-        collection = db[collection_names[CUR_SIZE]]
-        _ = dtypes[CUR_SIZE]
+        collection = db.benchmark
         cursor = collection.find(projection={"_id": 0})
         _ = pd.DataFrame(list(cursor))
 
     def time_to_pandas(self):
-        c = db[collection_names[CUR_SIZE]]
-        schema = schemas[CUR_SIZE]
-        find_pandas_all(c, {}, schema=schema)
+        c = db.benchmark
+        find_pandas_all(c, {}, schema=self.schema, projection={"_id": 0})
 
     def time_to_arrow(self):
-        c = db[collection_names[CUR_SIZE]]
-        schema = schemas[CUR_SIZE]
-        find_arrow_all(c, {}, schema=schema)
+        c = db.benchmark
+        table = find_arrow_all(c, {}, schema=self.schema)
+        self.exercise_table(table)
+
+    def time_conventional_arrow(self):
+        c = db.benchmark
+        f = list(c.find({}, projection={"_id": 0}))
+        table = pyarrow.Table.from_pylist(f)
+        self.exercise_table(table)
+
+
+class ProfileReadArray(Read):
+    def setup(self):
+        coll = db.benchmark
+        coll.drop()
+        base_dict = collections.OrderedDict(
+            [("x", 1), ("y", math.pi), ("emb", [math.pi for _ in range(64)])]
+        )
+        schema_dict = {"x": pyarrow.int64(), "y": pyarrow.float64()}
+        dtypes_list = np.dtype([("x", np.int64), ("y", np.float64)])
+        self.schema = Schema(schema_dict)
+        self.dtypes = np.dtype(dtypes_list)
+        coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
+        print(
+            "%d docs, %dk each with %d keys"
+            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+        )
+
+    # We need this because the naive methods don't always convert nested objects.
+    @staticmethod
+    def exercise_table(table):
+        [
+            [[n for n in i.values] if isinstance(i, pyarrow.ListScalar) else i for i in column]
+            for column in table.columns
+        ]
+
+    # All of the following tests are being skipped because NumPy/Pandas do not work with nested arrays.
+    def time_to_numpy(self):
+        pass
+
+    def time_to_pandas(self):
+        pass
+
+    def time_conventional_ndarray(self):
+        pass
+
+    def time_conventional_pandas(self):
+        pass
+
+
+class ProfileReadSmall(Read):
+    schema = None
+    dtypes = None
+
+    def setup(self):
+        coll = db.benchmark
+        coll.drop()
+        base_dict = collections.OrderedDict(
+            [
+                ("x", 1),
+                ("y", math.pi),
+            ]
+        )
+        schema_dict = {"x": pyarrow.int64(), "y": pyarrow.float64()}
+        dtypes_list = np.dtype([("x", np.int64), ("y", np.float64)])
+        self.schema = Schema(schema_dict)
+        self.dtypes = np.dtype(dtypes_list)
+        coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
+        print(
+            "%d docs, %dk each with %d keys"
+            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+        )
+
+
+class ProfileReadLarge(Read):
+    schema = None
+    dtypes = None
+
+    def setup(self):
+        coll = db.benchmark
+        coll.drop()
+        large_doc_keys = self.large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
+        base_dict = collections.OrderedDict([(k, math.pi) for k in large_doc_keys])
+        dtypes_list = np.dtype([(k, np.float64) for k in large_doc_keys])
+        schema_dict = {k: pyarrow.float64() for k in large_doc_keys}
+        self.schema = Schema(schema_dict)
+        self.dtypes = np.dtype(dtypes_list)
+        coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
+        print(
+            "%d docs, %dk each with %d keys"
+            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+        )
+
+
+class ProfileInsertSmall(Insert):
+    arrow_table = None
+    pandas_table = None
+    numpy_arrays = None
+    dtypes = None
+
+    def setup(self):
+        coll = db.benchmark
+        coll.drop()
+        base_dict = collections.OrderedDict([("x", 1), ("y", math.pi)])
+        dtypes_list = np.dtype([("x", np.int64), ("y", np.float64)])
+        self.dtypes = np.dtype(dtypes_list)
+        coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
+        print(
+            "%d docs, %dk each with %d keys"
+            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+        )
+        schema = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
+
+        self.arrow_table = find_arrow_all(db.benchmark, {}, schema=schema)
+        self.pandas_table = find_pandas_all(db.benchmark, {}, schema=schema)
+        self.numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)
+
+
+class ProfileInsertLarge(Insert):
+    arrow_table = None
+    pandas_table = None
+    numpy_arrays = None
+    dtypes = None
+
+    def setup(self):
+        coll = db.benchmark
+        coll.drop()
+        large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
+        base_dict = collections.OrderedDict([(k, math.pi) for k in large_doc_keys])
+        dtypes_list = np.dtype([(k, np.float64) for k in large_doc_keys])
+        self.dtypes = np.dtype(dtypes_list)
+        coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
+        print(
+            "%d docs, %dk each with %d keys"
+            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+        )
+        schema = Schema({k: pyarrow.float64() for k in large_doc_keys})
+        self.arrow_table = find_arrow_all(db.benchmark, {}, schema=schema)
+        self.pandas_table = find_pandas_all(db.benchmark, {}, schema=schema)
+        self.numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)

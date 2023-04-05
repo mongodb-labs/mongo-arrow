@@ -41,3 +41,7 @@ docs/_build/
 # libbson files
 libbson
 mongo-c-driver-*
+
+
+# Benchmark output files
+results/*
