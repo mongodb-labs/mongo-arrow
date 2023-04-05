@@ -36,6 +36,9 @@ assert pymongo.has_c()
 db = pymongo.MongoClient().pymongoarrow_test
 
 LARGE_DOC_SIZE = 50
+EMBEDDED_OBJECT_SIZE = (
+    64  # The number of values or key/value pairs in the embedded object (array or document).
+)
 
 
 # We have to use ABCs because ASV doesn't support any other way of skipping tests.
@@ -121,12 +124,14 @@ class ProfileReadArray(Read):
         coll = db.benchmark
         coll.drop()
         base_dict = collections.OrderedDict(
-            [("x", 1), ("y", math.pi), ("emb", [math.pi for _ in range(64)])]
+            [("x", 1), ("y", math.pi), ("emb", [math.pi for _ in range(EMBEDDED_OBJECT_SIZE)])]
         )
-        schema_dict = {"x": pyarrow.int64(), "y": pyarrow.float64()}
-        dtypes_list = np.dtype([("x", np.int64), ("y", np.float64)])
+        schema_dict = {
+            "x": pyarrow.int64(),
+            "y": pyarrow.float64(),
+            "emb": pyarrow.list_(pyarrow.float64()),
+        }
         self.schema = Schema(schema_dict)
-        self.dtypes = np.dtype(dtypes_list)
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
@@ -142,6 +147,53 @@ class ProfileReadArray(Read):
         ]
 
     # All of the following tests are being skipped because NumPy/Pandas do not work with nested arrays.
+    def time_to_numpy(self):
+        pass
+
+    def time_to_pandas(self):
+        pass
+
+    def time_conventional_ndarray(self):
+        pass
+
+    def time_conventional_pandas(self):
+        pass
+
+
+class ProfileReadDocument(Read):
+    def setup(self):
+        coll = db.benchmark
+        coll.drop()
+        base_dict = collections.OrderedDict(
+            [
+                ("x", 1),
+                ("y", math.pi),
+                ("emb", {f"a{i}": math.pi for i in range(EMBEDDED_OBJECT_SIZE)}),
+            ]
+        )
+        schema_dict = {
+            "x": pyarrow.int64(),
+            "y": pyarrow.float64(),
+            "emb": pyarrow.struct(
+                [pyarrow.field(f"a{i}", pyarrow.float64()) for i in range(EMBEDDED_OBJECT_SIZE)]
+            ),
+        }
+        self.schema = Schema(schema_dict)
+        coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
+        print(
+            "%d docs, %dk each with %d keys"
+            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+        )
+
+    # We need this because the naive methods don't always convert nested objects.
+    @staticmethod
+    def exercise_table(table):
+        [
+            [[n for n in i.values()] if isinstance(i, pyarrow.StructScalar) else i for i in column]
+            for column in table.columns
+        ]
+
+    # All of the following tests are being skipped because NumPy/Pandas do not work with nested documents.
     def time_to_numpy(self):
         pass
 
