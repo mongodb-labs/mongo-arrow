@@ -149,7 +149,6 @@ cdef extern from "<bson/bson.h>":
                   uint32_t *binary_len,    # OUT
                   const uint8_t **binary)  # OUT
 
-
 # bson_reader_t API
 cdef extern from "<bson/bson.h>":
     bson_reader_t * bson_reader_new_from_data(const uint8_t *data, size_t length)
