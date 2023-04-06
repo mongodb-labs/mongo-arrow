@@ -31,13 +31,12 @@ from pymongoarrow.api import (
 )
 
 N_DOCS = int(os.environ.get("N_DOCS"))
-name_to_obj = {"list": list, "dict": dict}
 assert pymongo.has_c()
 db = pymongo.MongoClient().pymongoarrow_test
 
-LARGE_DOC_SIZE = 50
+LARGE_DOC_SIZE = 20
 EMBEDDED_OBJECT_SIZE = (
-    64  # The number of values or key/value pairs in the embedded object (array or document).
+    20  # The number of values or key/value pairs in the embedded object (array or document).
 )
 
 
@@ -48,10 +47,13 @@ class Insert(ABC):
     of inserting tabular data.
     """
 
-    timeout = 100000
+    timeout = 100000  # The setup sometimes times out.
+    number = 1
+    repeat = (1, 10, 30.0)  # Min repeat, max repeat, time limit (will stop sampling after this)
+    rounds = 1
 
     @abc.abstractmethod
-    def setup(self):
+    def setup_cache(self):
         raise NotImplementedError
 
     def time_insert_arrow(self):
@@ -67,6 +69,18 @@ class Insert(ABC):
     def time_insert_numpy(self):
         write(db.benchmark, self.numpy_arrays)
 
+    def peakmem_insert_arrow(self):
+        self.time_insert_arrow()
+
+    def peakmem_insert_conventional(self):
+        self.time_insert_conventional()
+
+    def peakmem_insert_pandas(self):
+        self.time_insert_pandas()
+
+    def peakmem_insert_numpy(self):
+        self.time_insert_numpy()
+
 
 class Read(ABC):
     """
@@ -74,10 +88,13 @@ class Read(ABC):
     of reading MongoDB data.
     """
 
-    timeout = 100000
+    timeout = 100000  # The setup sometimes times out.
+    number = 3
+    repeat = (1, 10, 30.0)  # Min repeat, max repeat, time limit (will stop sampling after this)
+    rounds = 1
 
     @abc.abstractmethod
-    def setup(self):
+    def setup_cache(self):
         raise NotImplementedError
 
     # We need this because the naive methods don't always convert nested objects.
@@ -118,20 +135,37 @@ class Read(ABC):
         table = pyarrow.Table.from_pylist(f)
         self.exercise_table(table)
 
+    def peakmem_to_numpy(self):
+        self.time_to_numpy()
+
+    def peakmem_conventional_pandas(self):
+        self.time_conventional_pandas()
+
+    def peakmem_to_pandas(self):
+        self.time_to_pandas()
+
+    def peakmem_to_arrow(self):
+        self.time_to_arrow()
+
+    def peakmem_conventional_arrow(self):
+        self.time_conventional_arrow()
+
 
 class ProfileReadArray(Read):
-    def setup(self):
+    schema = Schema(
+        {
+            "x": pyarrow.int64(),
+            "y": pyarrow.float64(),
+            "emb": pyarrow.list_(pyarrow.float64()),
+        }
+    )
+
+    def setup_cache(self):
         coll = db.benchmark
         coll.drop()
         base_dict = collections.OrderedDict(
             [("x", 1), ("y", math.pi), ("emb", [math.pi for _ in range(EMBEDDED_OBJECT_SIZE)])]
         )
-        schema_dict = {
-            "x": pyarrow.int64(),
-            "y": pyarrow.float64(),
-            "emb": pyarrow.list_(pyarrow.float64()),
-        }
-        self.schema = Schema(schema_dict)
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
@@ -161,7 +195,17 @@ class ProfileReadArray(Read):
 
 
 class ProfileReadDocument(Read):
-    def setup(self):
+    schema = Schema(
+        {
+            "x": pyarrow.int64(),
+            "y": pyarrow.float64(),
+            "emb": pyarrow.struct(
+                [pyarrow.field(f"a{i}", pyarrow.float64()) for i in range(EMBEDDED_OBJECT_SIZE)]
+            ),
+        }
+    )
+
+    def setup_cache(self):
         coll = db.benchmark
         coll.drop()
         base_dict = collections.OrderedDict(
@@ -171,14 +215,6 @@ class ProfileReadDocument(Read):
                 ("emb", {f"a{i}": math.pi for i in range(EMBEDDED_OBJECT_SIZE)}),
             ]
         )
-        schema_dict = {
-            "x": pyarrow.int64(),
-            "y": pyarrow.float64(),
-            "emb": pyarrow.struct(
-                [pyarrow.field(f"a{i}", pyarrow.float64()) for i in range(EMBEDDED_OBJECT_SIZE)]
-            ),
-        }
-        self.schema = Schema(schema_dict)
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
@@ -208,10 +244,10 @@ class ProfileReadDocument(Read):
 
 
 class ProfileReadSmall(Read):
-    schema = None
-    dtypes = None
+    schema = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
+    dtypes = np.dtype(np.dtype([("x", np.int64), ("y", np.float64)]))
 
-    def setup(self):
+    def setup_cache(self):
         coll = db.benchmark
         coll.drop()
         base_dict = collections.OrderedDict(
@@ -220,10 +256,6 @@ class ProfileReadSmall(Read):
                 ("y", math.pi),
             ]
         )
-        schema_dict = {"x": pyarrow.int64(), "y": pyarrow.float64()}
-        dtypes_list = np.dtype([("x", np.int64), ("y", np.float64)])
-        self.schema = Schema(schema_dict)
-        self.dtypes = np.dtype(dtypes_list)
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
@@ -232,18 +264,15 @@ class ProfileReadSmall(Read):
 
 
 class ProfileReadLarge(Read):
-    schema = None
-    dtypes = None
+    large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
+    schema = Schema({k: pyarrow.float64() for k in large_doc_keys})
+    dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
 
-    def setup(self):
+    def setup_cache(self):
         coll = db.benchmark
         coll.drop()
-        large_doc_keys = self.large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
-        base_dict = collections.OrderedDict([(k, math.pi) for k in large_doc_keys])
-        dtypes_list = np.dtype([(k, np.float64) for k in large_doc_keys])
-        schema_dict = {k: pyarrow.float64() for k in large_doc_keys}
-        self.schema = Schema(schema_dict)
-        self.dtypes = np.dtype(dtypes_list)
+
+        base_dict = collections.OrderedDict([(k, math.pi) for k in self.large_doc_keys])
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
@@ -252,48 +281,38 @@ class ProfileReadLarge(Read):
 
 
 class ProfileInsertSmall(Insert):
-    arrow_table = None
-    pandas_table = None
-    numpy_arrays = None
-    dtypes = None
+    large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
+    schema = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
+    arrow_table = find_arrow_all(db.benchmark, {}, schema=schema)
+    pandas_table = find_pandas_all(db.benchmark, {}, schema=schema)
+    numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)
+    dtypes = np.dtype([("x", np.int64), ("y", np.float64)])
 
-    def setup(self):
+    def setup_cache(self):
         coll = db.benchmark
         coll.drop()
         base_dict = collections.OrderedDict([("x", 1), ("y", math.pi)])
-        dtypes_list = np.dtype([("x", np.int64), ("y", np.float64)])
-        self.dtypes = np.dtype(dtypes_list)
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
-        schema = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
-
-        self.arrow_table = find_arrow_all(db.benchmark, {}, schema=schema)
-        self.pandas_table = find_pandas_all(db.benchmark, {}, schema=schema)
-        self.numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)
 
 
 class ProfileInsertLarge(Insert):
-    arrow_table = None
-    pandas_table = None
-    numpy_arrays = None
-    dtypes = None
+    large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
+    schema = Schema({k: pyarrow.float64() for k in large_doc_keys})
+    arrow_table = find_arrow_all(db.benchmark, {}, schema=schema)
+    pandas_table = find_pandas_all(db.benchmark, {}, schema=schema)
+    numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)
+    dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
 
-    def setup(self):
+    def setup_cache(self):
         coll = db.benchmark
         coll.drop()
-        large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
-        base_dict = collections.OrderedDict([(k, math.pi) for k in large_doc_keys])
-        dtypes_list = np.dtype([(k, np.float64) for k in large_doc_keys])
-        self.dtypes = np.dtype(dtypes_list)
+        base_dict = collections.OrderedDict([(k, math.pi) for k in self.large_doc_keys])
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
-        schema = Schema({k: pyarrow.float64() for k in large_doc_keys})
-        self.arrow_table = find_arrow_all(db.benchmark, {}, schema=schema)
-        self.pandas_table = find_pandas_all(db.benchmark, {}, schema=schema)
-        self.numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)

@@ -50,7 +50,7 @@ jobs:
                   git checkout refs/bm/pr benchmarks/benchmarks.py
               fi
               git show --no-patch --format="%H (%s)"
-              asv run --python=`which python` --set-commit-hash $(git rev-parse HEAD) -vvv
+              asv run --python=`which python` --set-commit-hash $(git rev-parse HEAD)
           }
 
           asv machine --yes

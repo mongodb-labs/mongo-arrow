@@ -14,7 +14,7 @@
              "numpy": []
          },
          "env": {
-             "N_DOCS": ["50000", "1000"],
+             "N_DOCS": ["20000", "1000"],
          },
     },
     "environment_type": "virtualenv",
