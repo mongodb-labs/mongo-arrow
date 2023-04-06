@@ -37,7 +37,6 @@ from pymongoarrow.types import (
     CodeType,
     Decimal128Type,
     ObjectIdType,
-    RegexType,
 )
 from pytz import timezone
 
@@ -205,11 +204,7 @@ class ArrowApiTestMixin:
         self.coll.drop()
         res = write(self.coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
-        out = find_arrow_all(coll, {}, schema=schema)
-        for name in out.column_names:
-            if name == "Regex":
-                raise ValueError("TODO")
-            self.assertEqual(data[name], out[name].cast(data[name].type))
+        self.assertEqual(data, find_arrow_all(coll, {}, schema=schema))
         return res
 
     def test_write_error(self):
@@ -257,7 +252,6 @@ class ArrowApiTestMixin:
         schema["ObjectId"] = ObjectIdType()
         schema["Decimal128"] = Decimal128Type()
         schema["Code"] = CodeType()
-        schema["Regex"] = RegexType()
         data = Table.from_pydict(
             {
                 "Int64": [i for i in range(2)],
@@ -270,7 +264,6 @@ class ArrowApiTestMixin:
                 "ObjectId": [ObjectId().binary, ObjectId().binary],
                 "Decimal128": [Decimal128(str(i)).bid for i in range(2)],
                 "Code": [str(Code(str(i))) for i in range(2)],
-                "Regex": [dict(pattern=str(i), flags="i") for i in range(2)],
             },
             ArrowSchema(schema),
         )
@@ -325,7 +318,6 @@ class ArrowApiTestMixin:
             "ObjectId": [ObjectId().binary for i in range(3)],
             "Decimal128": [Decimal128(str(i)).bid for i in range(3)],
             "Code": [str(Code(str(i))) for i in range(3)],
-            "Regex": [dict(pattern=str(i), flags="i") for i in range(3)],
         }
 
         def inner(i):
@@ -340,7 +332,6 @@ class ArrowApiTestMixin:
                 Binary=Binary(bytes(i), 10),
                 ObjectId=ObjectId().binary,
                 Code=str(Code(str(i))),
-                Regex=dict(pattern=str(i), flags="i"),
             )
             if nested_elem:
                 inner_dict["list"] = [nested_elem]
@@ -407,7 +398,6 @@ class ArrowApiTestMixin:
         )
 
     def test_auto_schema_nested(self):
-        raise ValueError
         # Create table with random data of various types.
         _, data = self._create_nested_data()
 
@@ -420,7 +410,6 @@ class ArrowApiTestMixin:
                 self.assertEqual(data[name], out[name].cast(data[name].type))
 
     def test_auto_schema(self):
-        raise ValueError
         _, data = self._create_data()
         self.coll.drop()
         res = write(self.coll, data)

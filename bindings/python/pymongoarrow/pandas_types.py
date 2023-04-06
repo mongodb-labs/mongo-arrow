@@ -21,7 +21,7 @@ from typing import Type, Union
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-from bson import Binary, Code, Decimal128, ObjectId, Regex
+from bson import Binary, Code, Decimal128, ObjectId
 from pandas.api.extensions import (
     ExtensionArray,
     ExtensionDtype,
@@ -282,30 +282,6 @@ class PandasDecimal128Array(PandasBSONExtensionArray):
         from pymongoarrow.types import Decimal128Type
 
         return pa.array(self.data, type=Decimal128Type())
-
-
-@register_extension_dtype
-class PandasRegex(PandasBSONDtype):
-    """A pandas extension type for BSON Regex data type."""
-
-    type = Regex
-
-    @classmethod
-    def construct_array_type(cls) -> Type["PandasRegexArray"]:
-        return PandasRegexArray
-
-
-class PandasRegexArray(PandasBSONExtensionArray):
-    """A pandas extension type for BSON Regex Type."""
-
-    @property
-    def _default_dtype(self):
-        return PandasRegex()
-
-    def __arrow_array__(self, type=None):
-        from pymongoarrow.types import RegexType
-
-        return pa.array(self.data, type=RegexType())
 
 
 @register_extension_dtype

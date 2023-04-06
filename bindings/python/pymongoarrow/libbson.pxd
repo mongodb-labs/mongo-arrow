@@ -130,9 +130,6 @@ cdef extern from "<bson/bson.h>":
 
     bint bson_iter_decimal128 (const bson_iter_t *iter, bson_decimal128_t *dec)
 
-    const char * bson_iter_regex (const bson_iter_t *iter, # IN
-                                  const char **options)    # IN
-
     const char * bson_iter_code (const bson_iter_t *iter, # IN
                                  uint32_t *length)        # OUT
 
