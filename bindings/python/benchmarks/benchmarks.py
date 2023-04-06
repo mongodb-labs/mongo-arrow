@@ -104,7 +104,7 @@ class Read(ABC):
 
     def time_conventional_ndarray(self):
         collection = db.benchmark
-        cursor = collection.find()
+        cursor = collection.find(projection={"_id": 0})
         dtype = self.dtypes
         if "Large" in type(self).__name__:
             np.array([tuple(doc[k] for k in self.large_doc_keys) for doc in cursor], dtype=dtype)
@@ -113,7 +113,7 @@ class Read(ABC):
 
     def time_to_numpy(self):
         c = db.benchmark
-        find_numpy_all(c, {}, schema=self.schema)
+        find_numpy_all(c, {}, schema=self.schema, projection={"_id": 0})
 
     def time_conventional_pandas(self):
         collection = db.benchmark
@@ -126,7 +126,7 @@ class Read(ABC):
 
     def time_to_arrow(self):
         c = db.benchmark
-        table = find_arrow_all(c, {}, schema=self.schema)
+        table = find_arrow_all(c, {}, schema=self.schema, projection={"_id": 0})
         self.exercise_table(table)
 
     def time_conventional_arrow(self):
