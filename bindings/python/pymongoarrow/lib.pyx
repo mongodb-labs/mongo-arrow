@@ -145,7 +145,6 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
     cdef bson_decimal128_t dec128
     cdef bson_type_t value_t
     cdef const char * bson_str = NULL
-    cdef const char * options = NULL
     cdef StructType struct_dtype
     cdef const bson_t * doc = NULL
     cdef bson_iter_t doc_iter
