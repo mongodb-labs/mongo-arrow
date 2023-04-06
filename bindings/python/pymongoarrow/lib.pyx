@@ -82,7 +82,7 @@ _field_type_map = {
     BSON_TYPE_UTF8: string(),
     BSON_TYPE_BOOL: bool_(),
     BSON_TYPE_DECIMAL128: Decimal128Type_(),
-    BSON_TYPE_CODE: string(),
+    BSON_TYPE_CODE: CodeType(),
 }
 
 
