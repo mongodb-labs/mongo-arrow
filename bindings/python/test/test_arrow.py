@@ -414,6 +414,66 @@ class ArrowApiTestMixin:
             for name in out.column_names:
                 self.assertEqual(data[name], out[name].cast(data[name].type))
 
+    def _test_auto_schema_list(self, docs, expected):
+        self.coll.delete_many({})
+        self.coll.insert_many(docs)
+        actual = find_arrow_all(self.coll, {}, projection={"_id": 0})
+        self.assertEqual(actual.schema, expected.schema)
+        self.assertEqual(actual, expected)
+
+    def test_auto_schema_first_list_null(self):
+        docs = [
+            {"a": None},
+            {"a": ["str"]},
+            {"a": []},
+        ]
+        expected = pyarrow.Table.from_pylist(docs)
+        self._test_auto_schema_list(docs, expected)
+
+    def test_auto_schema_first_list_empty(self):
+        docs = [
+            {"a": []},
+            {"a": ["str"]},
+            {"a": []},
+        ]
+        expected = pyarrow.Table.from_pylist(
+            [
+                {"a": None},  # TODO: We incorrectly set the first empty list to null.
+                {"a": ["str"]},
+                {"a": []},
+            ]
+        )
+        self._test_auto_schema_list(docs, expected)
+
+    def test_auto_schema_first_list_element_null(self):
+        docs = [
+            {"a": None},
+            {"a": [None, None, "str"]},  # Inferred schema should use the first non-null element.
+            {"a": []},
+        ]
+        expected = pyarrow.Table.from_pylist(docs)
+        self._test_auto_schema_list(docs, expected)
+
+    @unittest.expectedFailure  # TODO: Our inferred value for the first a.b field differs from pyarrow's.
+    def test_auto_schema_first_embedded_list_null(self):
+        docs = [
+            {"a": {"b": None}},
+            {"a": {"b": ["str"]}},
+            {"a": {"b": []}},
+        ]
+        expected = pyarrow.Table.from_pylist(docs)
+        self._test_auto_schema_list(docs, expected)
+
+    @unittest.expectedFailure  # TODO: Our inferred value for the first a.b field differs from pyarrow's.
+    def test_auto_schema_first_embedded_doc_null(self):
+        docs = [
+            {"a": {"b": None}},
+            {"a": {"b": "str"}},
+            {"a": {"b": None}},
+        ]
+        expected = pyarrow.Table.from_pylist(docs)
+        self._test_auto_schema_list(docs, expected)
+
     def test_auto_schema_heterogeneous(self):
         vals = [1, "2", True, 4]
         data = [{"a": v} for v in vals]

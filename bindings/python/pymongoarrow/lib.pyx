@@ -83,7 +83,7 @@ _field_type_map = {
 }
 
 cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, context):
-    """Get the appropropriate data type for a specific field"""
+    """Get the appropriate data type for a specific field"""
     cdef const uint8_t *val_buf = NULL
     cdef uint32_t val_buf_len = 0
     cdef bson_subtype_t subtype
@@ -102,13 +102,15 @@ cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_
     elif value_t == BSON_TYPE_BINARY:
         bson_iter_binary (doc_iter, &subtype, &val_buf_len, &val_buf)
         field_type = BinaryType(subtype)
+    elif value_t == BSON_TYPE_NULL:
+        field_type = None
     else:
         raise PyMongoArrowError('unknown value type {}'.format(value_t))
     return field_type
 
 
 cdef extract_document_dtype(bson_iter_t * doc_iter, context):
-    """Get the appropropriate data type for a sub document"""
+    """Get the appropriate data type for a sub document"""
     cdef const char* key
     cdef bson_type_t value_t
     cdef bson_iter_t child_iter
@@ -117,18 +119,24 @@ cdef extract_document_dtype(bson_iter_t * doc_iter, context):
         key = bson_iter_key(doc_iter)
         value_t = bson_iter_type(doc_iter)
         field_type = extract_field_dtype(doc_iter, &child_iter, value_t, context)
-        fields.append(field(key.decode('utf-8'), field_type))
-    return struct(fields)
+        if field_type is not None:
+            fields.append(field(key.decode('utf-8'), field_type))
+    if fields:
+        return struct(fields)
+    return None
 
 cdef extract_array_dtype(bson_iter_t * doc_iter, context):
-    """Get the appropropriate data type for a sub array"""
+    """Get the appropriate data type for a sub array"""
     cdef const char* key
     cdef bson_type_t value_t
     cdef bson_iter_t child_iter
     fields = []
-    first_item = bson_iter_next(doc_iter)
-    value_t = bson_iter_type(doc_iter)
-    return extract_field_dtype(doc_iter, &child_iter, value_t, context)
+    while bson_iter_next(doc_iter):
+        value_t = bson_iter_type(doc_iter)
+        field_type = extract_field_dtype(doc_iter, &child_iter, value_t, context)
+        if field_type is not None:
+            return field_type
+    return None
 
 def process_bson_stream(bson_stream, context, arr_value_builder=None):
     """Process a bson byte stream using a PyMongoArrowContext"""
@@ -198,10 +206,14 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                     elif builder_type == DocumentBuilder:
                         bson_iter_recurse(&doc_iter, &child_iter)
                         struct_dtype = extract_document_dtype(&child_iter, context)
+                        if struct_dtype is None:
+                            continue
                         builder = DocumentBuilder(struct_dtype, context.tzinfo)
                     elif builder_type == ListBuilder:
                         bson_iter_recurse(&doc_iter, &child_iter)
                         list_dtype = extract_array_dtype(&child_iter, context)
+                        if list_dtype is None:
+                            continue
                         list_dtype = list_(list_dtype)
                         builder = ListBuilder(list_dtype, context.tzinfo, value_builder=arr_value_builder)
                     elif builder_type == BinaryBuilder:
