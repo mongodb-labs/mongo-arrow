@@ -470,8 +470,7 @@ class ArrowApiTestMixin:
             {'a': {'b': 'str'}},
             {'a': {'b': None}},
         ]
-        expected = pyarrow.Table.from_pylist()
-        print(expected)
+        expected = pyarrow.Table.from_pylist(docs)
         self._test_auto_schema_list(docs, expected)
 
     def test_auto_schema_heterogeneous(self):
