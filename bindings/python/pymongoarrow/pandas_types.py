@@ -296,7 +296,7 @@ class PandasCode(PandasBSONDtype):
 
 
 class PandasCodeArray(PandasBSONExtensionArray):
-    """A pandas extension type for BSON Code Type."""
+    """A pandas extension type for BSON Code data arrays."""
 
     @property
     def _default_dtype(self):

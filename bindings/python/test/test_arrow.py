@@ -21,7 +21,7 @@ from test.utils import AllowListEventListener, NullsTestMixin
 
 import pyarrow
 import pymongo
-from bson import Binary, Code, CodecOptions, Decimal128, ObjectId
+from bson import Binary, CodecOptions, Decimal128, ObjectId
 from pyarrow import Table, bool_, csv, decimal256, field, int32, int64, list_
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
@@ -263,7 +263,7 @@ class ArrowApiTestMixin:
                 "Binary": [b"1", b"23"],
                 "ObjectId": [ObjectId().binary, ObjectId().binary],
                 "Decimal128": [Decimal128(str(i)).bid for i in range(2)],
-                "Code": [str(Code(str(i))) for i in range(2)],
+                "Code": [str(i) for i in range(2)],
             },
             ArrowSchema(schema),
         )
@@ -317,7 +317,7 @@ class ArrowApiTestMixin:
             "Binary": [Binary(bytes(i), 10) for i in range(3)],
             "ObjectId": [ObjectId().binary for i in range(3)],
             "Decimal128": [Decimal128(str(i)).bid for i in range(3)],
-            "Code": [str(Code(str(i))) for i in range(3)],
+            "Code": [str(i) for i in range(3)],
         }
 
         def inner(i):
@@ -331,7 +331,7 @@ class ArrowApiTestMixin:
                 list=[nested_elem],
                 Binary=Binary(bytes(i), 10),
                 ObjectId=ObjectId().binary,
-                Code=str(Code(str(i))),
+                Code=str(i),
             )
             if nested_elem:
                 inner_dict["list"] = [nested_elem]

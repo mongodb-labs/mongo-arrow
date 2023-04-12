@@ -67,7 +67,7 @@ class BSONExtensionScalar(ExtensionScalar):
 
 
 class ObjectIdScalar(BSONExtensionScalar):
-    _klass = ObjectId
+    _bson_class = ObjectId
 
 
 class ObjectIdType(PyExtensionType):
@@ -139,7 +139,7 @@ class BinaryType(PyExtensionType):
 
 
 class CodeScalar(BSONExtensionScalar):
-    _klass = Code
+    _bson_class = Code
 
 
 class CodeType(PyExtensionType):
