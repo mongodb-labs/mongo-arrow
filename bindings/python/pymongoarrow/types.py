@@ -63,7 +63,7 @@ class BSONExtensionScalar(ExtensionScalar):
     def as_py(self):
         if self.value is None:
             return None
-        return self._klass(self.value.as_py())
+        return self._bson_class(self.value.as_py())
 
 
 class ObjectIdScalar(BSONExtensionScalar):
