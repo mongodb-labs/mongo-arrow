@@ -15,11 +15,12 @@ import calendar
 from datetime import datetime, timedelta
 from unittest import TestCase
 
-from bson import Binary, Decimal128, ObjectId
+from bson import Binary, Code, Decimal128, ObjectId
 from pyarrow import Array, bool_, field, int32, int64, list_, struct, timestamp
 from pymongoarrow.lib import (
     BinaryBuilder,
     BoolBuilder,
+    CodeBuilder,
     DatetimeBuilder,
     Decimal128Builder,
     DocumentBuilder,
@@ -259,3 +260,23 @@ class TestBoolBuilder(TestCase, BoolBuilderTestMixin):
     def setUp(self):
         self.builder_cls = BoolBuilder
         self.data_type = bool_()
+
+
+class TestCodeBuilder(TestCase):
+    def test_simple(self):
+        # Greetings in various languages, from
+        # https://www.w3.org/2001/06/utf-8-test/UTF-8-demo.html
+        values = ["Hello world", "Καλημέρα κόσμε", "コンニチハ"]
+        values += ["hello\u0000world"]
+        builder = CodeBuilder()
+        builder.append(values[0].encode("utf8"))
+        builder.append_values(values[1:])
+        builder.append_null()
+        arr = builder.finish()
+
+        codes = [Code(v) for v in values]
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 5)
+        self.assertEqual(arr.to_pylist(), codes + [None])

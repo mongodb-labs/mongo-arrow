@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 import pandas.testing
 import pyarrow
-from bson import Binary, CodecOptions, Decimal128, ObjectId
+from bson import Binary, Code, CodecOptions, Decimal128, ObjectId
 from pyarrow import decimal256, int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
@@ -153,6 +153,7 @@ class TestExplicitPandasApi(PandasTestBase):
                 "bool": [True, False, None],
                 "Binary": [Binary(bytes(i), 10) for i in range(2)] + [None],
                 "Decimal128": [Decimal128(str(i)) for i in range(2)] + [None],
+                "Code": [Code(str(i)) for i in range(2)] + [None],
             }
         ).astype(schema)
         return arrow_schema, data

@@ -17,7 +17,7 @@ from datetime import datetime
 import numpy as np
 import pyarrow as pa
 import pyarrow.types as _atypes
-from bson import Binary, Decimal128, Int64, ObjectId
+from bson import Binary, Code, Decimal128, Int64, ObjectId
 from pyarrow import DataType as _ArrowDataType
 from pyarrow import (
     ExtensionScalar,
@@ -31,7 +31,12 @@ from pyarrow import (
     struct,
     timestamp,
 )
-from pymongoarrow.pandas_types import PandasBinary, PandasDecimal128, PandasObjectId
+from pymongoarrow.pandas_types import (
+    PandasBinary,
+    PandasCode,
+    PandasDecimal128,
+    PandasObjectId,
+)
 
 
 class _BsonArrowTypes(enum.Enum):
@@ -46,6 +51,7 @@ class _BsonArrowTypes(enum.Enum):
     document = 9
     array = 10
     binary = 11
+    code = 12
 
 
 # Custom Extension Types.
@@ -53,11 +59,15 @@ class _BsonArrowTypes(enum.Enum):
 # for details.
 
 
-class ObjectIdScalar(ExtensionScalar):
+class BSONExtensionScalar(ExtensionScalar):
     def as_py(self):
         if self.value is None:
             return None
-        return ObjectId(self.value.as_py())
+        return self._bson_class(self.value.as_py())
+
+
+class ObjectIdScalar(BSONExtensionScalar):
+    _bson_class = ObjectId
 
 
 class ObjectIdType(PyExtensionType):
@@ -128,6 +138,26 @@ class BinaryType(PyExtensionType):
         return PandasBinary(self.subtype)
 
 
+class CodeScalar(BSONExtensionScalar):
+    _bson_class = Code
+
+
+class CodeType(PyExtensionType):
+    _type_marker = _BsonArrowTypes.code
+
+    def __init__(self):
+        super().__init__(string())
+
+    def __reduce__(self):
+        return CodeType, ()
+
+    def __arrow_ext_scalar_class__(self):
+        return CodeScalar
+
+    def to_pandas_dtype(self):
+        return PandasCode()
+
+
 # Internal Type Handling.
 
 
@@ -146,6 +176,11 @@ def _is_binary(obj):
     return type_marker == BinaryType._type_marker
 
 
+def _is_code(obj):
+    type_marker = getattr(obj, "_type_marker", "")
+    return type_marker == CodeType._type_marker
+
+
 _TYPE_NORMALIZER_FACTORY = {
     Int64: lambda _: int64(),
     float: lambda _: float64(),
@@ -159,6 +194,7 @@ _TYPE_NORMALIZER_FACTORY = {
     str: lambda _: string(),
     bool: lambda _: bool_(),
     Binary: lambda subtype: BinaryType(subtype),
+    Code: lambda _: CodeType(),
 }
 
 
@@ -188,6 +224,7 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _is_objectid: _BsonArrowTypes.objectid,
     _is_decimal128: _BsonArrowTypes.decimal128,
     _is_binary: _BsonArrowTypes.binary,
+    _is_code: _BsonArrowTypes.code,
     _atypes.is_string: _BsonArrowTypes.string,
     _atypes.is_boolean: _BsonArrowTypes.bool,
     _atypes.is_struct: _BsonArrowTypes.document,

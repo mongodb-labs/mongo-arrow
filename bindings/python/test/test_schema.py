@@ -14,7 +14,7 @@
 from datetime import datetime
 from unittest import TestCase
 
-from bson import Binary, Decimal128, Int64, ObjectId
+from bson import Binary, Code, Decimal128, Int64, ObjectId
 from pyarrow import Table, float64, int64
 from pyarrow import schema as ArrowSchema
 from pyarrow import timestamp
@@ -35,13 +35,16 @@ class TestSchema(TestCase):
         oid = ObjectId()
         dec = Decimal128("1.000")
         binary = Binary(bytes(10), 10)
-        lookup = {Decimal128: dec, ObjectId: oid, Binary: binary}
-        instantiated_objs.update({Decimal128: dec.bid, ObjectId: oid.binary, Binary: binary})
+        code = Code("hi", None)
+        lookup = {Decimal128: dec, ObjectId: oid, Binary: binary, Code: code}
+        instantiated_objs.update(
+            {Decimal128: dec.bid, ObjectId: oid.binary, Binary: binary, Code: code}
+        )
 
         for k, v in _TYPE_NORMALIZER_FACTORY.items():
             # Make an array of 4 elements with either the instantiated object or 1.
             column = [instantiated_objs.get(k, 1)] * 4
-            val = True if k != Binary else 10
+            val = True if k is not Binary else 10
             t = Table.from_pydict(
                 {"value": column},
                 ArrowSchema([("value", v(val))]),

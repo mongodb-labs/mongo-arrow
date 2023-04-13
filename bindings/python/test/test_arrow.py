@@ -34,6 +34,7 @@ from pymongoarrow.monkey import patch_all
 from pymongoarrow.types import (
     _TYPE_NORMALIZER_FACTORY,
     BinaryType,
+    CodeType,
     Decimal128Type,
     ObjectIdType,
 )
@@ -250,6 +251,7 @@ class ArrowApiTestMixin:
         schema["Binary"] = BinaryType(10)
         schema["ObjectId"] = ObjectIdType()
         schema["Decimal128"] = Decimal128Type()
+        schema["Code"] = CodeType()
         data = Table.from_pydict(
             {
                 "Int64": [i for i in range(2)],
@@ -261,6 +263,7 @@ class ArrowApiTestMixin:
                 "Binary": [b"1", b"23"],
                 "ObjectId": [ObjectId().binary, ObjectId().binary],
                 "Decimal128": [Decimal128(str(i)).bid for i in range(2)],
+                "Code": [str(i) for i in range(2)],
             },
             ArrowSchema(schema),
         )
@@ -314,6 +317,7 @@ class ArrowApiTestMixin:
             "Binary": [Binary(bytes(i), 10) for i in range(3)],
             "ObjectId": [ObjectId().binary for i in range(3)],
             "Decimal128": [Decimal128(str(i)).bid for i in range(3)],
+            "Code": [str(i) for i in range(3)],
         }
 
         def inner(i):
@@ -327,6 +331,7 @@ class ArrowApiTestMixin:
                 list=[nested_elem],
                 Binary=Binary(bytes(i), 10),
                 ObjectId=ObjectId().binary,
+                Code=str(i),
             )
             if nested_elem:
                 inner_dict["list"] = [nested_elem]

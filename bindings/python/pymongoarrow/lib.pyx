@@ -33,13 +33,14 @@ from pyarrow.lib import (
 
 from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
 from pymongoarrow.context import PyMongoArrowContext
-from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128Type as Decimal128Type_, BinaryType
+from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128Type as Decimal128Type_, BinaryType, CodeType
 
 # Cython imports
 from cpython cimport PyBytes_Size, object
 from cython.operator cimport dereference
 from libcpp cimport bool as cbool
 from libcpp.map cimport map
+from libc.string cimport strlen
 from libcpp.vector cimport vector
 from pyarrow.lib cimport *
 from pymongoarrow.libarrow cimport *
@@ -69,7 +70,8 @@ _builder_type_map = {
     BSON_TYPE_DOCUMENT: DocumentBuilder,
     BSON_TYPE_DECIMAL128: Decimal128Builder,
     BSON_TYPE_ARRAY: ListBuilder,
-    BSON_TYPE_BINARY: BinaryBuilder
+    BSON_TYPE_BINARY: BinaryBuilder,
+    BSON_TYPE_CODE: CodeBuilder,
 }
 
 _field_type_map = {
@@ -80,7 +82,9 @@ _field_type_map = {
     BSON_TYPE_UTF8: string(),
     BSON_TYPE_BOOL: bool_(),
     BSON_TYPE_DECIMAL128: Decimal128Type_(),
+    BSON_TYPE_CODE: CodeType(),
 }
+
 
 cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, context):
     """Get the appropriate data type for a specific field"""
@@ -148,7 +152,7 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
     cdef uint32_t val_buf_len = 0
     cdef bson_decimal128_t dec128
     cdef bson_type_t value_t
-    cdef const char * bson_str
+    cdef const char * bson_str = NULL
     cdef StructType struct_dtype
     cdef const bson_t * doc = NULL
     cdef bson_iter_t doc_iter
@@ -171,6 +175,7 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
     t_array = _BsonArrowTypes.array
     t_binary = _BsonArrowTypes.binary
     t_decimal128 = _BsonArrowTypes.decimal128
+    t_code = _BsonArrowTypes.code
 
     # initialize count to current length of builders
     for _, builder in builder_map.items():
@@ -253,6 +258,12 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                 elif ftype == t_string:
                     if value_t == BSON_TYPE_UTF8:
                         bson_str = bson_iter_utf8(&doc_iter, &str_len)
+                        builder.append(<bytes>(bson_str)[:str_len])
+                    else:
+                        builder.append_null()
+                elif ftype == t_code:
+                    if value_t == BSON_TYPE_CODE:
+                        bson_str = bson_iter_code(&doc_iter, &str_len)
                         builder.append(<bytes>(bson_str)[:str_len])
                     else:
                         builder.append_null()
@@ -357,6 +368,16 @@ cdef class StringBuilder(_ArrayBuilderBase):
 
     cdef shared_ptr[CStringBuilder] unwrap(self):
         return self.builder
+
+
+cdef class CodeBuilder(StringBuilder):
+    type_marker = _BsonArrowTypes.code
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out).cast(CodeType())
 
 
 cdef class ObjectIdBuilder(_ArrayBuilderBase):
