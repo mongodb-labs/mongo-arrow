@@ -249,7 +249,7 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                 if ftype == t_int32:
                     if value_t == BSON_TYPE_INT32:
                         int32_builder = builder
-                        int32_builder.append(bson_iter_int32(&doc_iter))
+                        int32_builder.append_raw(bson_iter_int32(&doc_iter))
                     else:
                         builder.append_null()
                 elif ftype == t_int64:
@@ -258,27 +258,27 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                             value_t == BSON_TYPE_DOUBLE or
                             value_t == BSON_TYPE_INT32):
                         int64_builder = builder
-                        int64_builder.append(bson_iter_as_int64(&doc_iter))
+                        int64_builder.append_raw(bson_iter_as_int64(&doc_iter))
                     else:
                         builder.append_null()
                 elif ftype == t_oid:
                     if value_t == BSON_TYPE_OID:
                         objectid_builder = builder
-                        objectid_builder.append_oid(bson_iter_oid(&doc_iter))
+                        objectid_builder.append_raw(bson_iter_oid(&doc_iter))
                     else:
                         builder.append_null()
                 elif ftype == t_string:
                     if value_t == BSON_TYPE_UTF8:
                         bson_str = bson_iter_utf8(&doc_iter, &str_len)
                         string_builder = builder
-                        string_builder.append_str(bson_str, str_len)
+                        string_builder.append_raw(bson_str, str_len)
                     else:
                         builder.append_null()
                 elif ftype == t_code:
                     if value_t == BSON_TYPE_CODE:
                         bson_str = bson_iter_code(&doc_iter, &str_len)
                         code_builder = builder
-                        code_builder.append_str(bson_str, str_len)
+                        code_builder.append_raw(bson_str, str_len)
                     else:
                         builder.append_null()
                 elif ftype == t_decimal128:
@@ -298,19 +298,19 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                             value_t == BSON_TYPE_INT32 or
                             value_t == BSON_TYPE_INT64):
                         double_builder = builder
-                        double_builder.append(bson_iter_as_double(&doc_iter))
+                        double_builder.append_raw(bson_iter_as_double(&doc_iter))
                     else:
                         builder.append_null()
                 elif ftype == t_datetime:
                     if value_t == BSON_TYPE_DATE_TIME:
                         datetime_builder = builder
-                        datetime_builder.append(bson_iter_date_time(&doc_iter))
+                        datetime_builder.append_raw(bson_iter_date_time(&doc_iter))
                     else:
                         builder.append_null()
                 elif ftype == t_bool:
                     if value_t == BSON_TYPE_BOOL:
                         bool_builder = builder
-                        bool_builder.append(bson_iter_bool(&doc_iter))
+                        bool_builder.append_raw(bson_iter_bool(&doc_iter))
                     else:
                         builder.append_null()
                 elif ftype == t_document:
@@ -337,7 +337,7 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                             builder.append_null()
                         else:
                             binary_builder = builder
-                            binary_builder.append_buf(<char*>val_buf, val_buf_len)
+                            binary_builder.append_raw(<char*>val_buf, val_buf_len)
                 else:
                     raise PyMongoArrowError('unknown ftype {}'.format(ftype))
             count += 1
@@ -375,11 +375,12 @@ cdef class StringBuilder(_ArrayBuilderBase):
     def __len__(self):
         return self.builder.get().length()
 
-    cpdef append_str(self, const char * value, uint32_t str_len):
+    cdef append_raw(self, const char * value, uint32_t str_len):
         self.builder.get().Append(value, str_len)
 
     cpdef append(self, value):
-        self.builder.get().Append(tobytes(value))
+        value = tobytes(value)
+        self.append_raw(value, len(value))
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
@@ -417,7 +418,7 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
     def __len__(self):
         return self.builder.get().length()
 
-    cdef append_oid(self, const bson_oid_t * value):
+    cdef append_raw(self, const bson_oid_t * value):
         self.builder.get().Append(value.bytes)
 
     cpdef append(self, value):
@@ -448,8 +449,11 @@ cdef class Int32Builder(_ArrayBuilderBase):
     def __len__(self):
         return self.builder.get().length()
 
-    cpdef append(self, int32_t value):
+    cdef append_raw(self, int32_t value):
         self.builder.get().Append(value)
+
+    cpdef append(self, int32_t value):
+        return self.append_raw(value)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
@@ -476,8 +480,11 @@ cdef class Int64Builder(_ArrayBuilderBase):
     def __len__(self):
         return self.builder.get().length()
 
-    cpdef append(self, int64_t value):
+    cdef append_raw(self, int64_t value):
         self.builder.get().Append(value)
+
+    cpdef append(self, int64_t value):
+        self.append_raw(value)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
@@ -504,8 +511,11 @@ cdef class DoubleBuilder(_ArrayBuilderBase):
     def __len__(self):
         return self.builder.get().length()
 
-    cpdef append(self, double value):
+    cdef append_raw(self, double value):
         self.builder.get().Append(value)
+
+    cpdef append(self, double value):
+        self.append_raw(value)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
@@ -540,8 +550,11 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
     def __len__(self):
         return self.builder.get().length()
 
-    cpdef append(self, int64_t value):
+    cpdef append_raw(self, int64_t value):
         self.builder.get().Append(value)
+
+    cpdef append(self, int64_t value):
+        self.append_raw(value)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
@@ -572,8 +585,11 @@ cdef class BoolBuilder(_ArrayBuilderBase):
     def __len__(self):
         return self.builder.get().length()
 
-    cpdef append(self, cbool value):
+    cdef append_raw(self, cbool value):
         self.builder.get().Append(value)
+
+    cpdef append(self, cbool value):
+        self.append_raw(value)
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
@@ -783,11 +799,11 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
     def __len__(self):
         return self.builder.get().length()
 
-    cpdef append_buf(self, const char * value, uint32_t str_len):
+    cdef append_raw(self, const char * value, uint32_t str_len):
         self.builder.get().Append(value, str_len)
 
     cpdef append(self, value):
-        self.builder.get().Append(<bytes>value, len(value))
+        self.append_raw(<const char *>value, len(value))
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
