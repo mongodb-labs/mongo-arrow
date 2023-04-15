@@ -20,7 +20,6 @@
 import copy
 import datetime
 import enum
-import struct as pystruct
 import sys
 
 # Python imports
@@ -37,9 +36,10 @@ from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal12
 
 # Cython imports
 from cpython cimport PyBytes_Size, object
-from cython.operator cimport dereference
+from cython.operator cimport dereference, preincrement
 from libcpp cimport bool as cbool
 from libcpp.map cimport map
+from libcpp.string cimport string
 from libc.string cimport strlen, memcpy
 from libcpp.vector cimport vector
 from pyarrow.lib cimport *
@@ -86,7 +86,7 @@ _field_type_map = {
 }
 
 
-cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, context):
+cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, object context):
     """Get the appropriate data type for a specific field"""
     cdef const uint8_t *val_buf = NULL
     cdef uint32_t val_buf_len = 0
@@ -113,7 +113,7 @@ cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_
     return field_type
 
 
-cdef extract_document_dtype(bson_iter_t * doc_iter, context):
+cdef extract_document_dtype(bson_iter_t * doc_iter, object context):
     """Get the appropriate data type for a sub document"""
     cdef const char* key
     cdef bson_type_t value_t
@@ -129,7 +129,7 @@ cdef extract_document_dtype(bson_iter_t * doc_iter, context):
         return struct(fields)
     return None
 
-cdef extract_array_dtype(bson_iter_t * doc_iter, context):
+cdef extract_array_dtype(bson_iter_t * doc_iter, object context):
     """Get the appropriate data type for a sub array"""
     cdef const char* key
     cdef bson_type_t value_t
@@ -166,9 +166,11 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
     cdef uint8_t ftype
     cdef Py_ssize_t count = 0
     cdef uint8_t byte_order_status = 0
-
+    cdef map[string, void *] builder_map
+    cdef map[string, void*].iterator it
     cdef bson_subtype_t subtype
-    cdef _ArrayBuilderBase builder
+
+    cdef _ArrayBuilderBase builder = None
     cdef Int32Builder int32_builder
     cdef DoubleBuilder double_builder
     cdef ObjectIdBuilder objectid_builder
@@ -182,26 +184,15 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
     cdef ListBuilder list_builder
     cdef DocumentBuilder doc_builder
 
-    builder_map = context.builder_map
+    # Build up a map of the builders.
+    for key, value in context.builder_map.items():
+        builder_map[key] = <void *>value
 
-    # Alias types for performance.
-    cdef uint8_t t_int32 = _BsonArrowTypes.int32.value
-    cdef uint8_t t_int64 = _BsonArrowTypes.int64.value
-    cdef uint8_t t_double = _BsonArrowTypes.double.value
-    cdef uint8_t t_datetime = _BsonArrowTypes.datetime.value
-    cdef uint8_t t_oid = _BsonArrowTypes.objectid.value
-    cdef uint8_t t_string = _BsonArrowTypes.string.value
-    cdef uint8_t t_bool = _BsonArrowTypes.bool.value
-    cdef uint8_t t_document = _BsonArrowTypes.document.value
-    cdef uint8_t t_array = _BsonArrowTypes.array.value
-    cdef uint8_t t_binary = _BsonArrowTypes.binary.value
-    cdef uint8_t t_decimal128 = _BsonArrowTypes.decimal128.value
-    cdef uint8_t t_code = _BsonArrowTypes.code.value
-
-    # initialize count to current length of builders
-    for _, builder in builder_map.items():
+    # Initialize count to current length of builders.
+    if len(context.builder_map):
+        builder = next(iter(context.builder_map.values()))
         count = len(builder)
-        break
+
     try:
         while True:
             doc = bson_reader_read_safe(stream_reader)
@@ -214,9 +205,13 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                 if arr_value_builder is not None:
                     builder = arr_value_builder
                 else:
-                    builder = builder_map.get(key)
+                    it = builder_map.find(key)
+                    if it != builder_map.end():
+                        builder = <_ArrayBuilderBase>builder_map[key]
                 if builder is None:
-                    builder = builder_map.get(key)
+                    it = builder_map.find(key)
+                    if it != builder_map.end():
+                        builder = <_ArrayBuilderBase>builder_map[key]
                 if builder is None and context.schema is None:
                     # Get the appropriate builder for the current field.
                     value_t = bson_iter_type(&doc_iter)
@@ -249,7 +244,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                     else:
                         builder = builder_type()
                     if arr_value_builder is None:
-                        builder_map[key] = builder
+                        builder_map[key] = <void *>builder
                     for _ in range(count):
                         builder.append_null()
 
@@ -258,13 +253,13 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
 
                 ftype = builder.type_marker
                 value_t = bson_iter_type(&doc_iter)
-                if ftype == t_int32:
+                if ftype == BSON_TYPE_INT32:
                     int32_builder = builder
                     if value_t == BSON_TYPE_INT32:
                         int32_builder.append_raw(bson_iter_int32(&doc_iter))
                     else:
                         int32_builder.append_null()
-                elif ftype == t_int64:
+                elif ftype == BSON_TYPE_INT64:
                     int64_builder = builder
                     if (value_t == BSON_TYPE_INT64 or
                             value_t == BSON_TYPE_BOOL or
@@ -273,27 +268,27 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         int64_builder.append_raw(bson_iter_as_int64(&doc_iter))
                     else:
                         int64_builder.append_null()
-                elif ftype == t_oid:
+                elif ftype == BSON_TYPE_OID:
                     objectid_builder = builder
                     if value_t == BSON_TYPE_OID:
                         objectid_builder.append_raw(bson_iter_oid(&doc_iter))
                     else:
                         objectid_builder.append_null()
-                elif ftype == t_string:
+                elif ftype == BSON_TYPE_UTF8:
                     string_builder = builder
                     if value_t == BSON_TYPE_UTF8:
                         bson_str = bson_iter_utf8(&doc_iter, &str_len)
                         string_builder.append_raw(bson_str, str_len)
                     else:
                         string_builder.append_null()
-                elif ftype == t_code:
+                elif ftype == BSON_TYPE_CODE:
                     code_builder = builder
                     if value_t == BSON_TYPE_CODE:
                         bson_str = bson_iter_code(&doc_iter, &str_len)
                         code_builder.append_raw(bson_str, str_len)
                     else:
                         code_builder.append_null()
-                elif ftype == t_decimal128:
+                elif ftype == BSON_TYPE_DECIMAL128:
                     dec128_builder = builder
                     if value_t == BSON_TYPE_DECIMAL128:
                         bson_iter_decimal128(&doc_iter, &dec128)
@@ -311,7 +306,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                             dec128_builder.append_null()
                     else:
                         dec128_builder.append_null()
-                elif ftype == t_double:
+                elif ftype == BSON_TYPE_DOUBLE:
                     double_builder = builder
                     if (value_t == BSON_TYPE_DOUBLE or
                             value_t == BSON_TYPE_BOOL or
@@ -320,19 +315,19 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         double_builder.append_raw(bson_iter_as_double(&doc_iter))
                     else:
                         double_builder.append_null()
-                elif ftype == t_datetime:
+                elif ftype == BSON_TYPE_DATE_TIME:
                     datetime_builder = builder
                     if value_t == BSON_TYPE_DATE_TIME:
                         datetime_builder.append_raw(bson_iter_date_time(&doc_iter))
                     else:
                         datetime_builder.append_null()
-                elif ftype == t_bool:
+                elif ftype == BSON_TYPE_BOOL:
                     bool_builder = builder
                     if value_t == BSON_TYPE_BOOL:
                         bool_builder.append_raw(bson_iter_bool(&doc_iter))
                     else:
                         bool_builder.append_null()
-                elif ftype == t_document:
+                elif ftype == BSON_TYPE_DOCUMENT:
                     doc_builder = builder
                     if value_t == BSON_TYPE_DOCUMENT:
                         bson_iter_document(&doc_iter, &val_buf_len, &val_buf)
@@ -341,7 +336,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         doc_builder.append_raw(val_buf, val_buf_len)
                     else:
                         doc_builder.append_null()
-                elif ftype == t_array:
+                elif ftype == BSON_TYPE_ARRAY:
                     list_builder = builder
                     if value_t == BSON_TYPE_ARRAY:
                         bson_iter_array(&doc_iter, &val_buf_len, &val_buf)
@@ -350,22 +345,27 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         list_builder.append_raw(val_buf, val_buf_len)
                     else:
                         list_builder.append_null()
-                elif ftype == t_binary:
+                elif ftype == BSON_TYPE_BINARY:
                     binary_builder = builder
                     if value_t == BSON_TYPE_BINARY:
                         bson_iter_binary (&doc_iter, &subtype,
                             &val_buf_len, &val_buf)
-                        if subtype != binary_builder.subtype:
+                        if subtype != binary_builder._subtype:
                             binary_builder.append_null()
                         else:
                             binary_builder.append_raw(<char*>val_buf, val_buf_len)
                 else:
                     raise PyMongoArrowError('unknown ftype {}'.format(ftype))
+
+            # Append nulls as needed to builders to account for any missing
+            # field(s).
             count += 1
-            for _, builder in builder_map.items():
+            it = builder_map.begin()
+            while it != builder_map.end():
+                builder = <_ArrayBuilderBase>(dereference(it).second)
                 if len(builder) != count:
-                    # Append null to account for any missing field(s)
                     builder.append_null()
+                preincrement(it)
     finally:
         bson_reader_destroy(stream_reader)
 
@@ -373,10 +373,9 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
 # Builders
 
 cdef class _ArrayBuilderBase:
-    cdef:
-        uint8_t type_marker
+    cdef uint8_t type_marker
 
-    def append_values(self, values):
+    cpdef append_values(self, values):
         for value in values:
             if value is None or value is np.nan:
                 self.append_null()
@@ -391,17 +390,17 @@ cdef class StringBuilder(_ArrayBuilderBase):
     def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CStringBuilder(pool))
-        self.type_marker = _BsonArrowTypes.string.value
+        self.type_marker = BSON_TYPE_UTF8
 
     cdef append_raw(self, const char * value, uint32_t str_len):
         self.builder.get().Append(value, str_len)
 
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
     cpdef append(self, value):
         value = tobytes(value)
         self.append_raw(value, len(value))
-
-    cpdef append_null(self):
-        self.builder.get().AppendNull()
 
     def __len__(self):
         return self.builder.get().length()
@@ -417,11 +416,10 @@ cdef class StringBuilder(_ArrayBuilderBase):
 
 
 cdef class CodeBuilder(StringBuilder):
-
     def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CStringBuilder(pool))
-        self.type_marker = _BsonArrowTypes.code.value
+        self.type_marker = BSON_TYPE_CODE
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
@@ -438,7 +436,7 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
         cdef shared_ptr[CDataType] dtype = fixed_size_binary(12)
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CFixedSizeBinaryBuilder(dtype, pool))
-        self.type_marker = _BsonArrowTypes.objectid.value
+        self.type_marker = BSON_TYPE_OID
 
     cdef append_raw(self, const bson_oid_t * value):
         self.builder.get().Append(value.bytes)
@@ -469,7 +467,7 @@ cdef class Int32Builder(_ArrayBuilderBase):
     def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CInt32Builder(pool))
-        self.type_marker = _BsonArrowTypes.int32.value
+        self.type_marker = BSON_TYPE_INT32
 
     cdef append_raw(self, int32_t value):
         self.builder.get().Append(value)
@@ -500,7 +498,7 @@ cdef class Int64Builder(_ArrayBuilderBase):
     def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CInt64Builder(pool))
-        self.type_marker = _BsonArrowTypes.int64.value
+        self.type_marker = BSON_TYPE_INT64
 
     cdef append_raw(self, int64_t value):
         self.builder.get().Append(value)
@@ -531,7 +529,7 @@ cdef class DoubleBuilder(_ArrayBuilderBase):
     def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CDoubleBuilder(pool))
-        self.type_marker = _BsonArrowTypes.double.value
+        self.type_marker = BSON_TYPE_DOUBLE
 
     cdef append_raw(self, double value):
         self.builder.get().Append(value)
@@ -570,7 +568,7 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
         self.dtype = dtype
         self.builder.reset(new CTimestampBuilder(
             pyarrow_unwrap_data_type(self.dtype), pool))
-        self.type_marker = _BsonArrowTypes.datetime.value
+        self.type_marker = BSON_TYPE_DATE_TIME
 
     cdef append_raw(self, int64_t value):
         self.builder.get().Append(value)
@@ -605,7 +603,7 @@ cdef class BoolBuilder(_ArrayBuilderBase):
     def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CBooleanBuilder(pool))
-        self.type_marker = _BsonArrowTypes.bool.value
+        self.type_marker = BSON_TYPE_BOOL
 
     cdef append_raw(self, cbool value):
         self.builder.get().Append(value)
@@ -637,7 +635,7 @@ cdef class Decimal128Builder(_ArrayBuilderBase):
         cdef shared_ptr[CDataType] dtype = fixed_size_binary(16)
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CFixedSizeBinaryBuilder(dtype, pool))
-        self.type_marker = _BsonArrowTypes.decimal128.value
+        self.type_marker = BSON_TYPE_DECIMAL128
 
     cdef append_raw(self, uint8_t * buf):
         self.builder.get().Append(buf)
@@ -661,7 +659,7 @@ cdef class Decimal128Builder(_ArrayBuilderBase):
         return self.builder
 
 
-cdef object get_field_builder(field, tzinfo):
+cdef object get_field_builder(object field, object tzinfo):
     """"Find the appropriate field builder given a pyarrow field"""
     cdef object field_builder
     cdef DataType field_type
@@ -723,7 +721,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
             c_field_builders.push_back(<shared_ptr[CArrayBuilder]>field_builder.builder)
 
         self.builder.reset(new CStructBuilder(pyarrow_unwrap_data_type(dtype), pool, c_field_builders))
-        self.type_marker = _BsonArrowTypes.document.value
+        self.type_marker = BSON_TYPE_DOCUMENT
 
     @property
     def dtype(self):
@@ -778,7 +776,7 @@ cdef class ListBuilder(_ArrayBuilderBase):
         grandchild_builder = <shared_ptr[CArrayBuilder]>field_builder.builder
         self.child_builder = field_builder
         self.builder.reset(new CListBuilder(pool, grandchild_builder, pyarrow_unwrap_data_type(dtype)))
-        self.type_marker = _BsonArrowTypes.array.value
+        self.type_marker = BSON_TYPE_ARRAY
 
 
     @property
@@ -820,7 +818,7 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
     def __cinit__(self, uint8_t subtype):
         self._subtype = subtype
         self.builder.reset(new CBinaryBuilder())
-        self.type_marker = _BsonArrowTypes.binary.value
+        self.type_marker = BSON_TYPE_BINARY
 
     @property
     def subtype(self):
@@ -829,8 +827,14 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
     cdef append_raw(self, const char * value, uint32_t str_len):
         self.builder.get().Append(value, str_len)
 
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
     cpdef append(self, value):
         self.append_raw(<const char *>value, len(value))
+
+    def __len__(self):
+        return self.builder.get().length()
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
