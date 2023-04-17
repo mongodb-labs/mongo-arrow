@@ -245,6 +245,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         builder = builder_type()
                     if arr_value_builder is None:
                         builder_map[key] = <void *>builder
+                        context.builder_map[key] = builder
                     for _ in range(count):
                         builder.append_null()
 
