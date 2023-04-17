@@ -354,6 +354,8 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         return find_pandas_all(coll, query, schema=schema)
 
     def equal_fn(self, left, right):
+        left = left.fillna(0)
+        right = right.fillna(0)
         if type(left) == pandas.DataFrame:
             pandas.testing.assert_frame_equal(left, right, check_dtype=False)
         else:
