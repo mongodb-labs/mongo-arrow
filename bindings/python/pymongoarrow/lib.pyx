@@ -247,6 +247,9 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                             value_t == BSON_TYPE_BOOL or
                             value_t == BSON_TYPE_DOUBLE or
                             value_t == BSON_TYPE_INT32):
+                        if value_t == BSON_TYPE_DOUBLE:
+                            print(f'bson_iter_as_double: {bson_iter_as_double(&doc_iter)}')
+                            print(f'bson_iter_as_int64: {bson_iter_as_int64(&doc_iter)}')
                         builder.append(bson_iter_as_int64(&doc_iter))
                     else:
                         builder.append_null()
