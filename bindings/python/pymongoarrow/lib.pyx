@@ -240,6 +240,10 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
                 if ftype == t_int32:
                     if value_t == BSON_TYPE_INT32:
                         builder.append(bson_iter_int32(&doc_iter))
+                    elif (value_t == BSON_TYPE_INT64 or
+                          value_t == BSON_TYPE_BOOL or
+                          value_t == BSON_TYPE_DOUBLE):
+                        builder.append(bson_iter_as_int64(&doc_iter))
                     else:
                         builder.append_null()
                 elif ftype == t_int64:
