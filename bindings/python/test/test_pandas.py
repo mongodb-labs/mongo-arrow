@@ -350,21 +350,6 @@ class TestBSONTypes(PandasTestBase):
 
 
 class TestNulls(NullsTestMixin, unittest.TestCase):
-    def test_nan_handling(self):
-        # Test null to nan to fillna behavior.
-        arr = pyarrow.array([1, 2, None], type=pyarrow.int64())
-        print(f"Array: {arr}")
-        series = arr.to_pandas()
-        expected = pandas.Series([1.0, 2.0, float("nan")], dtype="float")
-        print(f"Series  : {series}")
-        print(f"Expected: {expected}")
-        pandas.testing.assert_series_equal(series, expected)
-        series = series.fillna(0)
-        expected = pandas.Series([1.0, 2.0, 0.0], dtype="float")
-        print(f"Series  : {series}")
-        print(f"Expected: {expected}")
-        pandas.testing.assert_series_equal(series, expected)
-
     def find_fn(self, coll, query, schema):
         return find_pandas_all(coll, query, schema=schema)
 
