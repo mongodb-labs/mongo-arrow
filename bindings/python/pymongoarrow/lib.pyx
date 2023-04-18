@@ -21,6 +21,7 @@ import copy
 import datetime
 import enum
 import sys
+from math import isnan
 
 # Python imports
 import bson
@@ -269,9 +270,15 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                     int64_builder = builder
                     if (value_t == BSON_TYPE_INT64 or
                             value_t == BSON_TYPE_BOOL or
-                            value_t == BSON_TYPE_DOUBLE or
                             value_t == BSON_TYPE_INT32):
                         int64_builder.append_raw(bson_iter_as_int64(&doc_iter))
+                    elif value_t == BSON_TYPE_DOUBLE:
+                        # Treat nan as null.
+                        val = bson_iter_as_double(&doc_iter)
+                        if isnan(val):
+                            int64_builder.append_null()
+                        else:
+                            int64_builder.append_raw(bson_iter_as_int64(&doc_iter))
                     else:
                         int64_builder.append_null()
                 elif ftype == BSON_TYPE_OID:
