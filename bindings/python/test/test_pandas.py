@@ -351,6 +351,7 @@ class TestBSONTypes(PandasTestBase):
 
 class TestNulls(NullsTestMixin, unittest.TestCase):
     def test_nan_handling(self):
+        # Test null to nan to fillna behavior.
         arr = pyarrow.array([1, 2, None], type=pyarrow.int64())
         print(f"Array: {arr}")
         series = arr.to_pandas()
