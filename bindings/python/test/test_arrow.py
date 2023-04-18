@@ -626,9 +626,19 @@ class ArrowApiTestMixin:
         self.coll.insert_one({"a": 2 << 34})
         with self.assertRaises(OverflowError):
             find_arrow_all(self.coll, {}, projection={"_id": 0}, schema=Schema({"a": int32()}))
+        # Test double overflowing int32
+        self.coll.delete_many({})
+        self.coll.insert_one({"a": float(2 << 34)})
+        with self.assertRaises(OverflowError):
+            find_arrow_all(self.coll, {}, projection={"_id": 0}, schema=Schema({"a": int32()}))
 
     def test_mixed_types_int64(self):
         self._test_mixed_types_int(int64())
+        # Test double overflowing int64
+        self.coll.delete_many({})
+        self.coll.insert_one({"a": float(2 << 65)})
+        with self.assertRaises(OverflowError):
+            find_arrow_all(self.coll, {}, projection={"_id": 0}, schema=Schema({"a": int32()}))
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):
