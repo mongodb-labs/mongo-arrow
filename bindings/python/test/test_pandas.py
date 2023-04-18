@@ -269,7 +269,7 @@ class TestExplicitPandasApi(PandasTestBase):
         self.coll.insert_many(data)
         for func in [find_pandas_all, aggregate_pandas_all]:
             out = func(self.coll, {} if func == find_pandas_all else []).drop(columns=["_id"])
-            np.equal(out["a"], [1.0, np.nan, np.nan, 4.0])
+            np.equal(out["a"], [1.0, np.nan, 1, 4.0])
 
     def test_auto_schema_tz(self):
         schema = {

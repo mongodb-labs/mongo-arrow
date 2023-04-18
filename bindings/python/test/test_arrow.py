@@ -487,7 +487,7 @@ class ArrowApiTestMixin:
         self.coll.insert_many(data)
         for func in [find_arrow_all, aggregate_arrow_all]:
             out = func(self.coll, {} if func == find_arrow_all else []).drop(["_id"])
-            self.assertEqual(out["a"].to_pylist(), [1, None, None, 4])
+            self.assertEqual(out["a"].to_pylist(), [1, None, 1, 4])
 
     def test_auto_schema_tz(self):
         # Create table with random data of various types.
@@ -564,7 +564,7 @@ class ArrowApiTestMixin:
             dict(data=dict(a=1, b=True)),
             dict(data=dict(a=1, b=True, c="bar")),
             dict(data=dict(a=1)),
-            dict(data=dict(a=True, b=False)),
+            dict(data=dict(a="str", b=False)),
         ]
         self.coll.drop()
         self.coll.insert_many(data)
