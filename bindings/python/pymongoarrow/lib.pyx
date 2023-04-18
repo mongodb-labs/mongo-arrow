@@ -39,7 +39,7 @@ from cpython cimport PyBytes_Size, object
 from cython.operator cimport dereference, preincrement
 from libcpp cimport bool as cbool
 from libcpp.map cimport map
-from libcpp.string cimport string
+from libcpp.string cimport string as cstring
 from libc.string cimport strlen, memcpy
 from libcpp.vector cimport vector
 from pyarrow.lib cimport *
@@ -86,7 +86,7 @@ _field_type_map = {
 }
 
 
-cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, object context):
+cdef object extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, object context):
     """Get the appropriate data type for a specific field"""
     cdef const uint8_t *val_buf = NULL
     cdef uint32_t val_buf_len = 0
@@ -113,7 +113,7 @@ cdef extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_
     return field_type
 
 
-cdef extract_document_dtype(bson_iter_t * doc_iter, object context):
+cdef object extract_document_dtype(bson_iter_t * doc_iter, object context):
     """Get the appropriate data type for a sub document"""
     cdef const char* key
     cdef bson_type_t value_t
@@ -129,7 +129,8 @@ cdef extract_document_dtype(bson_iter_t * doc_iter, object context):
         return struct(fields)
     return None
 
-cdef extract_array_dtype(bson_iter_t * doc_iter, object context):
+
+cdef object extract_array_dtype(bson_iter_t * doc_iter, object context):
     """Get the appropriate data type for a sub array"""
     cdef const char* key
     cdef bson_type_t value_t
@@ -142,6 +143,7 @@ cdef extract_array_dtype(bson_iter_t * doc_iter, object context):
             return field_type
     return None
 
+
 def process_bson_stream(bson_stream, context, arr_value_builder=None):
     """Process a bson byte stream using a PyMongoArrowContext"""
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
@@ -149,7 +151,7 @@ def process_bson_stream(bson_stream, context, arr_value_builder=None):
     process_raw_bson_stream(bson_stream, length, context, arr_value_builder)
 
 
-cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, object context, object arr_value_builder):
+cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, object context, object arr_value_builder) except *:
     cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
     cdef uint32_t str_len
     cdef uint8_t dec128_buf[16]
@@ -166,8 +168,8 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
     cdef uint8_t ftype
     cdef Py_ssize_t count = 0
     cdef uint8_t byte_order_status = 0
-    cdef map[string, void *] builder_map
-    cdef map[string, void*].iterator it
+    cdef map[cstring, void *] builder_map
+    cdef map[cstring, void*].iterator it
     cdef bson_subtype_t subtype
 
     cdef _ArrayBuilderBase builder = None
@@ -202,16 +204,19 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                 raise InvalidBSON("Could not read BSON document")
             while bson_iter_next(&doc_iter):
                 key = bson_iter_key(&doc_iter)
+                builder = None
                 if arr_value_builder is not None:
                     builder = arr_value_builder
                 else:
                     it = builder_map.find(key)
                     if it != builder_map.end():
                         builder = <_ArrayBuilderBase>builder_map[key]
+
                 if builder is None:
                     it = builder_map.find(key)
                     if it != builder_map.end():
                         builder = <_ArrayBuilderBase>builder_map[key]
+
                 if builder is None and context.schema is None:
                     # Get the appropriate builder for the current field.
                     value_t = bson_iter_type(&doc_iter)
