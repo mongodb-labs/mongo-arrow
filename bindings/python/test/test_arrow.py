@@ -596,7 +596,7 @@ class ArrowApiTestMixin:
             {"a": 2.9},  # float should be truncated.
             {"a": True},  # True should be 1.
             {"a": False},  # False should be 0.
-            {"a": float("nan")},  # Should be 0.
+            {"a": float("nan")},  # Should be null.
             {"a": None},  # Should be null.
             {},  # Should be null.
             {"a": "string"},  # Should be null.
@@ -610,7 +610,7 @@ class ArrowApiTestMixin:
                 {"a": 2},
                 {"a": 1},
                 {"a": 0},
-                {"a": 0},
+                {"a": None},
                 {"a": None},
                 {},
                 {"a": None},
