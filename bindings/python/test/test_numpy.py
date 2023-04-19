@@ -235,7 +235,7 @@ class TestExplicitNumPyApi(NumpyTestBase):
             with self.subTest(func.__name__):
                 out = func(self.coll, {} if func == find_numpy_all else [])
                 del out["_id"]
-                np.equal(out, [1.0, np.nan, np.nan, 4.0])
+                np.equal(out, [1.0, np.nan, 1.0, 4.0])
 
     def test_auto_schema_tz(self):
         schema = {

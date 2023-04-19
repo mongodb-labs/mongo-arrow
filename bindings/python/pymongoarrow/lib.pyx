@@ -172,6 +172,8 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
     cdef map[cstring, void *] builder_map
     cdef map[cstring, void*].iterator it
     cdef bson_subtype_t subtype
+    cdef int32_t val32
+    cdef int64_t val64
 
     cdef _ArrayBuilderBase builder = None
     cdef Int32Builder int32_builder
@@ -262,8 +264,24 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                 value_t = bson_iter_type(&doc_iter)
                 if ftype == BSON_TYPE_INT32:
                     int32_builder = builder
-                    if value_t == BSON_TYPE_INT32:
-                        int32_builder.append_raw(bson_iter_int32(&doc_iter))
+                    if (value_t == BSON_TYPE_INT32 or value_t == BSON_TYPE_BOOL):
+                        int32_builder.append_raw(bson_iter_as_int64(&doc_iter))
+                    elif value_t == BSON_TYPE_INT64:
+                        val64 = bson_iter_as_int64(&doc_iter)
+                        val32 = <int32_t> val64
+                        if val64 == val32:
+                            int32_builder.append_raw(val32)
+                        else:
+                            # Use append (not append_raw) to surface overflow errors.
+                            int32_builder.append(val64)
+                    elif value_t == BSON_TYPE_DOUBLE:
+                        # Treat nan as null.
+                        val = bson_iter_as_double(&doc_iter)
+                        if isnan(val):
+                            int32_builder.append_null()
+                        else:
+                            # Use append (not append_raw) to surface overflow errors.
+                            int32_builder.append(bson_iter_as_int64(&doc_iter))
                     else:
                         int32_builder.append_null()
                 elif ftype == BSON_TYPE_INT64:

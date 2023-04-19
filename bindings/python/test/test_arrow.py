@@ -487,7 +487,7 @@ class ArrowApiTestMixin:
         self.coll.insert_many(data)
         for func in [find_arrow_all, aggregate_arrow_all]:
             out = func(self.coll, {} if func == find_arrow_all else []).drop(["_id"])
-            self.assertEqual(out["a"].to_pylist(), [1, None, None, 4])
+            self.assertEqual(out["a"].to_pylist(), [1, None, 1, 4])
 
     def test_auto_schema_tz(self):
         # Create table with random data of various types.
@@ -564,7 +564,7 @@ class ArrowApiTestMixin:
             dict(data=dict(a=1, b=True)),
             dict(data=dict(a=1, b=True, c="bar")),
             dict(data=dict(a=1)),
-            dict(data=dict(a=True, b=False)),
+            dict(data=dict(a="str", b=False)),
         ]
         self.coll.drop()
         self.coll.insert_many(data)
@@ -589,6 +589,56 @@ class ArrowApiTestMixin:
         coll.insert_many([{"data": Binary(b"1", 10)}, {"data": Binary(b"2", 20)}])
         res = find_arrow_all(coll, {}, schema=schema)
         self.assertEqual(res["data"].to_pylist(), [Binary(b"1", 10), None])
+
+    def _test_mixed_types_int(self, inttype):
+        docs = [
+            {"a": 1},
+            {"a": 2.9},  # float should be truncated.
+            {"a": True},  # True should be 1.
+            {"a": False},  # False should be 0.
+            {"a": float("nan")},  # Should be null.
+            {"a": None},  # Should be null.
+            {},  # Should be null.
+            {"a": "string"},  # Should be null.
+        ]
+        self.coll.delete_many({})
+        self.coll.insert_many(docs)
+        table = find_arrow_all(self.coll, {}, projection={"_id": 0}, schema=Schema({"a": inttype}))
+        expected = Table.from_pylist(
+            [
+                {"a": 1},
+                {"a": 2},
+                {"a": 1},
+                {"a": 0},
+                {"a": None},
+                {"a": None},
+                {},
+                {"a": None},
+            ],
+            schema=ArrowSchema([field("a", inttype)]),
+        )
+        self.assertEqual(table, expected)
+
+    def test_mixed_types_int32(self):
+        self._test_mixed_types_int(int32())
+        # Value too large to fit in int32 should cause an overflow error.
+        self.coll.delete_many({})
+        self.coll.insert_one({"a": 2 << 34})
+        with self.assertRaises(OverflowError):
+            find_arrow_all(self.coll, {}, projection={"_id": 0}, schema=Schema({"a": int32()}))
+        # Test double overflowing int32
+        self.coll.delete_many({})
+        self.coll.insert_one({"a": float(2 << 34)})
+        with self.assertRaises(OverflowError):
+            find_arrow_all(self.coll, {}, projection={"_id": 0}, schema=Schema({"a": int32()}))
+
+    def test_mixed_types_int64(self):
+        self._test_mixed_types_int(int64())
+        # Test double overflowing int64
+        self.coll.delete_many({})
+        self.coll.insert_one({"a": float(2 << 65)})
+        with self.assertRaises(OverflowError):
+            find_arrow_all(self.coll, {}, projection={"_id": 0}, schema=Schema({"a": int32()}))
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):
