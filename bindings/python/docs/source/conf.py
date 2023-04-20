@@ -69,10 +69,10 @@ html_js_files = [
 # Output file base name for HTML help builder.
 htmlhelp_basename = "PyMongoArrow" + release.replace(".", "_")
 
-intersphinx_mapping = {
-    "pyarrow": ("https://arrow.apache.org/docs/", None),
-    "pandas": ("https://pandas.pydata.org/docs/", None),
-    "numpy": ("https://numpy.org/doc/1.20/", None),
-    "pymongo": ("https://pymongo.readthedocs.io/en/stable/", None),
-    "bson": ("https://pymongo.readthedocs.io/en/stable/", None),
-}
+# intersphinx_mapping = {
+#     "pyarrow": ("https://arrow.apache.org/docs/", None),
+#     "pandas": ("https://pandas.pydata.org/docs/", None),
+#     "numpy": ("https://numpy.org/doc/1.20/", None),
+#     "pymongo": ("https://pymongo.readthedocs.io/en/stable/", None),
+#     "bson": ("https://pymongo.readthedocs.io/en/stable/", None),
+# }

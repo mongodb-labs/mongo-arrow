@@ -18,11 +18,8 @@ know to use **PyMongoArrow**.
 :doc:`quickstart`
   Start here for a quick overview.
 
-:doc:`supported_types`
-  A list of BSON types that are supported by PyMongoArrow.
-
-:doc:`extension_types`
-  A more in-depth explanation of the support for extension types such as ObjectId.
+:doc:`data_types`
+  Data type support with PyMongoArrow.
 
 :doc:`faq`
   Frequently asked questions.
@@ -88,8 +85,7 @@ Indices and tables
 
    installation
    quickstart
-   supported_types
-   extension_types
+   data_types
    faq
    api/index
    changelog
