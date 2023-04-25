@@ -68,8 +68,8 @@ to type-specifiers, e.g.::
   schema = Schema({'_id': int, 'amount': float, 'last_updated': datetime})
 
 There are multiple permissible type-identifiers for each supported BSON type.
-For a full-list of supported types and associated type-identifiers see
-:doc:`supported_types`.
+For a full-list of data types and associated type-identifiers see
+:doc:`data_types`.
 
 Nested data (embedded documents) are also supported::
 
