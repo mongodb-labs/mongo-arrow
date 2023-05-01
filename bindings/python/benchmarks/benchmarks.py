@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import abc
-import collections
 import math
 import os
 from abc import ABC
@@ -164,7 +163,7 @@ class ProfileReadArray(Read):
     def setup_cache(self):
         coll = db.benchmark
         coll.drop()
-        base_dict = collections.OrderedDict(
+        base_dict = dict(
             [("x", 1), ("y", math.pi), ("emb", [math.pi for _ in range(EMBEDDED_OBJECT_SIZE)])]
         )
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
@@ -209,7 +208,7 @@ class ProfileReadDocument(Read):
     def setup_cache(self):
         coll = db.benchmark
         coll.drop()
-        base_dict = collections.OrderedDict(
+        base_dict = dict(
             [
                 ("x", 1),
                 ("y", math.pi),
@@ -251,7 +250,7 @@ class ProfileReadSmall(Read):
     def setup_cache(self):
         coll = db.benchmark
         coll.drop()
-        base_dict = collections.OrderedDict(
+        base_dict = dict(
             [
                 ("x", 1),
                 ("y", math.pi),
@@ -273,7 +272,7 @@ class ProfileReadLarge(Read):
         coll = db.benchmark
         coll.drop()
 
-        base_dict = collections.OrderedDict([(k, math.pi) for k in self.large_doc_keys])
+        base_dict = dict([(k, math.pi) for k in self.large_doc_keys])
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
@@ -288,7 +287,7 @@ class ProfileReadExtensionSmall(Read):
     def setup_cache(self):
         coll = db.benchmark
         coll.drop()
-        base_dict = collections.OrderedDict(
+        base_dict = dict(
             [
                 ("x", Decimal128("1")),
                 ("y", Binary(b"1234", 10)),
@@ -304,13 +303,13 @@ class ProfileReadExtensionSmall(Read):
 class ProfileReadExtensionLarge(Read):
     large_doc_keys = [f"{i}" for i in range(LARGE_DOC_SIZE)]
     schema = Schema({k: Decimal128Type() for k in large_doc_keys})
-    dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
+    dtypes = np.dtype([(k, np.object_) for k in large_doc_keys])
 
     def setup_cache(self):
         coll = db.benchmark
         coll.drop()
 
-        base_dict = collections.OrderedDict([(k, Decimal128(k)) for k in self.large_doc_keys])
+        base_dict = dict([(k, Decimal128(k)) for k in self.large_doc_keys])
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
@@ -329,7 +328,7 @@ class ProfileInsertSmall(Insert):
     def setup_cache(self):
         coll = db.benchmark
         coll.drop()
-        base_dict = collections.OrderedDict([("x", 1), ("y", math.pi)])
+        base_dict = dict([("x", 1), ("y", math.pi)])
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
@@ -348,7 +347,7 @@ class ProfileInsertLarge(Insert):
     def setup_cache(self):
         coll = db.benchmark
         coll.drop()
-        base_dict = collections.OrderedDict([(k, math.pi) for k in self.large_doc_keys])
+        base_dict = dict([(k, math.pi) for k in self.large_doc_keys])
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
