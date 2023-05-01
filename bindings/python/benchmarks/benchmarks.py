@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 import pyarrow
 import pymongo
-from bson import BSON
+from bson import BSON, Binary, Decimal128
 from pymongoarrow.api import (
     Schema,
     find_arrow_all,
@@ -29,6 +29,7 @@ from pymongoarrow.api import (
     find_pandas_all,
     write,
 )
+from pymongoarrow.types import BinaryType, Decimal128Type
 
 N_DOCS = int(os.environ.get("N_DOCS"))
 assert pymongo.has_c()
@@ -273,6 +274,43 @@ class ProfileReadLarge(Read):
         coll.drop()
 
         base_dict = collections.OrderedDict([(k, math.pi) for k in self.large_doc_keys])
+        coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
+        print(
+            "%d docs, %dk each with %d keys"
+            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+        )
+
+
+class ProfileReadExtensionSmall(Read):
+    schema = Schema({"x": Decimal128Type(), "y": BinaryType(10)})
+    dtypes = np.dtype(np.dtype([("x", np.object_), ("y", np.object_)]))
+
+    def setup_cache(self):
+        coll = db.benchmark
+        coll.drop()
+        base_dict = collections.OrderedDict(
+            [
+                ("x", Decimal128("1")),
+                ("y", Binary(b"1234", 10)),
+            ]
+        )
+        coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
+        print(
+            "%d docs, %dk each with %d keys"
+            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+        )
+
+
+class ProfileReadExtensionLarge(Read):
+    large_doc_keys = [f"{i}" for i in range(LARGE_DOC_SIZE)]
+    schema = Schema({k: Decimal128Type() for k in large_doc_keys})
+    dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
+
+    def setup_cache(self):
+        coll = db.benchmark
+        coll.drop()
+
+        base_dict = collections.OrderedDict([(k, Decimal128(k)) for k in self.large_doc_keys])
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
             "%d docs, %dk each with %d keys"
