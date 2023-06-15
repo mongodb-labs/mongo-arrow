@@ -21,6 +21,9 @@ know to use **PyMongoArrow**.
 :doc:`data_types`
   Data type support with PyMongoArrow.
 
+:doc:`comparison`
+  Comparison of using PyMongoArrow versus using PyMongo directly.
+
 :doc:`faq`
   Frequently asked questions.
 
@@ -86,6 +89,7 @@ Indices and tables
    installation
    quickstart
    data_types
+   comparison
    faq
    api/index
    changelog
