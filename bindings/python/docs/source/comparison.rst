@@ -9,7 +9,7 @@ with **PyMongoArrow**. The reader is assumed to be familiar with basic
 
 Reading Data
 ^^^^^^^^^^^^
-The most basic way to read data using PyMongo is::
+The most basic way to read data using PyMongo is:
 
 .. code-block:: python
 
@@ -68,7 +68,7 @@ but if you wanted to for example, sort datetimes, it avoids unecessary casting:
     )
 
 Additionally, PyMongoArrow supports Pandas extension types.
-With PyMongo, a Decimal128 value behaves as follows::
+With PyMongo, a Decimal128 value behaves as follows:
 
 .. code-block:: python
 
@@ -104,7 +104,7 @@ In both cases the underlying values are the bson class type:
 Writing Data
 ~~~~~~~~~~~~
 
-Writing data from an Arrow table using PyMongo looks like the following::
+Writing data from an Arrow table using PyMongo looks like the following:
 
 .. code-block:: python
 
