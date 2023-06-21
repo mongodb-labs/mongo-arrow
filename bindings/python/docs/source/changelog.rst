@@ -5,7 +5,9 @@ Changes in Version 0.7.0
 ------------------------
 - Added support for BSON Embedded Document type.
 - Added support for BSON Array type.
-- Support PyArrow 11.0.
+- Added support for BSON Decimal128 type.
+- Added support for Pandas 2.0 and Pandas extension types.
+- Support PyArrow 12.0.
 
 Changes in Version 0.6.3
 ------------------------
