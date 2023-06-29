@@ -70,3 +70,7 @@ class TestSchema(TestCase):
     def test_from_arrow_units(self):
         schema = Schema({"field1": int64(), "field2": timestamp("s")})
         self.assertEqual(schema.typemap, {"field1": int64(), "field2": timestamp("s")})
+
+    def test_nested_projection(self):
+        schema = Schema({"_id": int64(), "obj": {"a": int64(), "b": int64()}})
+        self.assertEqual(schema._get_projection(), {"_id": True, "obj": {"a": True, "b": True}})

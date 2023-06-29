@@ -13,6 +13,7 @@
 # limitations under the License.
 import collections.abc as abc
 
+from pyarrow import StructType
 from pymongoarrow.types import _normalize_typeid
 
 
@@ -62,8 +63,13 @@ class Schema:
 
     def _get_projection(self):
         projection = {"_id": False}
-        for fname, _ in self.typemap.items():
-            projection[fname] = True
+        for fname, ftype in self.typemap.items():
+            if isinstance(ftype, StructType):
+                projection[fname] = {}
+                for nested_ftype in ftype:
+                    projection[fname][nested_ftype.name] = True
+            else:
+                projection[fname] = True
         return projection
 
     def __eq__(self, other):
