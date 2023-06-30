@@ -72,6 +72,8 @@ class Schema:
 
     def _get_field_projection_value(self, ftype):
         value = True
+        if isinstance(ftype, ListType):
+            return self._get_field_projection_value(ftype.value_field.type)
         if isinstance(ftype, StructType):
             projection = {}
             for nested_ftype in ftype:

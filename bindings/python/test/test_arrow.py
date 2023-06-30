@@ -642,12 +642,12 @@ class ArrowApiTestMixin:
 
     def test_nested_contradicting_unused_schema(self):
         data = [{"obj": {"a": 1, "b": 1000000000}}, {"obj": {"a": 2, "b": 1.0e50}}]
-        schema = Schema({"_id": int32(), "obj": {"a": int32()}})
+        schema = Schema({"obj": {"a": int32()}})
 
         self.coll.drop()
         self.coll.insert_many(data)
         for func in [find_arrow_all, aggregate_arrow_all]:
-            out = func(self.coll, {} if func == find_arrow_all else [], schema=schema).drop(["_id"])
+            out = func(self.coll, {} if func == find_arrow_all else [], schema=schema)
             self.assertEqual(out["obj"].to_pylist(), [{"a": 1}, {"a": 2}])
 
 
