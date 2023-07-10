@@ -15,9 +15,9 @@ from datetime import datetime
 from unittest import TestCase
 
 from bson import Binary, Code, Decimal128, Int64, ObjectId
-from pyarrow import Table, float64, int64
+from pyarrow import Table, field, float64, int64, list_
 from pyarrow import schema as ArrowSchema
-from pyarrow import timestamp
+from pyarrow import struct, timestamp
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY
 
@@ -70,3 +70,22 @@ class TestSchema(TestCase):
     def test_from_arrow_units(self):
         schema = Schema({"field1": int64(), "field2": timestamp("s")})
         self.assertEqual(schema.typemap, {"field1": int64(), "field2": timestamp("s")})
+
+    def test_nested_projection(self):
+        schema = Schema({"_id": int64(), "obj": {"a": int64(), "b": int64()}})
+        self.assertEqual(schema._get_projection(), {"_id": True, "obj": {"a": True, "b": True}})
+
+    def test_list_projection(self):
+        schema = Schema(
+            {"_id": int64(), "list": list_(struct([field("a", int64()), field("b", int64())]))}
+        )
+        self.assertEqual(schema._get_projection(), {"_id": True, "list": {"a": True, "b": True}})
+
+    def test_list_of_list_projection(self):
+        schema = Schema(
+            {
+                "_id": int64(),
+                "list": list_(list_(struct([field("a", int64()), field("b", int64())]))),
+            }
+        )
+        self.assertEqual(schema._get_projection(), {"_id": True, "list": {"a": True, "b": True}})

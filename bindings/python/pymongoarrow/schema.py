@@ -13,6 +13,7 @@
 # limitations under the License.
 import collections.abc as abc
 
+from pyarrow import ListType, StructType
 from pymongoarrow.types import _normalize_typeid
 
 
@@ -62,9 +63,20 @@ class Schema:
 
     def _get_projection(self):
         projection = {"_id": False}
-        for fname, _ in self.typemap.items():
-            projection[fname] = True
+        for fname, ftype in self.typemap.items():
+            projection[fname] = self._get_field_projection_value(ftype)
         return projection
+
+    def _get_field_projection_value(self, ftype):
+        value = True
+        if isinstance(ftype, ListType):
+            return self._get_field_projection_value(ftype.value_field.type)
+        elif isinstance(ftype, StructType):
+            projection = {}
+            for nested_ftype in ftype:
+                projection[nested_ftype.name] = True
+            value = projection
+        return value
 
     def __eq__(self, other):
         if isinstance(other, type(self)):
