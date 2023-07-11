@@ -26,7 +26,7 @@ from math import isnan
 # Python imports
 import bson
 import numpy as np
-from pyarrow import timestamp, struct, field
+from pyarrow import timestamp, struct, field, scalar, FixedSizeBinaryScalar, StructScalar
 from pyarrow.lib import (
     tobytes, StructType, int32, int64, float64, string, bool_, list_
 )
@@ -485,6 +485,9 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)
+        result = pyarrow_wrap_array(out)
+        for x in result:
+            print("CORRECT: ", x)
         return pyarrow_wrap_array(out).cast(ObjectIdType())
 
     cdef shared_ptr[CFixedSizeBinaryBuilder] unwrap(self):
@@ -781,7 +784,14 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)
-        return pyarrow_wrap_array(out)
+        wrapped = pyarrow_wrap_array(out)
+        python_out = []
+        for original in wrapped:
+            for fname, ftype in original.items():
+                if isinstance(ftype, FixedSizeBinaryScalar) and ftype.type.byte_width == 12: # ObjectIdType
+                    print("BEFORE: ", fname, ftype)
+                    print("AFTER: ", fname, ftype.cast(ObjectIdType()))
+        return wrapped
 
     cdef shared_ptr[CStructBuilder] unwrap(self):
         return self.builder
