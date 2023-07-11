@@ -26,7 +26,7 @@ from math import isnan
 # Python imports
 import bson
 import numpy as np
-from pyarrow import timestamp, struct, field, scalar, FixedSizeBinaryScalar, StructScalar
+from pyarrow import timestamp, struct, field, scalar, FixedSizeBinaryScalar, StructScalar, array
 from pyarrow.lib import (
     tobytes, StructType, int32, int64, float64, string, bool_, list_
 )
@@ -487,7 +487,7 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
             self.builder.get().Finish(&out)
         result = pyarrow_wrap_array(out)
         for x in result:
-            print("CORRECT: ", x)
+            print("CORRECT: ", result.type, type(result), x.type, type(x))
         return pyarrow_wrap_array(out).cast(ObjectIdType())
 
     cdef shared_ptr[CFixedSizeBinaryBuilder] unwrap(self):
@@ -787,10 +787,22 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         wrapped = pyarrow_wrap_array(out)
         python_out = []
         for original in wrapped:
+            new_types = []
+            new_names = list(original.keys())
             for fname, ftype in original.items():
+                #new_names.append(fname)
                 if isinstance(ftype, FixedSizeBinaryScalar) and ftype.type.byte_width == 12: # ObjectIdType
-                    print("BEFORE: ", fname, ftype)
-                    print("AFTER: ", fname, ftype.cast(ObjectIdType()))
+                    print("TYPE: ", ftype, ftype.type, type(ftype))
+                    new_ftype = ObjectIdType()
+                    #print("TYPE: ", new_ftype, new_ftype.storage_type, type(new_ftype))
+                    #print("ARRAY: ", array([(fname, ftype)]))
+                    new_types.append(new_ftype)
+                else:
+                    new_types.append(ftype.type)
+            python_out.append(struct(zip(new_names, new_types)))
+            print("BEFORE: ", wrapped, wrapped.type, type(wrapped))
+            print("AFTER: ", python_out[0], python_out, type(python_out[0]))
+            print("AFTER AFTER: ", array([], type=python_out[0]))
         return wrapped
 
     cdef shared_ptr[CStructBuilder] unwrap(self):
