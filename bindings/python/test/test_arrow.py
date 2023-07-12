@@ -21,7 +21,7 @@ from test.utils import AllowListEventListener, NullsTestMixin
 
 import pyarrow
 import pymongo
-from bson import Binary, CodecOptions, Decimal128, ObjectId
+from bson import Binary, Code, CodecOptions, Decimal128, ObjectId
 from pyarrow import Table, bool_, csv, decimal256, field, int32, int64, list_
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
@@ -650,15 +650,26 @@ class ArrowApiTestMixin:
             out = func(self.coll, {} if func == find_arrow_all else [], schema=schema)
             self.assertEqual(out["obj"].to_pylist(), [{"a": 1}, {"a": 2}])
 
-    def test_nested_bson_objectId(self):
-        object_id = ObjectId()
-        data = {'_id': object_id, 'id1': object_id, 'obj': {'id2': object_id, 'id3': object_id}}
+    def test_nested_bson_extension_types(self):
+        data = {
+            "obj": {
+                "obj_id": ObjectId(),
+                "dec_128": Decimal128("0.0005"),
+                "binary": Binary(b"123"),
+                "code": Code(""),
+            }
+        }
 
         self.coll.drop()
         self.coll.insert_one(data)
         out = find_arrow_all(self.coll, {})
-        for schema_field in out.schema:
-            self.assertIsInstance(schema_field.type, ObjectIdType)
+        obj_schema_type = out.field("obj").type
+
+        self.assertIsInstance(obj_schema_type.field("obj_id").type, ObjectIdType)
+        self.assertIsInstance(obj_schema_type.field("dec_128").type, Decimal128Type)
+        self.assertIsInstance(obj_schema_type.field("binary").type, BinaryType)
+        self.assertIsInstance(obj_schema_type.field("code").type, CodeType)
+
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):
     def run_find(self, *args, **kwargs):

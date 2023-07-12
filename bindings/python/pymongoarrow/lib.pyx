@@ -26,7 +26,7 @@ from math import isnan
 # Python imports
 import bson
 import numpy as np
-from pyarrow import timestamp, struct, field, scalar, FixedSizeBinaryScalar, StructScalar, array
+from pyarrow import timestamp, struct, field
 from pyarrow.lib import (
     tobytes, StructType, int32, int64, float64, string, bool_, list_
 )
@@ -485,14 +485,10 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)
-        result = pyarrow_wrap_array(out)
-        for x in result:
-            print("CORRECT: ", result.type, type(result), x.type, type(x))
         return pyarrow_wrap_array(out).cast(ObjectIdType())
 
     cdef shared_ptr[CFixedSizeBinaryBuilder] unwrap(self):
         return self.builder
-
 
 cdef class Int32Builder(_ArrayBuilderBase):
     cdef:
@@ -725,6 +721,8 @@ cdef object get_field_builder(object field, object tzinfo):
         field_builder = Decimal128Builder()
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.binary:
         field_builder = BinaryBuilder(field_type.subtype)
+    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.code:
+        field_builder = CodeBuilder()
     else:
         field_builder = StringBuilder()
     return field_builder
@@ -735,6 +733,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         shared_ptr[CStructBuilder] builder
         object dtype
         object context
+        object builder_map
 
     def __cinit__(self, StructType dtype, tzinfo=None, MemoryPool memory_pool=None):
         cdef StringBuilder field_builder
@@ -747,11 +746,11 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
 
         self.context = context = PyMongoArrowContext(None, {})
         context.tzinfo = tzinfo
-        builder_map = context.builder_map
+        self.builder_map = context.builder_map
 
         for field in dtype:
             field_builder = <StringBuilder>get_field_builder(field, tzinfo)
-            builder_map[field.name.encode('utf-8')] = field_builder
+            self.builder_map[field.name.encode('utf-8')] = field_builder
             c_field_builders.push_back(<shared_ptr[CArrayBuilder]>field_builder.builder)
 
         self.builder.reset(new CStructBuilder(pyarrow_unwrap_data_type(dtype), pool, c_field_builders))
@@ -784,26 +783,29 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)
-        wrapped = pyarrow_wrap_array(out)
-        python_out = []
-        for original in wrapped:
+
+        struct_array = pyarrow_wrap_array(out)
+        for struct_def in struct_array:
             new_types = []
-            new_names = list(original.keys())
-            for fname, ftype in original.items():
-                #new_names.append(fname)
-                if isinstance(ftype, FixedSizeBinaryScalar) and ftype.type.byte_width == 12: # ObjectIdType
-                    print("TYPE: ", ftype, ftype.type, type(ftype))
+            new_names = list(struct_def.keys())
+            for fname, ftype in struct_def.items():
+                if type(self.builder_map[fname.encode('utf-8')]).__name__ == ObjectIdBuilder.__name__: # ObjectIdType
                     new_ftype = ObjectIdType()
-                    #print("TYPE: ", new_ftype, new_ftype.storage_type, type(new_ftype))
-                    #print("ARRAY: ", array([(fname, ftype)]))
+                    new_types.append(new_ftype)
+                elif type(self.builder_map[fname.encode('utf-8')]).__name__ == Decimal128Builder.__name__: # Decimal128Type
+                   new_ftype = Decimal128Type_()
+                   new_types.append(new_ftype)
+                elif type(self.builder_map[fname.encode('utf-8')]).__name__ == BinaryBuilder.__name__: # BinaryType
+                    new_ftype = BinaryType(self.dtype.field(fname).type.subtype)
+                    new_types.append(new_ftype)
+                elif type(self.builder_map[fname.encode('utf-8')]).__name__ == CodeBuilder.__name__: # CodeType
+                    new_ftype = CodeType()
                     new_types.append(new_ftype)
                 else:
                     new_types.append(ftype.type)
-            python_out.append(struct(zip(new_names, new_types)))
-            print("BEFORE: ", wrapped, wrapped.type, type(wrapped))
-            print("AFTER: ", python_out[0], python_out, type(python_out[0]))
-            print("AFTER AFTER: ", array([], type=python_out[0]))
-        return wrapped
+
+            new_dtype = struct(dict(zip(new_names, new_types)))
+        return struct_array.cast(new_dtype)
 
     cdef shared_ptr[CStructBuilder] unwrap(self):
         return self.builder
