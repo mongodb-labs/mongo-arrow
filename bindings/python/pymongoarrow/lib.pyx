@@ -789,22 +789,23 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
             new_types = []
             new_names = list(struct_def.keys())
             for fname, ftype in struct_def.items():
-                if type(self.builder_map[fname.encode('utf-8')]).__name__ == ObjectIdBuilder.__name__: # ObjectIdType
+                fname_encoded = fname.encode('utf-8')]
+                if type(self.builder_map[fname_encoded]).__name__ == ObjectIdBuilder.__name__: # ObjectIdType
                     new_ftype = ObjectIdType()
                     new_types.append(new_ftype)
-                elif type(self.builder_map[fname.encode('utf-8')]).__name__ == Decimal128Builder.__name__: # Decimal128Type
+                elif type(self.builder_map[fname_encoded]).__name__ == Decimal128Builder.__name__: # Decimal128Type
                    new_ftype = Decimal128Type_()
                    new_types.append(new_ftype)
-                elif type(self.builder_map[fname.encode('utf-8')]).__name__ == BinaryBuilder.__name__: # BinaryType
+                elif type(self.builder_map[fname_encoded]).__name__ == BinaryBuilder.__name__: # BinaryType
                     new_ftype = BinaryType(self.dtype.field(fname).type.subtype)
                     new_types.append(new_ftype)
-                elif type(self.builder_map[fname.encode('utf-8')]).__name__ == CodeBuilder.__name__: # CodeType
+                elif type(self.builder_map[fname_encoded]).__name__ == CodeBuilder.__name__: # CodeType
                     new_ftype = CodeType()
                     new_types.append(new_ftype)
                 else:
                     new_types.append(ftype.type)
 
-            new_dtype = struct(dict(zip(new_names, new_types)))
+            new_dtype = struct(zip(new_names, new_types))
         return struct_array.cast(new_dtype)
 
     cdef shared_ptr[CStructBuilder] unwrap(self):
