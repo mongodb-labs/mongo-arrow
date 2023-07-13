@@ -789,7 +789,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
             new_types = []
             new_names = list(struct_def.keys())
             for fname, ftype in struct_def.items():
-                builder_instance = self.builder_map[fname.encode('utf-8')])
+                builder_instance = self.builder_map[fname.encode('utf-8')]
                 if isinstance(builder_instance, ObjectIdBuilder): # ObjectIdType
                     new_ftype = ObjectIdType()
                     new_types.append(new_ftype)
