@@ -789,17 +789,17 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
             new_types = []
             new_names = list(struct_def.keys())
             for fname, ftype in struct_def.items():
-                fname_encoded = fname.encode('utf-8')
-                if type(self.builder_map[fname_encoded]).__name__ == ObjectIdBuilder.__name__: # ObjectIdType
+                builder_name = type(self.builder_map[fname.encode('utf-8')]).__name__
+                if builder_name == ObjectIdBuilder.__name__: # ObjectIdType
                     new_ftype = ObjectIdType()
                     new_types.append(new_ftype)
-                elif type(self.builder_map[fname_encoded]).__name__ == Decimal128Builder.__name__: # Decimal128Type
+                elif builder_name == Decimal128Builder.__name__: # Decimal128Type
                    new_ftype = Decimal128Type_()
                    new_types.append(new_ftype)
-                elif type(self.builder_map[fname_encoded]).__name__ == BinaryBuilder.__name__: # BinaryType
+                elif builder_name == BinaryBuilder.__name__: # BinaryType
                     new_ftype = BinaryType(self.dtype.field(fname).type.subtype)
                     new_types.append(new_ftype)
-                elif type(self.builder_map[fname_encoded]).__name__ == CodeBuilder.__name__: # CodeType
+                elif builder_name == CodeBuilder.__name__: # CodeType
                     new_ftype = CodeType()
                     new_types.append(new_ftype)
                 else:
