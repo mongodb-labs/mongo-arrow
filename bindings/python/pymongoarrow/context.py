@@ -13,8 +13,6 @@
 # limitations under the License.
 from bson.codec_options import DEFAULT_CODEC_OPTIONS
 from pyarrow import Table, timestamp
-from pymongoarrow.types import _BsonArrowTypes, _get_internal_typemap
-
 from pymongoarrow.lib import (
     BinaryBuilder,
     BoolBuilder,
@@ -29,6 +27,7 @@ from pymongoarrow.lib import (
     ObjectIdBuilder,
     StringBuilder,
 )
+from pymongoarrow.types import _BsonArrowTypes, _get_internal_typemap
 
 _TYPE_TO_BUILDER_CLS = {
     _BsonArrowTypes.int32: Int32Builder,

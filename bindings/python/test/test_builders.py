@@ -17,8 +17,6 @@ from unittest import TestCase
 
 from bson import Binary, Code, Decimal128, ObjectId
 from pyarrow import Array, bool_, field, int32, int64, list_, struct, timestamp
-from pymongoarrow.types import ObjectIdType
-
 from pymongoarrow.lib import (
     BinaryBuilder,
     BoolBuilder,
@@ -33,6 +31,7 @@ from pymongoarrow.lib import (
     ObjectIdBuilder,
     StringBuilder,
 )
+from pymongoarrow.types import ObjectIdType
 
 
 class IntBuildersTestMixin:
