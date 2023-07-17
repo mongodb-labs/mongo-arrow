@@ -1,8 +1,17 @@
 Changelog
 =========
 
-Changes in Version 1.0.0
+Changes in Version 1.0.2
 ------------------------
+- Bug fix for projection on nested fields.
+- Bug fix for nested extension objects in auto schema.
+
+
+Changes in Version 1.0.1
+------------------------
+
+Note: The 1.0.0 release had an incorrect changelog.
+
 - Support BSON binary type.
 - Support BSON Decimal128 type.
 - Support Pandas 2.0 and Pandas extension types.
