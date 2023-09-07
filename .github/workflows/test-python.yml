@@ -43,7 +43,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: '**/setup.cfg'
+          cache-dependency-path: 'bindings/python/pyproject.toml'
+          allow-prereleases: true
       - name: Set up env
         run: |
            echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
