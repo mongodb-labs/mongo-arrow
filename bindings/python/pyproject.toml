@@ -4,7 +4,7 @@ requires = [
     "wheel>=0.37",
     "cython>=0.29",
     # Must be kept in sync with the `install_requires` in `setup.cfg`
-    "pyarrow>=12.0,<12.1.0",
+    "pyarrow>=13.0,<13.1.0",
 ]
 
 [tool.cibuildwheel]

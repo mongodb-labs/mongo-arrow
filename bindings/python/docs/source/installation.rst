@@ -6,12 +6,12 @@ System Compatibility
 --------------------
 
 PyMongoArrow is regularly built and tested on macOS and Linux
-(Ubuntu 20.04).
+(Ubuntu 22.04).
 
 Python Compatibility
 --------------------
 
-PyMongoArrow is currently compatible with CPython 3.8, 3.9, 3.10 and 3.11.
+PyMongoArrow is currently compatible with CPython 3.8, 3.9, 3.10, 3.11 and 3.12.
 
 Using Pip
 ---------
@@ -56,8 +56,8 @@ Dependencies
 
 PyMongoArrow requires:
 
-- PyMongo>=3.11 (PyMongo 4.0 is supported from 0.2)
-- PyArrow>=7,<7.1
+- PyMongo>=4.4
+- PyArrow>=13,<13.1
 
 To use PyMongoArrow with a PyMongo feature that requires an optional
 dependency, users must install PyMongo with the given dependency manually.
@@ -65,11 +65,11 @@ dependency, users must install PyMongo with the given dependency manually.
 .. note:: PyMongo's optional dependencies are detailed
    `here <https://pymongo.readthedocs.io/en/stable/installation.html#dependencies>`_.
 
-For example, to use PyMongoArrow with MongoDB Atlas' ``mongodb+srv://`` URIs
-users must install PyMongo with the ``srv`` extra in addition to installing
+For example, to use PyMongoArrow with Client-Side Field Level Encryption
+users must install PyMongo with the ``encryption`` extra in addition to installing
 PyMongoArrow::
 
-  $ python -m pip install 'pymongo[srv]' pymongoarrow
+  $ python -m pip install 'pymongo[encryption]' pymongoarrow
 
 Applications intending to use PyMongoArrow APIs that return query result sets
 as :class:`pandas.DataFrame` instances (e.g. :meth:`~pymongoarrow.api.find_pandas_all`)
