@@ -88,7 +88,7 @@ jobs:
           python -m pip install -v -e ".[test]"
       - name: Run the tests
         run: |
-          PYTHONWARNINGS=error python -m pytest -s -vv
+          python -m pytest -v
       - name: Check the manifest
         run: |
           pip install check-manifest

@@ -95,3 +95,6 @@ test-skip = "*arm64"
 testpaths = ["test"]
 addopts = "-ra --maxfail=10 --durations=5"
 faulthandler_timeout=1500
+filterwarnings = [
+  "error"
+]
