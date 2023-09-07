@@ -6,7 +6,7 @@ System Compatibility
 --------------------
 
 PyMongoArrow is regularly built and tested on macOS and Linux
-(Ubuntu 22.04).
+(Ubuntu 20.04).
 
 Python Compatibility
 --------------------
