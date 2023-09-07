@@ -15,6 +15,7 @@ graft pymongoarrow
 
 recursive-include test *
 recursive-exclude docs *
+recursive-exclude benchmarks *
 
 global-exclude *.cpp
 global-exclude *.dylib
