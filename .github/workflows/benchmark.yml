@@ -32,9 +32,6 @@ jobs:
         uses: supercharge/mongodb-github-action@1.9.0
         with:
           mongodb-version: 6.0
-      - name: Install libbson
-        run: |
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
       - name: Install Python dependencies
         run: |
           python -m pip install -U pip
@@ -60,14 +57,15 @@ jobs:
           # the current target that this PR will be merged into is HEAD^1.
           git update-ref refs/bm/merge-target $(git log -n 1 --pretty=format:"%H" main --)
           git checkout --force refs/bm/pr --
-          # Install the library
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -e ".[test]"
+          # Build and install the manylinux wheel
+          bash ./build-manylinux-wheel.sh
+          pip install dist/*.whl
           run_asv
 
-
           git checkout --force refs/bm/merge-target --
-          # Install the library
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -e ".[test]"
+          # Build and install the manylinux wheel
+          bash ./build-manylinux-wheel.sh
+          pip install dist/*.whl
           run_asv
 
       - name: Compare benchmarks
