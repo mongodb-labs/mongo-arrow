@@ -39,7 +39,8 @@ jobs:
         run: |
           python -m pip install -U pip
           python -m pip install asv virtualenv
-
+      - name: Install pyarrow
+        run: ./build-pyarrow.sh
       - name: Run benchmarks
         run: |
           set -eu
