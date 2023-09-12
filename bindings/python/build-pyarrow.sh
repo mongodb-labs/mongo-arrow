@@ -6,10 +6,9 @@ set -o errexit
 # Requirements:
 # build-essential cmake python3-dev python3.10-venv libssl-dev
 git clone https://github.com/apache/arrow.git
-cd arrow
+pushd arrow
 git submodule update --init
-cd ..
-source ./pyarrow-dev/bin/activate
+popd
 pip install -r arrow/python/requirements-build.txt
 DIST=$(pwd)/arrow-dist
 mkdir $DIST
