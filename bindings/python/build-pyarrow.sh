@@ -12,6 +12,8 @@ popd
 pip install -r arrow/python/requirements-build.txt
 DIST=$(pwd)/arrow-dist
 mkdir $DIST
+mkdir arrow/cpp/build
+pushd arrow/cpp/build
 export ARROW_HOME=$DIST
 export LD_LIBRARY_PATH="$DIST/lib:$LD_LIBRARY_PATH"
 export CMAKE_PREFIX_PATH="$ARROW_HOME:$CMAKE_PREFIX_PATH"
