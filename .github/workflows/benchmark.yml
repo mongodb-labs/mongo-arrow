@@ -42,7 +42,7 @@ jobs:
 
       - name: Run benchmarks
         run: |
-          set -eu
+          set -eux
           run_asv () {
               if [ ! -e "asv.conf.json" ] ; then
                   git checkout refs/bm/pr asv.conf.json
