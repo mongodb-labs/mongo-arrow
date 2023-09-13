@@ -12,10 +12,9 @@ Command Line Tools. Additionally, you need CMake and pkg-config::
   $ brew install cmake
   $ brew install pkg-config
 
-On Linux, you will need docker, to run the "build-manylinux-wheel.sh" script.
+On Linux, you require gcc 11, CMake and pkg-config.
 
-On Windows, you will need Visual Studio 2017 or later, with the Python Development
-workload installed.
+Windows is not yet supported.
 
 Environment Setup
 -----------------
@@ -37,6 +36,7 @@ libbson
 PyMongoArrow uses `libbson <http://mongoc.org/libbson/current/index.html>`_.
 Detailed instructions for building/installing ``libbson`` can be found
 `here <http://mongoc.org/libmongoc/1.21.0/installing.html#installing-the-mongodb-c-driver-libmongoc-and-bson-library-libbson>`_.
+
 
 You can either use a system-provided version of ``libbson`` that is properly
 configured for use with ``pkg-config``, or use the provided ``build-libbson.sh`` script to build it::
@@ -65,8 +65,6 @@ If you built libbson using the `build-libbson` script then use the same `LIBBSON
 
   (pymongoarrow) $ LIBBSON_INSTALL_DIR=$(pwd)/libbson pip install -v -e ".[test]"
 
-Note: we do not support editable installs on Linux, the "build-manylinux-wheel.sh" script must be used
-to create the wheel.
 
 Test
 ----
