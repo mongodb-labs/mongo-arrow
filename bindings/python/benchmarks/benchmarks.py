@@ -299,6 +299,10 @@ class ProfileReadExtensionSmall(Read):
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
 
+    # This must be skipped because arrow can't read the Decimal128Type
+    def time_conventional_arrow(self):
+        pass
+
 
 class ProfileReadExtensionLarge(Read):
     large_doc_keys = [f"{i}" for i in range(LARGE_DOC_SIZE)]
@@ -315,6 +319,10 @@ class ProfileReadExtensionLarge(Read):
             "%d docs, %dk each with %d keys"
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
+
+    # This must be skipped because arrow can't read the Decimal128Type
+    def time_conventional_arrow(self):
+        pass
 
 
 class ProfileInsertSmall(Insert):
