@@ -306,6 +306,9 @@ class ProfileReadExtensionSmall(Read):
     def time_insert_conventional(self):
         pass
 
+    def peakmem_conventional_arrow(self):
+        pass
+
 
 class ProfileReadExtensionLarge(Read):
     large_doc_keys = [f"{i}" for i in range(LARGE_DOC_SIZE)]
@@ -328,6 +331,9 @@ class ProfileReadExtensionLarge(Read):
         pass
 
     def time_insert_conventional(self):
+        pass
+
+    def peakmem_conventional_arrow(self):
         pass
 
 
