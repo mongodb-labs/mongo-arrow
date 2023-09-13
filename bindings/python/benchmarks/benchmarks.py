@@ -334,9 +334,6 @@ class ProfileReadExtensionLarge(Read):
 class ProfileInsertSmall(Insert):
     large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
     schema = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
-    arrow_table = find_arrow_all(db.benchmark, {}, schema=schema)
-    pandas_table = find_pandas_all(db.benchmark, {}, schema=schema)
-    numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)
     dtypes = np.dtype([("x", np.int64), ("y", np.float64)])
 
     def setup(self):
@@ -348,14 +345,14 @@ class ProfileInsertSmall(Insert):
             "%d docs, %dk each with %d keys"
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
+        self.arrow_table = find_arrow_all(db.benchmark, {}, schema=self.schema)
+        self.pandas_table = find_pandas_all(db.benchmark, {}, schema=self.schema)
+        self.numpy_arrays = find_numpy_all(db.benchmark, {}, schema=self.schema)
 
 
 class ProfileInsertLarge(Insert):
     large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
     schema = Schema({k: pyarrow.float64() for k in large_doc_keys})
-    arrow_table = find_arrow_all(db.benchmark, {}, schema=schema)
-    pandas_table = find_pandas_all(db.benchmark, {}, schema=schema)
-    numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)
     dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
 
     def setup(self):
@@ -367,3 +364,6 @@ class ProfileInsertLarge(Insert):
             "%d docs, %dk each with %d keys"
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
+        self.arrow_table = find_arrow_all(db.benchmark, {}, schema=self.schema)
+        self.pandas_table = find_pandas_all(db.benchmark, {}, schema=self.schema)
+        self.numpy_arrays = find_numpy_all(db.benchmark, {}, schema=self.schema)
