@@ -53,7 +53,7 @@ class Insert(ABC):
     rounds = 1
 
     @abc.abstractmethod
-    def setup_cache(self):
+    def setup(self):
         raise NotImplementedError
 
     def time_insert_arrow(self):
@@ -94,7 +94,7 @@ class Read(ABC):
     rounds = 1
 
     @abc.abstractmethod
-    def setup_cache(self):
+    def setup(self):
         raise NotImplementedError
 
     # We need this because the naive methods don't always convert nested objects.
@@ -160,7 +160,7 @@ class ProfileReadArray(Read):
         }
     )
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict(
@@ -205,7 +205,7 @@ class ProfileReadDocument(Read):
         }
     )
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict(
@@ -247,7 +247,7 @@ class ProfileReadSmall(Read):
     schema = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
     dtypes = np.dtype(np.dtype([("x", np.int64), ("y", np.float64)]))
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict(
@@ -268,7 +268,7 @@ class ProfileReadLarge(Read):
     schema = Schema({k: pyarrow.float64() for k in large_doc_keys})
     dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
 
@@ -284,7 +284,7 @@ class ProfileReadExtensionSmall(Read):
     schema = Schema({"x": Decimal128Type(), "y": BinaryType(10)})
     dtypes = np.dtype(np.dtype([("x", np.object_), ("y", np.object_)]))
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict(
@@ -312,7 +312,7 @@ class ProfileReadExtensionLarge(Read):
     schema = Schema({k: Decimal128Type() for k in large_doc_keys})
     dtypes = np.dtype([(k, np.object_) for k in large_doc_keys])
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
 
@@ -339,7 +339,7 @@ class ProfileInsertSmall(Insert):
     numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)
     dtypes = np.dtype([("x", np.int64), ("y", np.float64)])
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict([("x", 1), ("y", math.pi)])
@@ -358,7 +358,7 @@ class ProfileInsertLarge(Insert):
     numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)
     dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict([(k, math.pi) for k in self.large_doc_keys])
