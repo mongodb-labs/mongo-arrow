@@ -303,6 +303,9 @@ class ProfileReadExtensionSmall(Read):
     def time_conventional_arrow(self):
         pass
 
+    def time_insert_conventional(self):
+        pass
+
 
 class ProfileReadExtensionLarge(Read):
     large_doc_keys = [f"{i}" for i in range(LARGE_DOC_SIZE)]
@@ -322,6 +325,9 @@ class ProfileReadExtensionLarge(Read):
 
     # This must be skipped because arrow can't read the Decimal128Type
     def time_conventional_arrow(self):
+        pass
+
+    def time_insert_conventional(self):
         pass
 
 
