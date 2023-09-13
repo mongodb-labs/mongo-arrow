@@ -32,17 +32,14 @@ jobs:
         uses: supercharge/mongodb-github-action@1.9.0
         with:
           mongodb-version: 6.0
-      - name: Set up env
-        run: |
-          echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$PWD/libbson/lib" >> $GITHUB_ENV
       - name: Install libbson
         run: |
-          ./build-libbson.sh
+          LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
       - name: Install Python dependencies
         run: |
           python -m pip install -U pip
           python -m pip install asv virtualenv
+
       - name: Run benchmarks
         run: |
           set -eu
