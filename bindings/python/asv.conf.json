@@ -6,16 +6,9 @@
     "repo_subdir": "bindings/python",
     "branches": ["main"],
     "matrix": {
-         "req": {
-             "pyarrow": ["7.0.0"],
-             "pymongo": ["3.11", "4.1.1"],
-             "pandas": [],
-             "Cython": [],
-             "numpy": []
-         },
          "env": {
-             "N_DOCS": ["20000", "1000"],
-         },
+             "N_DOCS": ["20000", "1000"]
+         }
     },
-    "environment_type": "virtualenv",
+    "environment_type": "virtualenv"
 }
