@@ -12,7 +12,7 @@ Command Line Tools. Additionally, you need CMake and pkg-config::
   $ brew install cmake
   $ brew install pkg-config
 
-On Linux, you require gcc 12, CMake and pkg-config.
+On Linux, installation requires gcc 12, CMake and pkg-config.
 
 Windows is not yet supported.
 
