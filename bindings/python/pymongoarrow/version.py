@@ -14,4 +14,4 @@
 
 __version__ = "1.1.0.dev0"
 
-_MIN_LIBBSON_VERSION = "1.21.0"
+_MIN_LIBBSON_VERSION = "1.23.1"

@@ -103,7 +103,7 @@ class TestExplicitPandasApi(PandasTestBase):
             # Object types may lose type information in a round trip.
             # Integer types with missing values are converted to floating
             # point in a round trip.
-            if str(out_col.dtype) in ["object", "float64"]:
+            if str(out_col.dtype) in ["object", "float64", "datetime64[ms]"]:
                 out_col = out_col.astype(in_col.dtype)
             pd.testing.assert_series_equal(in_col, out_col)
 
@@ -140,7 +140,7 @@ class TestExplicitPandasApi(PandasTestBase):
         schema["Int64"] = pd.Int64Dtype()
         schema["int"] = pd.Int32Dtype()
         schema["str"] = "string"
-        schema["datetime"] = "datetime64[ns]"
+        schema["datetime"] = "datetime64[ms]"
 
         data = pd.DataFrame(
             data={
@@ -224,7 +224,7 @@ class TestExplicitPandasApi(PandasTestBase):
             "bool": "bool",
             "double": "float64",
             "int32": "int32",
-            "dt": "datetime64[ns]",
+            "dt": "datetime64[ms]",
         }
         schema["nested"] = "object"
 
@@ -274,7 +274,7 @@ class TestExplicitPandasApi(PandasTestBase):
     def test_auto_schema_tz(self):
         schema = {
             "bool": "bool",
-            "dt": "datetime64[ns, US/Eastern]",
+            "dt": "datetime64[ms, US/Eastern]",
             "string": "str",
         }
         data = pd.DataFrame(
@@ -371,7 +371,7 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         str: "object",
         int: ["int64", "float64"],
         float: "float64",
-        datetime.datetime: "datetime64[ns]",
+        datetime.datetime: "datetime64[ms]",
         ObjectId: "bson_PandasObjectId",
         Decimal128: "bson_PandasDecimal128",
         bool: "object",

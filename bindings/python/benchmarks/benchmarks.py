@@ -53,7 +53,7 @@ class Insert(ABC):
     rounds = 1
 
     @abc.abstractmethod
-    def setup_cache(self):
+    def setup(self):
         raise NotImplementedError
 
     def time_insert_arrow(self):
@@ -94,7 +94,7 @@ class Read(ABC):
     rounds = 1
 
     @abc.abstractmethod
-    def setup_cache(self):
+    def setup(self):
         raise NotImplementedError
 
     # We need this because the naive methods don't always convert nested objects.
@@ -160,7 +160,7 @@ class ProfileReadArray(Read):
         }
     )
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict(
@@ -205,7 +205,7 @@ class ProfileReadDocument(Read):
         }
     )
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict(
@@ -247,7 +247,7 @@ class ProfileReadSmall(Read):
     schema = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
     dtypes = np.dtype(np.dtype([("x", np.int64), ("y", np.float64)]))
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict(
@@ -268,7 +268,7 @@ class ProfileReadLarge(Read):
     schema = Schema({k: pyarrow.float64() for k in large_doc_keys})
     dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
 
@@ -284,7 +284,7 @@ class ProfileReadExtensionSmall(Read):
     schema = Schema({"x": Decimal128Type(), "y": BinaryType(10)})
     dtypes = np.dtype(np.dtype([("x", np.object_), ("y", np.object_)]))
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict(
@@ -299,13 +299,20 @@ class ProfileReadExtensionSmall(Read):
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
 
+    # This must be skipped because arrow can't read the Decimal128Type
+    def time_conventional_arrow(self):
+        pass
+
+    def time_insert_conventional(self):
+        pass
+
 
 class ProfileReadExtensionLarge(Read):
     large_doc_keys = [f"{i}" for i in range(LARGE_DOC_SIZE)]
     schema = Schema({k: Decimal128Type() for k in large_doc_keys})
     dtypes = np.dtype([(k, np.object_) for k in large_doc_keys])
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
 
@@ -316,16 +323,20 @@ class ProfileReadExtensionLarge(Read):
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
 
+    # This must be skipped because arrow can't read the Decimal128Type
+    def time_conventional_arrow(self):
+        pass
+
+    def time_insert_conventional(self):
+        pass
+
 
 class ProfileInsertSmall(Insert):
     large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
     schema = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
-    arrow_table = find_arrow_all(db.benchmark, {}, schema=schema)
-    pandas_table = find_pandas_all(db.benchmark, {}, schema=schema)
-    numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)
     dtypes = np.dtype([("x", np.int64), ("y", np.float64)])
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict([("x", 1), ("y", math.pi)])
@@ -334,17 +345,17 @@ class ProfileInsertSmall(Insert):
             "%d docs, %dk each with %d keys"
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
+        self.arrow_table = find_arrow_all(db.benchmark, {}, schema=self.schema)
+        self.pandas_table = find_pandas_all(db.benchmark, {}, schema=self.schema)
+        self.numpy_arrays = find_numpy_all(db.benchmark, {}, schema=self.schema)
 
 
 class ProfileInsertLarge(Insert):
     large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
     schema = Schema({k: pyarrow.float64() for k in large_doc_keys})
-    arrow_table = find_arrow_all(db.benchmark, {}, schema=schema)
-    pandas_table = find_pandas_all(db.benchmark, {}, schema=schema)
-    numpy_arrays = find_numpy_all(db.benchmark, {}, schema=schema)
     dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
 
-    def setup_cache(self):
+    def setup(self):
         coll = db.benchmark
         coll.drop()
         base_dict = dict([(k, math.pi) for k in self.large_doc_keys])
@@ -353,3 +364,6 @@ class ProfileInsertLarge(Insert):
             "%d docs, %dk each with %d keys"
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
+        self.arrow_table = find_arrow_all(db.benchmark, {}, schema=self.schema)
+        self.pandas_table = find_pandas_all(db.benchmark, {}, schema=self.schema)
+        self.numpy_arrays = find_numpy_all(db.benchmark, {}, schema=self.schema)

@@ -3,9 +3,69 @@ requires = [
     "setuptools>=47.9",
     "wheel>=0.37",
     "cython>=0.29",
-    # Must be kept in sync with the `install_requires` in `setup.cfg`
-    "pyarrow>=12.0,<12.1.0",
+    # Must be kept in sync with "project.dependencies" below.
+    "pyarrow>=13.0,<13.1.0",
 ]
+
+[project]
+name = "pymongoarrow"
+description = '"Tools for using NumPy, Pandas and PyArrow with MongoDB"'
+license = {text = "Apache License, Version 2.0"}
+authors = [{name = "Prashant Mital"}]
+maintainers = [{name = "MongoDB"}, {name = "Inc."}]
+keywords = ["mongo", "mongodb", "pymongo", "arrow", "bson", "numpy", "pandas"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Database",
+]
+requires-python = ">=3.8"
+dependencies = [
+    # Must be kept in sync with "build_sytem.requires" above.
+    "pyarrow >=13.0,<13.1",
+    "pymongo >=4.4,<5",
+    "pandas >=1.3.5,<3",
+]
+dynamic = ["version"]
+
+[project.readme]
+file = "README.rst"
+content-type = "text/x-rst"
+
+[project.urls]
+Homepage = "https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python"
+
+[project.optional-dependencies]
+test = ["pytz", "pytest"]
+
+[tool.setuptools]
+zip-safe = false
+include-package-data = true
+platforms = ["Linux", "Mac OS X"]
+
+[tool.setuptools.package-data]
+pymongoarrow = ["*.pxd", "*.pyx", "*.pyi", "*.so.*", "*.dylib", "*.dll", "*.pyd"]
+
+[tool.setuptools.packages.find]
+exclude = [
+    "test",
+    "docs",
+]
+namespaces = false
+
+[tool.setuptools.dynamic]
+version = {attr = "pymongoarrow.version.__version__"}
 
 [tool.cibuildwheel]
 skip = "pp* *-manylinux_i686 *_ppc64le *_s390x *-musllinux*"
@@ -20,7 +80,7 @@ LIBBSON_INSTALL_DIR = "./libbson"
 
 [tool.cibuildwheel.linux]
 archs = "x86_64 aarch64"
-manylinux-x86_64-image = "manylinux2014"
+manylinux-x86_64-image = "manylinux_2_28"
 repair-wheel-command = [
     "pip install \"auditwheel>=5,<6\"",
     "python addtags.py {wheel} {dest_dir}"
@@ -29,3 +89,11 @@ repair-wheel-command = [
 [tool.cibuildwheel.macos]
 archs = "x86_64 arm64"
 test-skip = "*arm64"
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+addopts = "-ra --maxfail=10 --durations=5"
+faulthandler_timeout=1500
+filterwarnings = [
+  "error"
+]

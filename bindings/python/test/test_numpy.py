@@ -261,7 +261,7 @@ class TestExplicitNumPyApi(NumpyTestBase):
                 )
                 del out["_id"]
                 # Note: Numpy does not handle timezones.
-                assert out["dt"].dtype == np.dtype("<M8[ns]")
+                assert out["dt"].dtype in [np.dtype("<M8[ms]"), np.dtype("<M8[ns]")]
                 assert data["dt"].dtype == np.dtype("<M8[ms]")
                 out.pop("dt")
                 self.assert_numpy_equal(data, out)
