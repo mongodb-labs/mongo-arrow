@@ -21,8 +21,19 @@ from test.utils import AllowListEventListener, NullsTestMixin
 
 import pyarrow
 import pymongo
-from bson import Binary, CodecOptions, Decimal128, ObjectId
-from pyarrow import Table, bool_, csv, decimal256, field, int32, int64, list_
+from bson import Binary, Code, CodecOptions, Decimal128, ObjectId
+from pyarrow import (
+    DataType,
+    FixedSizeBinaryType,
+    Table,
+    bool_,
+    csv,
+    decimal256,
+    field,
+    int32,
+    int64,
+    list_,
+)
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
 from pyarrow.parquet import read_table, write_table
@@ -649,6 +660,34 @@ class ArrowApiTestMixin:
         for func in [find_arrow_all, aggregate_arrow_all]:
             out = func(self.coll, {} if func == find_arrow_all else [], schema=schema)
             self.assertEqual(out["obj"].to_pylist(), [{"a": 1}, {"a": 2}])
+
+    def test_nested_bson_extension_types(self):
+        data = {
+            "obj": {
+                "obj_id": ObjectId(),
+                "dec_128": Decimal128("0.0005"),
+                "binary": Binary(b"123"),
+                "code": Code(""),
+            }
+        }
+
+        self.coll.drop()
+        self.coll.insert_one(data)
+        out = find_arrow_all(self.coll, {})
+        obj_schema_type = out.field("obj").type
+
+        self.assertIsInstance(obj_schema_type.field("obj_id").type, FixedSizeBinaryType)
+        self.assertIsInstance(obj_schema_type.field("dec_128").type, FixedSizeBinaryType)
+        self.assertIsInstance(obj_schema_type.field("binary").type, DataType)
+        self.assertIsInstance(obj_schema_type.field("code").type, DataType)
+
+        new_types = [ObjectIdType(), Decimal128Type(), BinaryType(0), CodeType()]
+        new_names = [f.name for f in out["obj"].type]
+        new_obj = out["obj"].cast(struct(zip(new_names, new_types)))
+        self.assertIsInstance(new_obj.type[0].type, ObjectIdType)
+        self.assertIsInstance(new_obj.type[1].type, Decimal128Type)
+        self.assertIsInstance(new_obj.type[2].type, BinaryType)
+        self.assertIsInstance(new_obj.type[3].type, CodeType)
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):

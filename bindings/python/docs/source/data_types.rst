@@ -162,3 +162,13 @@ with the code below (taken from `here <https://arrow.apache.org/docs/python/pand
    ... del arrow_table
 
 Defining a conversion for `pa.string()` in addition converts Arrow strings to NumPy strings, and not objects.
+
+Nested Extension Types
+----------------------
+
+Pending ``ARROW-179``, extension types such as ``ObjectId`` that appear in nested documents will not
+be converted to the corresponding PyMongoArrow extension type, but will
+instead have the raw Arrow type (``FixedSizeBinaryType(fixed_size_binary[12])``).
+
+These values can either be consumed as-is or converted individually to the
+desired extension type, e.g. ``_id = out['nested'][0]['_id'].cast(ObjectIdType())``.
