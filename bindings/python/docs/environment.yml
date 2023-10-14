@@ -3,8 +3,9 @@ channels:
   - conda-forge
 dependencies:
 - python=3.9
-- sphinx<5
+- sphinx==7
 - libbson
 - pkg-config
 - pandas
 - numpy
+- gcc>=12 # [linux]
