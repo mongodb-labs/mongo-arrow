@@ -7,5 +7,5 @@ dependencies:
 - pkg-config
 - pandas
 - numpy
-- pyarrow >=13.0,<13.1.0
+- pyarrow >=13.0
 - gxx >=12 # [linux]
