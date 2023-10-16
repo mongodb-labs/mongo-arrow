@@ -1,10 +1,10 @@
 version: 2
-sphinx:
-  configuration: ./bindings/python/docs/source/conf.py
-conda:
-  environment: ./bindings/python/docs/environment.yml
-python:
-  install:
-    # install the package itself
-    - method: pip
-      path: ./bindings/python
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.9"
+  commands:
+    - NO_EXT=1 pip install ./bindings/python[docs]
+    - mkdir --parents $READTHEDOCS_OUTPUT/html/
+    - cd ./bindings/python/docs && make html
+    - cp --recursive ./bindings/python/docs/build/html/* $READTHEDOCS_OUTPUT/html/
