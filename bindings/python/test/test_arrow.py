@@ -22,7 +22,18 @@ from test.utils import AllowListEventListener, NullsTestMixin
 import pyarrow
 import pymongo
 from bson import Binary, Code, CodecOptions, Decimal128, ObjectId
-from pyarrow import Table, bool_, csv, decimal256, field, int32, int64, list_
+from pyarrow import (
+    DataType,
+    FixedSizeBinaryType,
+    Table,
+    bool_,
+    csv,
+    decimal256,
+    field,
+    int32,
+    int64,
+    list_,
+)
 from pyarrow import schema as ArrowSchema
 from pyarrow import string, struct, timestamp
 from pyarrow.parquet import read_table, write_table
@@ -665,10 +676,18 @@ class ArrowApiTestMixin:
         out = find_arrow_all(self.coll, {})
         obj_schema_type = out.field("obj").type
 
-        self.assertIsInstance(obj_schema_type.field("obj_id").type, ObjectIdType)
-        self.assertIsInstance(obj_schema_type.field("dec_128").type, Decimal128Type)
-        self.assertIsInstance(obj_schema_type.field("binary").type, BinaryType)
-        self.assertIsInstance(obj_schema_type.field("code").type, CodeType)
+        self.assertIsInstance(obj_schema_type.field("obj_id").type, FixedSizeBinaryType)
+        self.assertIsInstance(obj_schema_type.field("dec_128").type, FixedSizeBinaryType)
+        self.assertIsInstance(obj_schema_type.field("binary").type, DataType)
+        self.assertIsInstance(obj_schema_type.field("code").type, DataType)
+
+        new_types = [ObjectIdType(), Decimal128Type(), BinaryType(0), CodeType()]
+        new_names = [f.name for f in out["obj"].type]
+        new_obj = out["obj"].cast(struct(zip(new_names, new_types)))
+        self.assertIsInstance(new_obj.type[0].type, ObjectIdType)
+        self.assertIsInstance(new_obj.type[1].type, Decimal128Type)
+        self.assertIsInstance(new_obj.type[2].type, BinaryType)
+        self.assertIsInstance(new_obj.type[3].type, CodeType)
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):
