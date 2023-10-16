@@ -46,3 +46,5 @@ if not os.environ.get("NO_EXT"):
                 f"Expected libbson version {_MIN_LIBBSON_VERSION} or greater, "
                 f"found {libbson_version}"
             )
+else:
+    libbson_version = "unknown"
