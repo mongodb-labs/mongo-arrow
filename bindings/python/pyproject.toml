@@ -3,7 +3,8 @@ requires = [
     "setuptools>=47.9",
     "wheel>=0.37",
     "cython>=0.29",
-    # Must be kept in sync with "project.dependencies" below.
+    # Must be kept in sync with "project.dependencies" below and
+    # with docs/environment.yml
     "pyarrow>=13.0,<13.1.0",
 ]
 
