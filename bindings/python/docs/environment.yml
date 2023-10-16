@@ -2,7 +2,7 @@ name: mongo_arrow_documentation
 channels:
   - conda-forge
 dependencies:
-- sphinx >=7,<8
+- sphinx
 - libbson
 - pkg-config
 - pandas
