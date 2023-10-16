@@ -13,36 +13,47 @@
 # limitations under the License.
 from bson.codec_options import DEFAULT_CODEC_OPTIONS
 from pyarrow import Table, timestamp
-from pymongoarrow.lib import (
-    BinaryBuilder,
-    BoolBuilder,
-    CodeBuilder,
-    DatetimeBuilder,
-    Decimal128Builder,
-    DocumentBuilder,
-    DoubleBuilder,
-    Int32Builder,
-    Int64Builder,
-    ListBuilder,
-    ObjectIdBuilder,
-    StringBuilder,
-)
 from pymongoarrow.types import _BsonArrowTypes, _get_internal_typemap
 
-_TYPE_TO_BUILDER_CLS = {
-    _BsonArrowTypes.int32: Int32Builder,
-    _BsonArrowTypes.int64: Int64Builder,
-    _BsonArrowTypes.double: DoubleBuilder,
-    _BsonArrowTypes.datetime: DatetimeBuilder,
-    _BsonArrowTypes.objectid: ObjectIdBuilder,
-    _BsonArrowTypes.decimal128: Decimal128Builder,
-    _BsonArrowTypes.string: StringBuilder,
-    _BsonArrowTypes.bool: BoolBuilder,
-    _BsonArrowTypes.document: DocumentBuilder,
-    _BsonArrowTypes.array: ListBuilder,
-    _BsonArrowTypes.binary: BinaryBuilder,
-    _BsonArrowTypes.code: CodeBuilder,
-}
+try:
+    from pymongoarrow.lib import (
+        BinaryBuilder,
+        BoolBuilder,
+        CodeBuilder,
+        DatetimeBuilder,
+        Decimal128Builder,
+        DocumentBuilder,
+        DoubleBuilder,
+        Int32Builder,
+        Int64Builder,
+        ListBuilder,
+        ObjectIdBuilder,
+        StringBuilder,
+    )
+
+    _TYPE_TO_BUILDER_CLS = {
+        _BsonArrowTypes.int32: Int32Builder,
+        _BsonArrowTypes.int64: Int64Builder,
+        _BsonArrowTypes.double: DoubleBuilder,
+        _BsonArrowTypes.datetime: DatetimeBuilder,
+        _BsonArrowTypes.objectid: ObjectIdBuilder,
+        _BsonArrowTypes.decimal128: Decimal128Builder,
+        _BsonArrowTypes.string: StringBuilder,
+        _BsonArrowTypes.bool: BoolBuilder,
+        _BsonArrowTypes.document: DocumentBuilder,
+        _BsonArrowTypes.array: ListBuilder,
+        _BsonArrowTypes.binary: BinaryBuilder,
+        _BsonArrowTypes.code: CodeBuilder,
+    }
+except ImportError:
+    import traceback
+    import warnings
+
+    warnings.warn(
+        "Could not find compiled pymongoarrow.lib extension, please install "
+        "from source or report the following traceback on the issue tracker:\n"
+        f"{traceback.format_exc()}"
+    )
 
 
 class PyMongoArrowContext:
