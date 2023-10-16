@@ -104,10 +104,14 @@ jobs:
           python-version: 3.9
           cache: 'pip'
           cache-dependency-path: '**/pyproject.toml'
+      - name: Install libbson
+        run: |
+          pip install packaging  # needed for mongo-c-driver-1.24.4/build/calc_release_version.py
+          ./build-libbson.sh
       - name: Install lib
         shell: bash -l {0}
         run: |
-          NO_EXT=1 pip install .[docs]
+          pip install .[docs]
       - name: Build docs with warnings
         shell: bash -l {0}
         run: |

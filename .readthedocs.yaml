@@ -7,4 +7,4 @@ build:
     - NO_EXT=1 pip install ./bindings/python[docs]
     - mkdir --parents $READTHEDOCS_OUTPUT/html/
     - cd ./bindings/python/docs && make html
-    - cp --recursive html/* $READTHEDOCS_OUTPUT/html/
+    - cp --recursive ./bindings/python/docs/html/* $READTHEDOCS_OUTPUT/html/
