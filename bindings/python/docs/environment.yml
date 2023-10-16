@@ -7,4 +7,4 @@ dependencies:
 - pkg-config
 - pandas
 - numpy
-- gcc >=12 # [linux]
+- gxx >=12 # [linux]
