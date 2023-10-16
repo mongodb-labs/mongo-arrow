@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
 import warnings
 
 import numpy as np
@@ -31,9 +30,16 @@ from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import _validate_schema, get_numpy_type
 
-if not os.environ.get("NO_EXT"):
+try:
     from pymongoarrow.lib import process_bson_stream
+except ImportError:
+    import traceback
 
+    warnings.warn(
+        "Could not find compiled pymongoarrow.lib extension, please install "
+        "from source or report the following traceback on the issue tracker:\n"
+        f"{traceback.format_exc()}"
+    )
 
 __all__ = [
     "aggregate_arrow_all",
