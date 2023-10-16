@@ -5,5 +5,7 @@ build:
     python: "3.9"
   commands:
     - NO_EXT=1 pip install ./bindings/python[docs]
-sphinx:
-  configuration: ./bindings/python/docs/source/conf.py
+    - mkdir --parents $READTHEDOCS_OUTPUT/html/
+    - pushd docs
+    - make html
+    - cp --recursive html/* $READTHEDOCS_OUTPUT/html/

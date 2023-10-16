@@ -107,7 +107,7 @@ jobs:
       - name: Install lib
         shell: bash -l {0}
         run: |
-          NO_EXT=1 pip install .
+          NO_EXT=1 pip install .[docs]
       - name: Build docs with warnings
         shell: bash -l {0}
         run: |
