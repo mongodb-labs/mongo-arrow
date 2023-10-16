@@ -1,14 +1,9 @@
 version: 2
 build:
-  os: "ubuntu-22.04"
+  os: ubuntu-22.04
   tools:
-    python: "mambaforge-22.9"
+    python: "3.9"
+  commands:
+    - NO_EXT=1 pip install ./bindings/python[docs]
 sphinx:
   configuration: ./bindings/python/docs/source/conf.py
-conda:
-  environment: ./bindings/python/docs/environment.yml
-python:
-  install:
-    # install the package itself
-    - method: pip
-      path: ./bindings/python

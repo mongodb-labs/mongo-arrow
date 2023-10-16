@@ -172,4 +172,9 @@ def get_extension_modules():
     return modules
 
 
-setup(ext_modules=get_extension_modules())
+if os.environ.get("NO_EXT"):
+    ext_modules = []
+else:
+    ext_modules = get_extension_modules()
+
+setup(ext_modules=ext_modules)

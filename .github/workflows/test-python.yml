@@ -43,7 +43,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
-          cache-dependency-path: '**/setup.cfg'
+          cache-dependency-path: '**/pyproject.toml'
       - name: Set up env
         run: |
            echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
@@ -98,31 +98,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Cache conda
-        uses: actions/cache@v3
-        env:
-          # Increase this value to reset cache if environment.yml has not changed
-          CACHE_NUMBER: 0
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          path: ~/conda_pkgs_dir
-          key:
-            ${{ runner.os }}-conda-${{ env.CACHE_NUMBER }}-${{
-            hashFiles('bindings/python/docs/environment.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          auto-update-conda: true
-          activate-environment: mongo_arrow_documentation
-          environment-file: bindings/python/docs/environment.yml
-          use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
+          python-version: 3.9
+          cache: 'pip'
+          cache-dependency-path: '**/pyproject.toml'
       - name: Install lib
         shell: bash -l {0}
         run: |
-          pip install .
+          NO_EXT=1 pip install .
       - name: Build docs with warnings
         shell: bash -l {0}
         run: |
           pushd docs
-          make html SPHINXOPTS="-W"
+          NO_EXT=1 make html SPHINXOPTS="-W"
       - name: Run linkcheck
         shell: bash -l {0}
         run: |

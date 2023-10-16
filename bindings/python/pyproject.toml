@@ -48,6 +48,7 @@ content-type = "text/x-rst"
 Homepage = "https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python"
 
 [project.optional-dependencies]
+docs = ["sphinx"]
 test = ["pytz", "pytest"]
 
 [tool.setuptools]

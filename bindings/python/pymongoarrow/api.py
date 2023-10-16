@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import warnings
 
 import numpy as np
@@ -26,10 +27,13 @@ from pymongo.bulk import BulkWriteError
 from pymongo.common import MAX_WRITE_BATCH_SIZE
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import _validate_schema, get_numpy_type
+
+if not os.environ.get("NO_EXT"):
+    from pymongoarrow.lib import process_bson_stream
+
 
 __all__ = [
     "aggregate_arrow_all",

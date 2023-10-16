@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import traceback
 import warnings
 
@@ -28,19 +29,20 @@ except ImportError:
         return _LooseVersion(version)
 
 
-try:
-    from pymongoarrow.lib import libbson_version
-except ImportError:
-    warnings.warn(
-        "Could not find compiled pymongoarrow.lib extension, please install "
-        "from source or report the following traceback on the issue tracker:\n"
-        f"{traceback.format_exc()}"
-    )
-    libbson_version = None
-
-if libbson_version is not None:
-    if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
-        raise ImportError(
-            f"Expected libbson version {_MIN_LIBBSON_VERSION} or greater, "
-            f"found {libbson_version}"
+if not os.environ.get("NO_EXT"):
+    try:
+        from pymongoarrow.lib import libbson_version
+    except ImportError:
+        warnings.warn(
+            "Could not find compiled pymongoarrow.lib extension, please install "
+            "from source or report the following traceback on the issue tracker:\n"
+            f"{traceback.format_exc()}"
         )
+        libbson_version = None
+
+    if libbson_version is not None:
+        if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
+            raise ImportError(
+                f"Expected libbson version {_MIN_LIBBSON_VERSION} or greater, "
+                f"found {libbson_version}"
+            )
