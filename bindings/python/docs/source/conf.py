@@ -7,7 +7,7 @@ import os
 import os.path as p
 
 # Ignore C extension.
-os.environ["NO_EXT"] = 1
+os.environ["NO_EXT"] = "1"
 
 # -- Path setup --------------------------------------------------------------
 
