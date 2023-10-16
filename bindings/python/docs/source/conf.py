@@ -3,6 +3,11 @@
 # This file only contains a selection of the most common options. For a full
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
+import os
+import os.path as p
+
+# Ignore C extension.
+os.environ["NO_EXT"] = 1
 
 # -- Path setup --------------------------------------------------------------
 
@@ -10,7 +15,6 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os.path as p
 
 # -- Project information -----------------------------------------------------
 

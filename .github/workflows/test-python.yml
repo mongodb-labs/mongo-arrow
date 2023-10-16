@@ -112,7 +112,7 @@ jobs:
         shell: bash -l {0}
         run: |
           pushd docs
-          NO_EXT=1 make html SPHINXOPTS="-W"
+          make html SPHINXOPTS="-W"
       - name: Run linkcheck
         shell: bash -l {0}
         run: |
