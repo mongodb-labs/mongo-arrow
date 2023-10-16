@@ -2,10 +2,9 @@ name: mongo_arrow_documentation
 channels:
   - conda-forge
 dependencies:
-- python=3.9
-- sphinx>=7,<8
+- sphinx >=7,<8
 - libbson
 - pkg-config
 - pandas
 - numpy
-- gcc>=12 # [linux]
+- gcc >=12 # [linux]
