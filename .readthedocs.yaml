@@ -6,6 +6,5 @@ build:
   commands:
     - NO_EXT=1 pip install ./bindings/python[docs]
     - mkdir --parents $READTHEDOCS_OUTPUT/html/
-    - cd ./bindings/python/docs
-    - make html
+    - make -C ./bindings/python/docs html
     - cp --recursive html/* $READTHEDOCS_OUTPUT/html/
