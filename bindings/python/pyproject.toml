@@ -91,6 +91,7 @@ repair-wheel-command = [
 archs = "x86_64 arm64"
 test-skip = "*arm64"
 
+[tool.pytest.ini_options]
 minversion = "7"
 addopts = ["-ra", "--strict-config", "--strict-markers", "--durations=5", "--junitxml=xunit-results/TEST-results.xml"]
 testpaths = ["test"]
