@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 from bson import ObjectId
 from pandas.tests.extension import base
+
 from pymongoarrow.pandas_types import PandasObjectId, PandasObjectIdArray
 
 try:

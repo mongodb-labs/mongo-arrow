@@ -68,7 +68,7 @@ def append_libbson_flags(module):
             elif platform == "linux":
                 module.extra_link_args += ["-Wl,-rpath,$ORIGIN"]
 
-        # Find the linkable library file, and explicity add it to the linker if on Windows.
+        # Find the linkable library file, and explicitly add it to the linker if on Windows.
         lib_dirs = glob.glob(os.path.join(install_dir, "lib*"))
         if len(lib_dirs) != 1:
             warnings.warn(f"Unable to locate libbson in {install_dir}")
@@ -100,13 +100,13 @@ def append_libbson_flags(module):
         return
 
     # Check for the existence of the library.
-    lnames = query_pkgconfig("pkg-config --libs-only-l {}".format(pc_path))
+    lnames = query_pkgconfig(f"pkg-config --libs-only-l {pc_path}")
     if not lnames:
         raise ValueError(f'Could not find "{pc_path}" library')
 
     # Check against the minimum required version.
     min_version = get_min_libbson_version()
-    mod_version = query_pkgconfig("pkg-config --modversion {}".format(pc_path))
+    mod_version = query_pkgconfig(f"pkg-config --modversion {pc_path}")
 
     if mod_version < min_version:
         raise ValueError(
@@ -114,13 +114,13 @@ def append_libbson_flags(module):
         )
 
     # Gather the appropriate flags.
-    cflags = query_pkgconfig("pkg-config --cflags {}".format(pc_path))
+    cflags = query_pkgconfig(f"pkg-config --cflags {pc_path}")
 
     if cflags:
         orig_cflags = os.environ.get("CFLAGS", "")
         os.environ["CFLAGS"] = cflags + " " + orig_cflags
 
-    ldflags = query_pkgconfig("pkg-config --libs {}".format(pc_path))
+    ldflags = query_pkgconfig(f"pkg-config --libs {pc_path}")
     if ldflags:
         orig_ldflags = os.environ.get("LDFLAGS", "")
         os.environ["LDFLAGS"] = ldflags + " " + orig_ldflags
@@ -172,9 +172,6 @@ def get_extension_modules():
     return modules
 
 
-if os.environ.get("NO_EXT"):
-    ext_modules = []
-else:
-    ext_modules = get_extension_modules()
+ext_modules = [] if os.environ.get("NO_EXT") else get_extension_modules()
 
 setup(ext_modules=ext_modules)

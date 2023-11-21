@@ -25,13 +25,13 @@ Release Process
 
 #. Check JIRA to ensure all the tickets in this version have been completed.
 
-#. Add release notes to `doc/source/changelog.rst`. Generally just summarize/clarify
+#. Add release notes to ``doc/source/changelog.rst``. Generally just summarize/clarify
    the git log, but you might add some more long form notes for big changes.
 
-#. Replace the `devN` version number w/ the new version number (see
+#. Replace the ``devN`` version number w/ the new version number (see
    note above in `Versioning`_). Make sure version number is updated in
-   `pymongoarrow/version.py`. Commit the change and tag the release.
-   Immediately bump the version number to `dev0` in a new commit::
+   ``pymongoarrow/version.py``. Commit the change and tag the release.
+   Immediately bump the version number to ``dev0`` in a new commit::
 
      $ # Bump to release version number
      $ git commit -a -m "BUMP <release version number>"

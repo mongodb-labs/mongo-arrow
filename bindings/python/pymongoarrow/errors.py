@@ -20,8 +20,6 @@ from bson.errors import InvalidBSON  # noqa: F401
 class PyMongoArrowError(Exception):
     """Base class for all PyMongoArrow exceptions."""
 
-    pass
-
 
 class ArrowWriteError(PyMongoArrowError):
     """Error raised when we encounter an exception writing into MongoDB"""

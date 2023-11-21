@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 from bson import Binary
 from pandas.tests.extension import base
+
 from pymongoarrow.pandas_types import PandasBinary, PandasBinaryArray
 
 try:

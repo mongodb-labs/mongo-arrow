@@ -21,7 +21,7 @@ html_show_sphinx = False
 
 version_file = p.abspath(p.join("../../", "pymongoarrow/version.py"))
 version_data = {}
-with open(version_file, "r") as vf:
+with open(version_file) as vf:
     exec(vf.read(), {}, version_data)
 version = version_data["__version__"]
 release = version

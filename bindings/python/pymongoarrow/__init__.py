@@ -16,7 +16,8 @@ import traceback
 import warnings
 
 # We must import pyarrow before attempting to load the Cython module.
-import pyarrow  # noqa: F401
+import pyarrow as pa  # noqa: F401
+
 from pymongoarrow.version import _MIN_LIBBSON_VERSION, __version__  # noqa: F401
 
 try:
@@ -34,13 +35,15 @@ except ImportError:
     warnings.warn(
         "Could not find compiled pymongoarrow.lib extension, please install "
         "from source or report the following traceback on the issue tracker:\n"
-        f"{traceback.format_exc()}"
+        f"{traceback.format_exc()}",
+        stacklevel=1,
     )
     libbson_version = None
 
-if libbson_version is not None:
+if libbson_version is not None:  # noqa: SIM102
     if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
-        raise ImportError(
+        msg = (
             f"Expected libbson version {_MIN_LIBBSON_VERSION} or greater, "
             f"found {libbson_version}"
         )
+        raise ImportError(msg)

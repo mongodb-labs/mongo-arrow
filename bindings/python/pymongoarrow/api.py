@@ -24,6 +24,7 @@ from pyarrow import Schema as ArrowSchema
 from pyarrow import Table
 from pymongo.bulk import BulkWriteError
 from pymongo.common import MAX_WRITE_BATCH_SIZE
+
 from pymongoarrow.context import PyMongoArrowContext
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.result import ArrowWriteResult
@@ -38,7 +39,8 @@ except ImportError:
     warnings.warn(
         "Could not find compiled pymongoarrow.lib extension, please install "
         "from source or report the following traceback on the issue tracker:\n"
-        f"{traceback.format_exc()}"
+        f"{traceback.format_exc()}",
+        stacklevel=1,
     )
 
 __all__ = [
@@ -128,10 +130,11 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, **kwargs):
     context = PyMongoArrowContext.from_schema(schema, codec_options=collection.codec_options)
 
     if pipeline and ("$out" in pipeline[-1] or "$merge" in pipeline[-1]):
-        raise ValueError(
+        msg = (
             "Aggregation pipelines containing a '$out' or '$merge' stage are "
             "not supported by PyMongoArrow"
         )
+        raise ValueError(msg)
 
     for opt in ("batchSize", "useCursor"):
         if kwargs.pop(opt, None):
@@ -212,10 +215,7 @@ def _arrow_to_numpy(arrow_table, schema=None):
     See https://arrow.apache.org/docs/python/numpy.html for details.
     """
     container = {}
-    if not schema:
-        schema = {i.name: i.type for i in arrow_table.schema}
-    else:
-        schema = schema.typemap
+    schema = {i.name: i.type for i in arrow_table.schema} if not schema else schema.typemap
 
     for fname in schema:
         dtype = get_numpy_type(schema[fname])
@@ -327,7 +327,7 @@ class _PandasNACodec(TypeEncoder):
 
     def transform_python(self, _):
         """Transform an NA object into 'None'"""
-        return None
+        return
 
 
 def write(collection, tabular):
@@ -354,16 +354,17 @@ def write(collection, tabular):
         isinstance(tabular, dict)
         and len(tabular.values()) >= 1
         and ndarray is not None
-        and all([isinstance(i, ndarray) for i in tabular.values()])
+        and all(isinstance(i, ndarray) for i in tabular.values())
     ):
         _validate_schema([i.dtype for i in tabular.values()])
         tab_size = len(next(iter(tabular.values())))
     else:
-        raise ValueError(
+        msg = (
             f"Invalid tabular data object of type {type(tabular)} \n"
             "Please ensure that it is one of the supported types: "
             "DataFrame, Table, or a dictionary containing NumPy arrays."
         )
+        raise ValueError(msg)
 
     tabular_gen = _tabular_generator(tabular)
 

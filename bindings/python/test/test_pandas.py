@@ -23,16 +23,17 @@ from test.utils import AllowListEventListener, NullsTestMixin
 import numpy as np
 import pandas as pd
 import pandas.testing
-import pyarrow
+import pyarrow as pa
 from bson import Binary, Code, CodecOptions, Decimal128, ObjectId
 from pyarrow import decimal256, int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
+from pytz import timezone
+
 from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.pandas_types import PandasBSONDtype, PandasDecimal128, PandasObjectId
 from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
-from pytz import timezone
 
 
 class PandasTestBase(unittest.TestCase):
@@ -59,7 +60,12 @@ class TestExplicitPandasApi(PandasTestBase):
     def setUp(self):
         self.coll.drop()
         self.coll.insert_many(
-            [{"_id": 1, "data": 10}, {"_id": 2, "data": 20}, {"_id": 3, "data": 30}, {"_id": 4}]
+            [
+                {"_id": 1, "data": 10},
+                {"_id": 2, "data": 20},
+                {"_id": 3, "data": 30},
+                {"_id": 4},
+            ]
         )
         self.cmd_listener.reset()
         self.getmore_listener.reset()
@@ -74,7 +80,10 @@ class TestExplicitPandasApi(PandasTestBase):
 
         expected = pd.DataFrame(data={"_id": [4, 3], "data": [None, 30]}).astype({"_id": "int32"})
         table = find_pandas_all(
-            self.coll, {"_id": {"$gt": 2}}, schema=self.schema, sort=[("_id", DESCENDING)]
+            self.coll,
+            {"_id": {"$gt": 2}},
+            schema=self.schema,
+            sort=[("_id", DESCENDING)],
         )
         self.assertTrue(table.equals(expected))
 
@@ -120,14 +129,19 @@ class TestExplicitPandasApi(PandasTestBase):
         schema = {"_id": "int32", "data": "int64"}
 
         data = pd.DataFrame(
-            data={"_id": [i for i in range(10001)] * 2, "data": [i * 2 for i in range(10001)] * 2}
+            data={
+                "_id": [i for i in range(10001)] * 2,
+                "data": [i * 2 for i in range(10001)] * 2,
+            }
         ).astype(schema)
         with self.assertRaises(ArrowWriteError):
             try:
                 self.round_trip(data, Schema({"_id": int32(), "data": int64()}))
             except ArrowWriteError as awe:
                 self.assertEqual(
-                    10001, awe.details["writeErrors"][0]["index"], awe.details["nInserted"]
+                    10001,
+                    awe.details["writeErrors"][0]["index"],
+                    awe.details["nInserted"],
                 )
                 raise awe
 
@@ -341,7 +355,7 @@ class TestBSONTypes(PandasTestBase):
         self.getmore_listener.reset()
 
     def test_find_decimal128(self):
-        decimals = self.decimal_128s + [None]  # type:ignore
+        decimals = self.decimal_128s + [None]
         pd_schema = {"_id": PandasObjectId(), "decimal128": PandasDecimal128()}
         expected = pd.DataFrame(data={"_id": self.oids, "decimal128": decimals}).astype(pd_schema)
 
@@ -382,8 +396,8 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         int: None,
         float: None,
         datetime.datetime: ValueError,
-        ObjectId: pyarrow.lib.ArrowInvalid,
-        Decimal128: pyarrow.lib.ArrowInvalid,
+        ObjectId: pa.lib.ArrowInvalid,
+        Decimal128: pa.lib.ArrowInvalid,
         bool: None,
     }
 

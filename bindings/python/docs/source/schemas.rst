@@ -77,7 +77,7 @@ The following example illustrates how to do it with a very simple nested documen
    1  b'c\xec2\x98R(\xc9\x1e@#\xcc\xbc'         10      bar
 
 
-For aggregate you can flatten the fields using the `$project` stage, like so:
+For aggregate you can flatten the fields using the ``$project`` stage, like so:
 
 .. code-block:: pycon
 

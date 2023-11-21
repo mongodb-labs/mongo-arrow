@@ -13,6 +13,7 @@
 # limitations under the License.
 from bson.codec_options import DEFAULT_CODEC_OPTIONS
 from pyarrow import Table, timestamp
+
 from pymongoarrow.types import _BsonArrowTypes, _get_internal_typemap
 
 try:
@@ -52,7 +53,8 @@ except ImportError:
     warnings.warn(
         "Could not find compiled pymongoarrow.lib extension, please install "
         "from source or report the following traceback on the issue tracker:\n"
-        f"{traceback.format_exc()}"
+        f"{traceback.format_exc()}",
+        stacklevel=1,
     )
 
 

@@ -23,10 +23,11 @@ from bson import CodecOptions, Decimal128, ObjectId
 from pyarrow import int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
+from pytz import timezone
+
 from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
-from pytz import timezone
 
 
 class NumpyTestBase(unittest.TestCase):
@@ -63,7 +64,12 @@ class TestExplicitNumPyApi(NumpyTestBase):
     def setUp(self):
         self.coll.drop()
         self.coll.insert_many(
-            [{"_id": 1, "data": 10}, {"_id": 2, "data": 20}, {"_id": 3, "data": 30}, {"_id": 4}]
+            [
+                {"_id": 1, "data": 10},
+                {"_id": 2, "data": 20},
+                {"_id": 3, "data": 30},
+                {"_id": 4},
+            ]
         )
         self.cmd_listener.reset()
         self.getmore_listener.reset()
@@ -83,7 +89,10 @@ class TestExplicitNumPyApi(NumpyTestBase):
             "data": np.array([np.nan, 30], dtype=np.float64),
         }
         actual = find_numpy_all(
-            self.coll, {"_id": {"$gt": 2}}, schema=self.schema, sort=[("_id", DESCENDING)]
+            self.coll,
+            {"_id": {"$gt": 2}},
+            schema=self.schema,
+            sort=[("_id", DESCENDING)],
         )
         self.assert_numpy_equal(actual, expected)
 
@@ -111,7 +120,7 @@ class TestExplicitNumPyApi(NumpyTestBase):
             coll = self.coll
         coll.drop()
         res = write(self.coll, data)
-        self.assertEqual(len(list(data.values())[0]), res.raw_result["insertedCount"])
+        self.assertEqual(len(next(data.values())[0]), res.raw_result["insertedCount"])
         self.assert_numpy_equal(find_numpy_all(coll, {}, schema=schema), data)
         return res
 
@@ -124,14 +133,19 @@ class TestExplicitNumPyApi(NumpyTestBase):
     def test_write_error(self):
         schema = {"_id": "int32", "data": "int64"}
         length = 10001
-        data = {"_id": [i for i in range(length)] * 2, "data": [i * 2 for i in range(length)] * 2}
+        data = {
+            "_id": [i for i in range(length)] * 2,
+            "data": [i * 2 for i in range(length)] * 2,
+        }
         data = self.schemafied_ndarray_dict(data, schema)
         with self.assertRaises(ArrowWriteError):
             try:
                 self.round_trip(data, Schema({"_id": int32(), "data": int64()}))
             except ArrowWriteError as awe:
                 self.assertEqual(
-                    10001, awe.details["writeErrors"][0]["index"], awe.details["nInserted"]
+                    10001,
+                    awe.details["writeErrors"][0]["index"],
+                    awe.details["nInserted"],
                 )
                 raise awe
 

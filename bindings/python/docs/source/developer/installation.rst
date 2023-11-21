@@ -61,7 +61,7 @@ In the previously created virtualenv, install PyMongoArrow and its test dependen
 
   (pymongoarrow) $ pip install -v -e ".[test]"
 
-If you built libbson using the `build-libbson` script then use the same `LIBBSON_INSTALL_DIR` as above:
+If you built libbson using the ``build-libbson`` script then use the same ``LIBBSON_INSTALL_DIR`` as above:
 
   (pymongoarrow) $ LIBBSON_INSTALL_DIR=$(pwd)/libbson pip install -v -e ".[test]"
 
