@@ -78,7 +78,7 @@ repos:
   hooks:
   - id: slotscheck
     files: \.py$
-    exclude: "^(test|addtags.py)/"
+    exclude: "^(bindings/python/test|binding/pythonaddtags.py)/"
     stages: [manual]
     args: ["--no-strict-imports"]
 

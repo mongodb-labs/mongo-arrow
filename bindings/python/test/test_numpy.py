@@ -120,7 +120,7 @@ class TestExplicitNumPyApi(NumpyTestBase):
             coll = self.coll
         coll.drop()
         res = write(self.coll, data)
-        self.assertEqual(next(data.values()), res.raw_result["insertedCount"])
+        self.assertEqual(next(iter(data.values())), res.raw_result["insertedCount"])
         self.assert_numpy_equal(find_numpy_all(coll, {}, schema=schema), data)
         return res
 
