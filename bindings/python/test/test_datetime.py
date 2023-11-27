@@ -17,10 +17,10 @@ from test import client_context
 
 import pytz
 from bson.codec_options import CodecOptions
-from pyarrow import Table, int32
+from pyarrow import Table, int32, timestamp
 from pyarrow import schema as ArrowSchema
-from pyarrow import timestamp
 from pymongo import ASCENDING, WriteConcern
+
 from pymongoarrow.api import Schema, find_arrow_all
 from pymongoarrow.context import PyMongoArrowContext
 

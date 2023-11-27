@@ -31,6 +31,7 @@ from pyarrow import (
     struct,
     timestamp,
 )
+
 from pymongoarrow.pandas_types import (
     PandasBinary,
     PandasCode,
@@ -239,18 +240,18 @@ def _is_typeid_supported(typeid):
 def _normalize_typeid(typeid, field_name):
     if isinstance(typeid, _ArrowDataType):
         return typeid
-    elif isinstance(typeid, dict):
+    if isinstance(typeid, dict):
         fields = []
         for sub_field_name, sub_typeid in typeid.items():
             fields.append((sub_field_name, _normalize_typeid(sub_typeid, sub_field_name)))
         return struct(fields)
-    elif isinstance(typeid, list):
+    if isinstance(typeid, list):
         return list_(_normalize_typeid(type(typeid[0]), "0"))
-    elif _is_typeid_supported(typeid):
+    if _is_typeid_supported(typeid):
         normalizer = _TYPE_NORMALIZER_FACTORY[typeid]
         return normalizer(typeid)
-    else:
-        raise ValueError("Unsupported type identifier {} for field {}".format(typeid, field_name))
+    msg = f"Unsupported type identifier {typeid} for field {field_name}"
+    raise ValueError(msg)
 
 
 def _get_internal_typemap(typemap):
@@ -261,9 +262,8 @@ def _get_internal_typemap(typemap):
                 internal_typemap[fname] = internal_id
 
         if fname not in internal_typemap:
-            raise ValueError(
-                f'Unsupported data type in schema for field "{fname}" of type "{ftype}"'
-            )
+            msg = f'Unsupported data type in schema for field "{fname}" of type "{ftype}"'
+            raise ValueError(msg)
 
     return internal_typemap
 
@@ -274,13 +274,11 @@ def _in_type_map(t):
             t = pa.from_numpy_dtype(t)
         except pa.lib.ArrowNotImplementedError:
             return False
-    for checker in _TYPE_CHECKER_TO_INTERNAL_TYPE.keys():
-        if checker(t):
-            return True
-    return False
+    return any(checker(t) for checker in _TYPE_CHECKER_TO_INTERNAL_TYPE)
 
 
 def _validate_schema(schema):
     for i in schema:
         if not _in_type_map(i):
-            raise ValueError(f'Unsupported data type "{i}" in schema')
+            msg = f'Unsupported data type "{i}" in schema'
+            raise ValueError(msg)

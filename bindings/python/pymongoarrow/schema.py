@@ -14,6 +14,7 @@
 import collections.abc as abc
 
 from pyarrow import ListType, StructType
+
 from pymongoarrow.types import _normalize_typeid
 
 
@@ -47,12 +48,12 @@ class Schema:
         if isinstance(schema, abc.Mapping):
             normed = type(self)._normalize_mapping(schema)
         else:
-            raise ValueError("schema must be a mapping or sequence")
+            msg = "schema must be a mapping or sequence"
+            raise ValueError(msg)
         self.typemap = normed
 
     def __iter__(self):
-        for fname in self.typemap:
-            yield fname
+        yield from self.typemap
 
     @staticmethod
     def _normalize_mapping(mapping):
@@ -71,7 +72,7 @@ class Schema:
         value = True
         if isinstance(ftype, ListType):
             return self._get_field_projection_value(ftype.value_field.type)
-        elif isinstance(ftype, StructType):
+        if isinstance(ftype, StructType):
             projection = {}
             for nested_ftype in ftype:
                 projection[nested_ftype.name] = True

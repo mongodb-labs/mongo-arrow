@@ -17,6 +17,7 @@ from unittest import TestCase
 
 from bson import Binary, Code, Decimal128, ObjectId
 from pyarrow import Array, bool_, field, int32, int64, list_, struct, timestamp
+
 from pymongoarrow.lib import (
     BinaryBuilder,
     BoolBuilder,

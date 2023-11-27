@@ -46,7 +46,7 @@ Support for additional types will be added in subsequent releases.
 Type identifiers can be used to specify that a field is of a certain type
 during :class:`pymongoarrow.api.Schema` declaration. For example, if your data
 has fields 'f1' and 'f2' bearing types 32-bit integer and UTC datetime
-respectively, and '_id' that is an `ObjectId`, your schema can be defined as::
+respectively, and '_id' that is an ``ObjectId``, your schema can be defined as::
 
   schema = Schema({
     '_id': ObjectId,
@@ -61,7 +61,7 @@ field and its data type.
 Embedded Array Considerations
 -----------------------------
 
-The schema used for an Embedded Array must use the `pyarrow.list_()` type,
+The schema used for an Embedded Array must use the ``pyarrow.list_()`` type,
 so that the type of the array elements can be specified.  For example,
 
 .. code-block: python
@@ -161,7 +161,7 @@ with the code below (taken from `here <https://arrow.apache.org/docs/python/pand
    ... )
    ... del arrow_table
 
-Defining a conversion for `pa.string()` in addition converts Arrow strings to NumPy strings, and not objects.
+Defining a conversion for ``pa.string()`` in addition converts Arrow strings to NumPy strings, and not objects.
 
 Nested Extension Types
 ----------------------

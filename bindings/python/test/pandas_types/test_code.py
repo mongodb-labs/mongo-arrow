@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 from bson import Code
 from pandas.tests.extension import base
+
 from pymongoarrow.pandas_types import PandasCode, PandasCodeArray
 
 try:

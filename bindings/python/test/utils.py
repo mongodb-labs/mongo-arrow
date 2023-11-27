@@ -17,11 +17,12 @@ from collections import defaultdict
 from test import client_context
 
 import numpy as np
-import pyarrow
+import pyarrow as pa
 from bson import Decimal128, ObjectId
 from pandas import isna
 from pyarrow import bool_, float64, int64, string, timestamp
 from pymongo import WriteConcern, monitoring
+
 from pymongoarrow.api import write
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import (
@@ -57,19 +58,19 @@ class EventListener(monitoring.CommandListener):
 class AllowListEventListener(EventListener):
     def __init__(self, *commands):
         self.commands = set(commands)
-        super(AllowListEventListener, self).__init__()
+        super().__init__()
 
     def started(self, event):
         if event.command_name in self.commands:
-            super(AllowListEventListener, self).started(event)
+            super().started(event)
 
     def succeeded(self, event):
         if event.command_name in self.commands:
-            super(AllowListEventListener, self).succeeded(event)
+            super().succeeded(event)
 
     def failed(self, event):
         if event.command_name in self.commands:
-            super(AllowListEventListener, self).failed(event)
+            super().failed(event)
 
 
 class NullsTestMixin:
@@ -114,8 +115,8 @@ class NullsTestMixin:
         int: None,
         float: None,
         datetime.datetime: None,
-        ObjectId: pyarrow.lib.ArrowInvalid,
-        Decimal128: pyarrow.lib.ArrowInvalid,
+        ObjectId: pa.lib.ArrowInvalid,
+        Decimal128: pa.lib.ArrowInvalid,
         bool: None,
     }
 
@@ -144,7 +145,7 @@ class NullsTestMixin:
         self.getmore_listener.reset()
 
     def assertType(self, obj1, arrow_type):
-        if isinstance(obj1, pyarrow.ChunkedArray):
+        if isinstance(obj1, pa.ChunkedArray):
             if "storage_type" in dir(arrow_type) and obj1.type != arrow_type:
                 self.assertEqual(obj1.type, arrow_type.storage_type)
             else:
@@ -185,7 +186,7 @@ class NullsTestMixin:
         self.assertType(res_table["int64"], atype)
 
     def test_all_types(self):
-        for t in self.pytype_tab_map.keys():
+        for t in self.pytype_tab_map:
             self.assertTrue(_in_type_map(_TYPE_NORMALIZER_FACTORY[t](0)))
 
     def test_other_handling(self):
@@ -211,7 +212,8 @@ class NullsTestMixin:
 
             self.assertType(table["other"], con_type)
             self.assertEqual(
-                self.na_safe(con_type), np.all(np.equal(isna(others), isna(table["other"])))
+                self.na_safe(con_type),
+                np.all(np.equal(isna(others), isna(table["other"]))),
             )
 
             def writeback():
@@ -219,7 +221,7 @@ class NullsTestMixin:
                 self.coll.drop()
                 table_write_schema = Schema({"other": pytype})
                 table_write_schema_arrow = (
-                    pyarrow.schema([("other", pytype)])
+                    pa.schema([("other", pytype)])
                     if (gen in [str, float, datetime.datetime])
                     else None
                 )

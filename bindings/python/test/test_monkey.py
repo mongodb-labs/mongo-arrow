@@ -13,7 +13,7 @@
 # limitations under the License.
 from unittest import TestCase
 
-from pymongoarrow import api as api
+from pymongoarrow import api
 
 
 class TestMonkey(TestCase):

@@ -30,8 +30,9 @@ def patch_all():
        # Example of patched usage
        df = coll.db.test.find_pandas_all({'amount': {'$gte': 20}}, schema=schema)
     """
-    import pymongoarrow.api as api_module
     from pymongo.collection import Collection
+
+    import pymongoarrow.api as api_module
 
     api_methods = api_module._PATCH_METHODS
     for method_name in api_methods:

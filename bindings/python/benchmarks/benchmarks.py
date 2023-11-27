@@ -18,9 +18,10 @@ from abc import ABC
 
 import numpy as np
 import pandas as pd
-import pyarrow
+import pyarrow as pa
 import pymongo
 from bson import BSON, Binary, Decimal128
+
 from pymongoarrow.api import (
     Schema,
     find_arrow_all,
@@ -31,7 +32,7 @@ from pymongoarrow.api import (
 from pymongoarrow.types import BinaryType, Decimal128Type
 
 N_DOCS = int(os.environ.get("N_DOCS"))
-assert pymongo.has_c()
+assert pymongo.has_c()  # noqa: S101
 db = pymongo.MongoClient().pymongoarrow_test
 
 LARGE_DOC_SIZE = 20
@@ -49,7 +50,11 @@ class Insert(ABC):
 
     timeout = 100000  # The setup sometimes times out.
     number = 1
-    repeat = (1, 10, 30.0)  # Min repeat, max repeat, time limit (will stop sampling after this)
+    repeat = (
+        1,
+        10,
+        30.0,
+    )  # Min repeat, max repeat, time limit (will stop sampling after this)
     rounds = 1
 
     @abc.abstractmethod
@@ -90,7 +95,11 @@ class Read(ABC):
 
     timeout = 100000  # The setup sometimes times out.
     number = 3
-    repeat = (1, 10, 30.0)  # Min repeat, max repeat, time limit (will stop sampling after this)
+    repeat = (
+        1,
+        10,
+        30.0,
+    )  # Min repeat, max repeat, time limit (will stop sampling after this)
     rounds = 1
 
     @abc.abstractmethod
@@ -98,7 +107,7 @@ class Read(ABC):
         raise NotImplementedError
 
     # We need this because the naive methods don't always convert nested objects.
-    @staticmethod
+    @staticmethod  # noqa: B027
     def exercise_table(table):
         pass
 
@@ -107,7 +116,10 @@ class Read(ABC):
         cursor = collection.find(projection={"_id": 0})
         dtype = self.dtypes
         if "Large" in type(self).__name__:
-            np.array([tuple(doc[k] for k in self.large_doc_keys) for doc in cursor], dtype=dtype)
+            np.array(
+                [tuple(doc[k] for k in self.large_doc_keys) for doc in cursor],
+                dtype=dtype,
+            )
         else:
             np.array([(doc["x"], doc["y"]) for doc in cursor], dtype=dtype)
 
@@ -132,7 +144,7 @@ class Read(ABC):
     def time_conventional_arrow(self):
         c = db.benchmark
         f = list(c.find({}, projection={"_id": 0}))
-        table = pyarrow.Table.from_pylist(f)
+        table = pa.Table.from_pylist(f)
         self.exercise_table(table)
 
     def peakmem_to_numpy(self):
@@ -154,9 +166,9 @@ class Read(ABC):
 class ProfileReadArray(Read):
     schema = Schema(
         {
-            "x": pyarrow.int64(),
-            "y": pyarrow.float64(),
-            "emb": pyarrow.list_(pyarrow.float64()),
+            "x": pa.int64(),
+            "y": pa.float64(),
+            "emb": pa.list_(pa.float64()),
         }
     )
 
@@ -164,7 +176,11 @@ class ProfileReadArray(Read):
         coll = db.benchmark
         coll.drop()
         base_dict = dict(
-            [("x", 1), ("y", math.pi), ("emb", [math.pi for _ in range(EMBEDDED_OBJECT_SIZE)])]
+            [
+                ("x", 1),
+                ("y", math.pi),
+                ("emb", [math.pi for _ in range(EMBEDDED_OBJECT_SIZE)]),
+            ]
         )
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
@@ -176,7 +192,7 @@ class ProfileReadArray(Read):
     @staticmethod
     def exercise_table(table):
         [
-            [[n for n in i.values] if isinstance(i, pyarrow.ListScalar) else i for i in column]
+            [[n for n in i.values] if isinstance(i, pa.ListScalar) else i for i in column]
             for column in table.columns
         ]
 
@@ -197,10 +213,10 @@ class ProfileReadArray(Read):
 class ProfileReadDocument(Read):
     schema = Schema(
         {
-            "x": pyarrow.int64(),
-            "y": pyarrow.float64(),
-            "emb": pyarrow.struct(
-                [pyarrow.field(f"a{i}", pyarrow.float64()) for i in range(EMBEDDED_OBJECT_SIZE)]
+            "x": pa.int64(),
+            "y": pa.float64(),
+            "emb": pa.struct(
+                [pa.field(f"a{i}", pa.float64()) for i in range(EMBEDDED_OBJECT_SIZE)]
             ),
         }
     )
@@ -225,7 +241,7 @@ class ProfileReadDocument(Read):
     @staticmethod
     def exercise_table(table):
         [
-            [[n for n in i.values()] if isinstance(i, pyarrow.StructScalar) else i for i in column]
+            [[n for n in i.values()] if isinstance(i, pa.StructScalar) else i for i in column]
             for column in table.columns
         ]
 
@@ -244,7 +260,7 @@ class ProfileReadDocument(Read):
 
 
 class ProfileReadSmall(Read):
-    schema = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
+    schema = Schema({"x": pa.int64(), "y": pa.float64()})
     dtypes = np.dtype(np.dtype([("x", np.int64), ("y", np.float64)]))
 
     def setup(self):
@@ -265,7 +281,7 @@ class ProfileReadSmall(Read):
 
 class ProfileReadLarge(Read):
     large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
-    schema = Schema({k: pyarrow.float64() for k in large_doc_keys})
+    schema = Schema({k: pa.float64() for k in large_doc_keys})
     dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
 
     def setup(self):
@@ -333,7 +349,7 @@ class ProfileReadExtensionLarge(Read):
 
 class ProfileInsertSmall(Insert):
     large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
-    schema = Schema({"x": pyarrow.int64(), "y": pyarrow.float64()})
+    schema = Schema({"x": pa.int64(), "y": pa.float64()})
     dtypes = np.dtype([("x", np.int64), ("y", np.float64)])
 
     def setup(self):
@@ -352,7 +368,7 @@ class ProfileInsertSmall(Insert):
 
 class ProfileInsertLarge(Insert):
     large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
-    schema = Schema({k: pyarrow.float64() for k in large_doc_keys})
+    schema = Schema({k: pa.float64() for k in large_doc_keys})
     dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
 
     def setup(self):

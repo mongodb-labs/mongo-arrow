@@ -52,7 +52,7 @@ The primary benefit that PyMongoArrow gives is support for BSON types through Ar
     y: double
 
 And it also lets Arrow correctly identify the type! This is limited in utility for non-numeric extension types,
-but if you wanted to for example, sort datetimes, it avoids unecessary casting:
+but if you wanted to for example, sort datetimes, it avoids unnecessary casting:
 
 .. code-block:: python
 

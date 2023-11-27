@@ -19,7 +19,7 @@ from datetime import datetime
 from test import client_context
 from test.utils import AllowListEventListener, NullsTestMixin
 
-import pyarrow
+import pyarrow as pa
 import pymongo
 from bson import Binary, Code, CodecOptions, Decimal128, ObjectId
 from pyarrow import (
@@ -33,12 +33,16 @@ from pyarrow import (
     int32,
     int64,
     list_,
+    string,
+    struct,
+    timestamp,
 )
 from pyarrow import schema as ArrowSchema
-from pyarrow import string, struct, timestamp
 from pyarrow.parquet import read_table, write_table
 from pymongo import DESCENDING, MongoClient, WriteConcern
 from pymongo.collection import Collection
+from pytz import timezone
+
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
@@ -49,7 +53,6 @@ from pymongoarrow.types import (
     Decimal128Type,
     ObjectIdType,
 )
-from pytz import timezone
 
 
 class ArrowApiTestMixin:
@@ -71,7 +74,12 @@ class ArrowApiTestMixin:
     def setUp(self):
         self.coll.drop()
         self.coll.insert_many(
-            [{"_id": 1, "data": 10}, {"_id": 2, "data": 20}, {"_id": 3, "data": 30}, {"_id": 4}]
+            [
+                {"_id": 1, "data": 10},
+                {"_id": 2, "data": 20},
+                {"_id": 3, "data": 30},
+                {"_id": 4},
+            ]
         )
         self.cmd_listener.reset()
         self.getmore_listener.reset()
@@ -91,7 +99,8 @@ class ArrowApiTestMixin:
         self.assertEqual(table, expected)
 
         expected = Table.from_pydict(
-            {"_id": [4, 3], "data": [None, 30]}, ArrowSchema([("_id", int32()), ("data", int64())])
+            {"_id": [4, 3], "data": [None, 30]},
+            ArrowSchema([("_id", int32()), ("data", int64())]),
         )
         table = self.run_find({"_id": {"$gt": 2}}, schema=self.schema, sort=[("_id", DESCENDING)])
         self.assertEqual(table, expected)
@@ -102,7 +111,8 @@ class ArrowApiTestMixin:
 
     def test_find_with_projection(self):
         expected = Table.from_pydict(
-            {"_id": [4, 3], "data": [None, 60]}, ArrowSchema([("_id", int32()), ("data", int64())])
+            {"_id": [4, 3], "data": [None, 60]},
+            ArrowSchema([("_id", int32()), ("data", int64())]),
         )
         projection = {"_id": True, "data": {"$multiply": [2, "$data"]}}
         table = self.run_find(
@@ -140,7 +150,9 @@ class ArrowApiTestMixin:
             return orig_method(*args, **kwargs)
 
         with mock.patch.object(
-            pymongo.collection.Collection, "find_raw_batches", wraps=mock_find_raw_batches
+            pymongo.collection.Collection,
+            "find_raw_batches",
+            wraps=mock_find_raw_batches,
         ):
             expected = Table.from_pydict(
                 {"_id": [1, 2, 3, 4], "data": [10, 20, 30, None]},
@@ -184,7 +196,9 @@ class ArrowApiTestMixin:
             return orig_method(*args, **kwargs)
 
         with mock.patch.object(
-            pymongo.collection.Collection, "aggregate_raw_batches", wraps=mock_agg_raw_batches
+            pymongo.collection.Collection,
+            "aggregate_raw_batches",
+            wraps=mock_agg_raw_batches,
         ):
             expected = Table.from_pydict(
                 {"_id": [4, 3, 2, 1], "data": [None, 30, 20, 10]},
@@ -221,7 +235,10 @@ class ArrowApiTestMixin:
     def test_write_error(self):
         schema = {"_id": int32(), "data": int64()}
         data = Table.from_pydict(
-            {"_id": [i for i in range(10001)] * 2, "data": [i * 2 for i in range(10001)] * 2},
+            {
+                "_id": [i for i in range(10001)] * 2,
+                "data": [i * 2 for i in range(10001)] * 2,
+            },
             ArrowSchema(schema),
         )
         with self.assertRaises(ArrowWriteError) as awe:
@@ -232,13 +249,17 @@ class ArrowApiTestMixin:
             awe.exception.details["nInserted"],
         )
         self.assertEqual(
-            awe.exception.details.keys(), {"nInserted", "writeConcernErrors", "writeErrors"}
+            awe.exception.details.keys(),
+            {"nInserted", "writeConcernErrors", "writeErrors"},
         )
 
     def test_pymongo_error(self):
         schema = {"_id": int32(), "data": int64()}
         data = Table.from_pydict(
-            {"_id": [i for i in range(10001)] * 2, "data": [i * 2 for i in range(10001)] * 2},
+            {
+                "_id": [i for i in range(10001)] * 2,
+                "data": [i * 2 for i in range(10001)] * 2,
+            },
             ArrowSchema(schema),
         )
 
@@ -254,7 +275,8 @@ class ArrowApiTestMixin:
                 data,
             )
         self.assertEqual(
-            exc.exception.details.keys(), {"nInserted", "writeConcernErrors", "writeErrors"}
+            exc.exception.details.keys(),
+            {"nInserted", "writeConcernErrors", "writeErrors"},
         )
 
     def _create_data(self):
@@ -315,7 +337,7 @@ class ArrowApiTestMixin:
             [
                 field(a, b)
                 for (a, b) in list(schema.items())
-                if not isinstance(b, pyarrow.PyExtensionType)
+                if not isinstance(b, pa.PyExtensionType)
             ]
         )
         raw_data = {
@@ -443,7 +465,7 @@ class ArrowApiTestMixin:
             {"a": ["str"]},
             {"a": []},
         ]
-        expected = pyarrow.Table.from_pylist(docs)
+        expected = pa.Table.from_pylist(docs)
         self._test_auto_schema_list(docs, expected)
 
     def test_auto_schema_first_list_empty(self):
@@ -452,7 +474,7 @@ class ArrowApiTestMixin:
             {"a": ["str"]},
             {"a": []},
         ]
-        expected = pyarrow.Table.from_pylist(
+        expected = pa.Table.from_pylist(
             [
                 {"a": None},  # TODO: We incorrectly set the first empty list to null.
                 {"a": ["str"]},
@@ -467,7 +489,7 @@ class ArrowApiTestMixin:
             {"a": [None, None, "str"]},  # Inferred schema should use the first non-null element.
             {"a": []},
         ]
-        expected = pyarrow.Table.from_pylist(docs)
+        expected = pa.Table.from_pylist(docs)
         self._test_auto_schema_list(docs, expected)
 
     @unittest.expectedFailure  # TODO: Our inferred value for the first a.b field differs from pyarrow's.
@@ -477,7 +499,7 @@ class ArrowApiTestMixin:
             {"a": {"b": ["str"]}},
             {"a": {"b": []}},
         ]
-        expected = pyarrow.Table.from_pylist(docs)
+        expected = pa.Table.from_pylist(docs)
         self._test_auto_schema_list(docs, expected)
 
     @unittest.expectedFailure  # TODO: Our inferred value for the first a.b field differs from pyarrow's.
@@ -487,7 +509,7 @@ class ArrowApiTestMixin:
             {"a": {"b": "str"}},
             {"a": {"b": None}},
         ]
-        expected = pyarrow.Table.from_pylist(docs)
+        expected = pa.Table.from_pylist(docs)
         self._test_auto_schema_list(docs, expected)
 
     def test_auto_schema_heterogeneous(self):
@@ -758,7 +780,7 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         self.assertEqual(left, right)
 
     def table_from_dict(self, dict, schema=None):
-        return pyarrow.Table.from_pydict(dict, schema)
+        return pa.Table.from_pydict(dict, schema)
 
     def assert_in_idx(self, table, col_name):
         self.assertTrue(col_name in table.column_names)

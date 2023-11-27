@@ -39,12 +39,7 @@ class PandasBSONDtype(ExtensionDtype):
         return f"bson_{self.__class__.__name__}"
 
     def __from_arrow__(self, array: Union[pa.Array, pa.ChunkedArray]) -> ExtensionArray:
-
-        if isinstance(array, pa.Array):
-            chunks = [array]
-        else:
-            # pyarrow.ChunkedArray
-            chunks = array.chunks
+        chunks = [array] if isinstance(array, pa.Array) else array.chunks
 
         arr_type = self.construct_array_type()
         dtype = array.type.to_pandas_dtype()
@@ -55,29 +50,28 @@ class PandasBSONDtype(ExtensionDtype):
             vals = []
             typ = self.type
             for val in np.array(arr):
+                new_val = val
                 if not pd.isna(val) and not isinstance(val, typ):
-                    if typ == Decimal128:
-                        val = Decimal128.from_bid(val)
-                    else:
-                        val = typ(val)
-                vals.append(val)
-            arr = np.array(vals, dtype=object)
+                    new_val = Decimal128.from_bid(val) if typ == Decimal128 else typ(val)
+                vals.append(new_val)
+            new_arr = np.array(vals, dtype=object)
             # using _from_sequence to ensure None is converted to NA
-            to_append = arr_type._from_sequence(arr, dtype=dtype)
+            to_append = arr_type._from_sequence(new_arr, dtype=dtype)
             results.append(to_append)
 
         if results:
             return arr_type._concat_same_type(results)
-        else:
-            return arr_type(np.array([], dtype="object"))
+        return arr_type(np.array([], dtype="object"))
 
     @classmethod
     def construct_from_string(cls, string):
         if not isinstance(string, str):
-            raise TypeError(f"'construct_from_string' expects a string, got {type(string)}")
+            msg = f"'construct_from_string' expects a string, got {type(string)}"
+            raise TypeError(msg)
         default = cls()
         if string != default.name:
-            raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
+            msg = f"Cannot construct a '{cls.__name__}' from '{string}'"
+            raise TypeError(msg)
         return default
 
 
@@ -86,15 +80,18 @@ class PandasBSONExtensionArray(ExtensionArray):
 
     _default_dtype = None
 
-    def __init__(self, values, dtype, copy=False) -> None:
+    def __init__(self, values, dtype, copy=False) -> None:  # noqa: ARG002
         if not isinstance(values, np.ndarray):
-            raise TypeError("Need to pass a numpy array as values")
+            msg = "Need to pass a numpy array as values"
+            raise TypeError(msg)
         dtype = dtype or self._default_dtype
         if dtype is None:
-            raise ValueError("dtype must be a valid data type")
+            msg = "dtype must be a valid data type"
+            raise ValueError(msg)
         for val in values:
             if not isinstance(val, dtype.type) and not pd.isna(val):
-                raise ValueError(f"Values must be either {dtype.type} or NA")
+                msg = f"Values must be either {dtype.type} or NA"
+                raise ValueError(msg)
         self._dtype = dtype
         self.data = values
 
@@ -103,7 +100,7 @@ class PandasBSONExtensionArray(ExtensionArray):
         return self._dtype
 
     @classmethod
-    def _from_sequence(cls, scalars, dtype=None, copy=False):
+    def _from_sequence(cls, scalars, dtype=None, copy=False):  # noqa: ARG003
         data = np.empty(len(scalars), dtype=object)
         data[:] = scalars
         return cls(data, dtype=dtype)
@@ -115,10 +112,9 @@ class PandasBSONExtensionArray(ExtensionArray):
     def __getitem__(self, item):
         if isinstance(item, numbers.Integral):
             return self.data[item]
-        else:
-            # slice, list-like, mask
-            item = pd.api.indexers.check_array_indexer(self, item)
-            return type(self)(self.data[item], dtype=self._dtype)
+        # slice, list-like, mask
+        item = pd.api.indexers.check_array_indexer(self, item)
+        return type(self)(self.data[item], dtype=self._dtype)
 
     def __setitem__(self, item, value):
         if (
@@ -126,12 +122,14 @@ class PandasBSONExtensionArray(ExtensionArray):
             and not isinstance(value, self.dtype.type)
             and not pd.isna(value)
         ):
-            raise ValueError(f"Value must be of type {self.dtype.type} or nan")
+            msg = f"Value must be of type {self.dtype.type} or nan"
+            raise ValueError(msg)
         if not isinstance(item, numbers.Integral):
             # slice, list-like, mask
             item = pd.api.indexers.check_array_indexer(self, item)
         elif not isinstance(value, self.dtype.type) and not pd.isna(value):
-            raise ValueError(f"Array element must be of type {self.dtype.type} or nan")
+            msg = f"Array element must be of type {self.dtype.type} or nan"
+            raise ValueError(msg)
         self.data[item] = value
 
     def __len__(self) -> int:
@@ -212,13 +210,14 @@ class PandasBinary(PandasBSONDtype):
     @classmethod
     def construct_from_string(cls, string):
         if not isinstance(string, str):
-            raise TypeError(f"'construct_from_string' expects a string, got {type(string)}")
+            msg = f"'construct_from_string' expects a string, got {type(string)}"
+            raise TypeError(msg)
         pattern = re.compile(r"^bson_Binary\[(?P<subtype>.+)\]$")
         match = pattern.match(string)
         if match:
             return cls(**match.groupdict())
-        else:
-            raise TypeError(f"Cannot construct a '{cls.__name__}' from '{string}'")
+        msg = f"Cannot construct a '{cls.__name__}' from '{string}'"
+        raise TypeError(msg)
 
 
 class PandasBinaryArray(PandasBSONExtensionArray):

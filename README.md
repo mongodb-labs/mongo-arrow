@@ -31,7 +31,7 @@ df = production.invoices.find_pandas_all({'amount': {'$gt': 100.00}}, schema=inv
 ```
 
 Since PyMongoArrow can automatically infer the schema from the first batch of data, this can be
-further simplifed to:
+further simplified to:
 
 ```
 df = production.invoices.find_pandas_all({'amount': {'$gt': 100.00}})
