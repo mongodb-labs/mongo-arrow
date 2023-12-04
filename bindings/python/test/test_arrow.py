@@ -327,18 +327,14 @@ class ArrowApiTestMixin:
         self.assertEqual(mock.call_count, 2)
 
     def _create_nested_data(self, nested_elem=None):
-        schema = {k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items()}
+        schema = {k.__name__: v(0) for k, v in _TYPE_NORMALIZER_FACTORY.items()}
         if nested_elem:
             schem_ent, nested_elem = nested_elem
             schema["list"] = list_(schem_ent)
 
         # PyArrow does not support from_pydict with nested extension types.
         schema["nested"] = struct(
-            [
-                field(a, b)
-                for (a, b) in list(schema.items())
-                if not isinstance(b, pa.PyExtensionType)
-            ]
+            [field(a, b) for (a, b) in list(schema.items()) if not isinstance(b, pa.ExtensionType)]
         )
         raw_data = {
             "str": [None] + [str(i) for i in range(2)],
@@ -370,6 +366,7 @@ class ArrowApiTestMixin:
                 inner_dict["list"] = [nested_elem]
             return inner_dict
 
+        del schema["bool"]
         if nested_elem:
             raw_data["list"] = [[nested_elem] for _ in range(3)]
         raw_data["nested"] = [inner(i) for i in range(3)]
