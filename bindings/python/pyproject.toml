@@ -101,7 +101,9 @@ norecursedirs = ["test/*"]
 faulthandler_timeout = 1500
 xfail_strict = true
 filterwarnings = [
-  "error"
+  "error",
+  # https://github.com/dateutil/dateutil/issues/1314
+  "module:datetime.datetime.utc:DeprecationWarning",
 ]
 
 [tool.ruff]
