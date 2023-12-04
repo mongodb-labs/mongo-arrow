@@ -87,14 +87,10 @@ class ObjectIdType(ExtensionType):
         return PandasObjectId()
 
     def __arrow_ext_serialize__(self):
-        # since we don't have a parameterized type, we don't need extra
-        # metadata to be deserialized
         return b""
 
     @classmethod
     def __arrow_ext_deserialize__(self, storage_type, serialized):
-        # return an instance of this subclass given the serialized
-        # metadata.
         return ObjectIdType()
 
 
@@ -121,14 +117,10 @@ class Decimal128Type(ExtensionType):
         return PandasDecimal128()
 
     def __arrow_ext_serialize__(self):
-        # since we don't have a parameterized type, we don't need extra
-        # metadata to be deserialized
         return b""
 
     @classmethod
     def __arrow_ext_deserialize__(self, storage_type, serialized):
-        # return an instance of this subclass given the serialized
-        # metadata.
         return Decimal128Type()
 
 
@@ -165,8 +157,6 @@ class BinaryType(ExtensionType):
 
     @classmethod
     def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        # Return an instance of this subclass given the serialized
-        # metadata.
         serialized = serialized.decode()
         assert serialized.startswith("subtype=")  # noqa: S101
         subtype = int(serialized.split("=")[1])
@@ -193,18 +183,14 @@ class CodeType(ExtensionType):
         return PandasCode()
 
     def __arrow_ext_serialize__(self):
-        # since we don't have a parameterized type, we don't need extra
-        # metadata to be deserialized
         return b""
 
     @classmethod
     def __arrow_ext_deserialize__(self, storage_type, serialized):
-        # return an instance of this subclass given the serialized
-        # metadata.
         return CodeType()
 
 
-# Register all of the extension types:
+# Register all of the extension types.
 for dtype in [ObjectIdType, CodeType, Decimal128Type]:
     pa.register_extension_type(dtype())
 pa.register_extension_type(BinaryType(0))

@@ -366,7 +366,6 @@ class ArrowApiTestMixin:
                 inner_dict["list"] = [nested_elem]
             return inner_dict
 
-        del schema["bool"]
         if nested_elem:
             raw_data["list"] = [[nested_elem] for _ in range(3)]
         raw_data["nested"] = [inner(i) for i in range(3)]
