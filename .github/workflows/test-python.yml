@@ -72,6 +72,7 @@ jobs:
       - name: Install libbson
         run: |
           pip install packaging  # needed for mongo-c-driver-1.24.4/build/calc_release_version.py
+          pip install setuptools  # needed for use of distutils
           ./build-libbson.sh
       - name: Install Python dependencies
         run: |
