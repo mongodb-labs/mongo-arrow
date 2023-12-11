@@ -21,7 +21,7 @@ from bson import Binary, Code, Decimal128, Int64, ObjectId
 from pyarrow import DataType as _ArrowDataType
 from pyarrow import (
     ExtensionScalar,
-    PyExtensionType,
+    ExtensionType,
     binary,
     bool_,
     float64,
@@ -71,11 +71,11 @@ class ObjectIdScalar(BSONExtensionScalar):
     _bson_class = ObjectId
 
 
-class ObjectIdType(PyExtensionType):
+class ObjectIdType(ExtensionType):
     _type_marker = _BsonArrowTypes.objectid
 
     def __init__(self):
-        super().__init__(binary(12))
+        super().__init__(binary(12), "pymongoarrow.objectid")
 
     def __reduce__(self):
         return ObjectIdType, ()
@@ -86,6 +86,13 @@ class ObjectIdType(PyExtensionType):
     def to_pandas_dtype(self):
         return PandasObjectId()
 
+    def __arrow_ext_serialize__(self):
+        return b""
+
+    @classmethod
+    def __arrow_ext_deserialize__(self, storage_type, serialized):
+        return ObjectIdType()
+
 
 class Decimal128Scalar(ExtensionScalar):
     def as_py(self):
@@ -94,11 +101,11 @@ class Decimal128Scalar(ExtensionScalar):
         return Decimal128.from_bid(self.value.as_py())
 
 
-class Decimal128Type(PyExtensionType):
+class Decimal128Type(ExtensionType):
     _type_marker = _BsonArrowTypes.decimal128
 
     def __init__(self):
-        super().__init__(binary(16))
+        super().__init__(binary(16), "pymongoarrow.decimal128")
 
     def __reduce__(self):
         return Decimal128Type, ()
@@ -109,6 +116,13 @@ class Decimal128Type(PyExtensionType):
     def to_pandas_dtype(self):
         return PandasDecimal128()
 
+    def __arrow_ext_serialize__(self):
+        return b""
+
+    @classmethod
+    def __arrow_ext_deserialize__(self, storage_type, serialized):
+        return Decimal128Type()
+
 
 class BinaryScalar(ExtensionScalar):
     def as_py(self):
@@ -118,12 +132,12 @@ class BinaryScalar(ExtensionScalar):
         return Binary(self.value.as_py(), self.type.subtype)
 
 
-class BinaryType(PyExtensionType):
+class BinaryType(ExtensionType):
     _type_marker = _BsonArrowTypes.binary
 
     def __init__(self, subtype):
         self._subtype = subtype
-        super().__init__(binary())
+        super().__init__(binary(), "pymongoarrow.binary")
 
     @property
     def subtype(self):
@@ -138,16 +152,26 @@ class BinaryType(PyExtensionType):
     def to_pandas_dtype(self):
         return PandasBinary(self.subtype)
 
+    def __arrow_ext_serialize__(self):
+        return f"subtype={self.subtype}".encode()
+
+    @classmethod
+    def __arrow_ext_deserialize__(cls, storage_type, serialized):
+        serialized = serialized.decode()
+        assert serialized.startswith("subtype=")  # noqa: S101
+        subtype = int(serialized.split("=")[1])
+        return BinaryType(subtype)
+
 
 class CodeScalar(BSONExtensionScalar):
     _bson_class = Code
 
 
-class CodeType(PyExtensionType):
+class CodeType(ExtensionType):
     _type_marker = _BsonArrowTypes.code
 
     def __init__(self):
-        super().__init__(string())
+        super().__init__(string(), "pymongoarrow.code")
 
     def __reduce__(self):
         return CodeType, ()
@@ -158,6 +182,18 @@ class CodeType(PyExtensionType):
     def to_pandas_dtype(self):
         return PandasCode()
 
+    def __arrow_ext_serialize__(self):
+        return b""
+
+    @classmethod
+    def __arrow_ext_deserialize__(self, storage_type, serialized):
+        return CodeType()
+
+
+# Register all of the extension types.
+for dtype in [ObjectIdType, CodeType, Decimal128Type]:
+    pa.register_extension_type(dtype())
+pa.register_extension_type(BinaryType(0))
 
 # Internal Type Handling.
 
