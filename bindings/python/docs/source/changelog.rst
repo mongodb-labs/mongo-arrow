@@ -1,18 +1,21 @@
 Changelog
 =========
 
+Changes in Version 1.2.0
+------------------------
+- Support for PyArrow 14.0.
+- Support for Python 3.12.
+
 Changes in Version 1.1.0
 ------------------------
 - Support for PyArrow 13.0.
 - Revert bug fix for nested extension objects in auto schema, since it
   caused a performance regression.
 
-
 Changes in Version 1.0.2
 ------------------------
 - Bug fix for projection on nested fields.
 - Bug fix for nested extension objects in auto schema.
-
 
 Changes in Version 1.0.1
 ------------------------
