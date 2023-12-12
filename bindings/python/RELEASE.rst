@@ -41,14 +41,11 @@ Release Process
      $ git push
      $ git push --tags
 
-#. Download the release assets from the "Python Wheels" Github Workflow, e.g.
-https://github.com/mongodb-labs/mongo-arrow/actions/runs/2060477840.
+#. Pushing a tag will trigger the release process on GitHub Actions that will require a member of the team
+   to authorize the deployment. Navigate to https://github.com/mongodb-labs/mongo-arrow/actions/workflows/release-python.yml
+   and wait for the publish to complete.
 
-#. Upload all the release packages to PyPI with twine::
-
-     $ python3 -m twine upload dist/*
-
-#. Make sure the new version appears on https://mongo-arrow.readthedocs.io/en/latest/. If the
+#. Make sure the new version appears on https://mongo-arrow.readthedocs.io/en/stable/. If the
    new version does not show up automatically, trigger a rebuild of "latest":
    https://readthedocs.org/projects/mongo-arrow/builds/
 
@@ -61,3 +58,6 @@ https://github.com/mongodb-labs/mongo-arrow/actions/runs/2060477840.
    The title should be "PyMongoArrow X.Y.Z", and the description should contain
    a link to the release notes on the the community forum, e.g.
    "Release notes: mongodb.com/community/forums/t/pymongoarrow-0-1-1-released/104574."
+
+#. Wait for automated update PR on conda-forge, e.g.:  https://github.com/conda-forge/pymongoarrow-feedstock/pull/24
+   Update dependencies if needed.
