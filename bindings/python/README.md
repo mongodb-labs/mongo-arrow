@@ -14,7 +14,7 @@ for the latest source.
 for loading MongoDB query result sets as Apache Arrow tables, Pandas
 DataFrames or NumPy arrays.
 
-``` pycon
+```pycon
 >>> from pymongoarrow.monkey import patch_all
 ... patch_all()
 ... from pymongoarrow.api import Schema
