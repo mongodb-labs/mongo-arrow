@@ -1,15 +1,5 @@
 # PyMongoArrow
 
-- Info: A companion library to PyMongo that makes it easy to move data between
-MongoDB and Apache Arrow. See
-[GitHub](https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python)
-for the latest source.
-
-- Documentation: Available at
-[mongo-arrow.readthedocs.io](https://mongo-arrow.readthedocs.io/en/latest/).
-
-- Author: Prashant Mital
-
 **PyMongoArrow** is a companion library to PyMongo that contains tools
 for loading MongoDB query result sets as Apache Arrow tables, Pandas
 DataFrames or NumPy arrays.
