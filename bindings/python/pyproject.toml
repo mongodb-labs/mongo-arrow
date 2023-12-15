@@ -42,7 +42,10 @@ dependencies = [
 dynamic = ["version"]
 
 [project.urls]
-Homepage = "https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python"
+Homepage = "https://www.mongodb.org"
+Documentation = "https://mongo-arrow.readthedocs.io"
+Source = "https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python"
+Tracker = "https://jira.mongodb.org/projects/ARROW/issues"
 
 [project.optional-dependencies]
 docs = ["sphinx"]

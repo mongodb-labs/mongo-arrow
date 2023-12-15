@@ -1,5 +1,10 @@
 # PyMongoArrow
 
+[![PyPI Version](https://img.shields.io/pypi/v/pymongoarrow)](https://pypi.org/project/pymongoarrow)
+[![Python Versions](https://img.shields.io/pypi/pyversions/pymongoarrow)](https://pypi.org/project/pymongoarrow)
+[![Monthly Downloads](https://static.pepy.tech/badge/pymongoarrow/month)](https://pepy.tech/project/pymongoarrow)
+[![Documentation Status](https://readthedocs.org/projects/mongo-arrow/badge/?version=stable)](http://mongo-arrow.readthedocs.io/en/stable/?badge=stable)
+
 **PyMongoArrow** is a companion library to PyMongo that contains tools
 for loading MongoDB query result sets as Apache Arrow tables, Pandas
 DataFrames or NumPy arrays.
