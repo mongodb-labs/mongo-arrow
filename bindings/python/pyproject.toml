@@ -30,6 +30,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Database",
 ]
+readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
     # Must be kept in sync with "build_sytem.requires" above.
@@ -39,10 +40,6 @@ dependencies = [
     "packaging >=23.2,<24"
 ]
 dynamic = ["version"]
-
-[project.readme]
-file = "README.rst"
-content-type = "text/x-rst"
 
 [project.urls]
 Homepage = "https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python"
