@@ -407,7 +407,9 @@ def write(collection, tabular):
     elif isinstance(tabular, pd.DataFrame):
         _validate_schema(ArrowSchema.from_pandas(tabular).types)
     elif isinstance(tabular, pl.DataFrame):
-        warnings.warn("Validation of Polars.DataFrame is NotYetImplemented.", UserWarning, stacklevel=2)
+        if '_id' not in tabular.columns:
+            raise ValueError("Writing Polars Dataframes require an explicit '_id' column. ObjectIDType not yet supported")
+            warnings.warn("NotYetImplemented - Complete validation of Polars.DataFrame", UserWarning, stacklevel=2)
     elif (
         isinstance(tabular, dict)
         and len(tabular.values()) >= 1
