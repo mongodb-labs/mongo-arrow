@@ -14,12 +14,13 @@
 import warnings
 
 import numpy as np
+import pandas as pd
+import polars as pl
 import pymongo.errors
 from bson import encode
 from bson.codec_options import TypeEncoder, TypeRegistry
 from bson.raw_bson import RawBSONDocument
 from numpy import ndarray
-from pandas import NA, DataFrame
 from pyarrow import Schema as ArrowSchema
 from pyarrow import Table
 from pymongo.bulk import BulkWriteError
@@ -50,6 +51,8 @@ __all__ = [
     "find_pandas_all",
     "aggregate_numpy_all",
     "find_numpy_all",
+    "aggregate_polars_all",
+    "find_polars_all",
     "write",
     "Schema",
 ]
@@ -62,6 +65,8 @@ _PATCH_METHODS = [
     "find_pandas_all",
     "aggregate_numpy_all",
     "find_numpy_all",
+    "aggregate_polars_all",
+    "find_polars_all",
 ]
 
 # MongoDB 3.6's maxMessageSizeBytes minus some overhead to account
@@ -290,6 +295,55 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, **kwargs):
     )
 
 
+def _arrow_to_polars(arrow_table):
+    """Helper function that converts an Arrow Table to a Polars DataFrame"""
+    return pl.from_arrow(arrow_table)
+
+
+def find_polars_all(collection, query, *, schema=None, **kwargs):
+    """Method that returns the results of a find query as a
+    :class:`polars.DataFrame` instance.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``find`` operation.
+      - `query`: A mapping containing the query to use for the find operation.
+      - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
+        If the schema is not given, it will be inferred using the first
+        document in the result set.
+
+    Additional keyword-arguments passed to this method will be passed
+    directly to the underlying ``find`` operation.
+
+    :Returns:
+      An instance of class:`polars.DataFrame`.
+    """
+    return _arrow_to_polars(find_arrow_all(collection, query, schema=schema, **kwargs))
+
+
+def aggregate_polars_all(collection, pipeline, *, schema=None, **kwargs):
+    """Method that returns the results of an aggregation pipeline as a
+    :class:`polars.DataFrame` instance.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``find`` operation.
+      - `pipeline`: A list of aggregation pipeline stages.
+      - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
+        If the schema is not given, it will be inferred using the first
+        document in the result set.
+
+    Additional keyword-arguments passed to this method will be passed
+    directly to the underlying ``aggregate`` operation.
+
+    :Returns:
+      An instance of class:`polars.DataFrame`.
+    """
+    return _arrow_to_polars(
+        aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs)
+    )
+
+
 def _transform_bwe(bwe, offset):
     bwe["nInserted"] += offset
     for i in bwe["writeErrors"]:
@@ -306,9 +360,11 @@ def _tabular_generator(tabular):
         for i in tabular.to_batches():
             for row in i.to_pylist():
                 yield row
-    elif DataFrame is not None and isinstance(tabular, DataFrame):
+    elif pd.DataFrame is not None and isinstance(tabular, pd.DataFrame):  # todo how could DataFrame be None?
         for row in tabular.to_dict("records"):
             yield row
+    elif isinstance(tabular, pl.DataFrame):
+        yield from _tabular_generator(tabular.to_arrow())
     elif isinstance(tabular, dict):
         iter_dict = {k: np.nditer(v) for k, v in tabular.items()}
         try:
@@ -323,7 +379,7 @@ class _PandasNACodec(TypeEncoder):
 
     @property
     def python_type(self):
-        return NA.__class__
+        return pd.NA.__class__
 
     def transform_python(self, _):
         """Transform an NA object into 'None'"""
@@ -348,8 +404,10 @@ def write(collection, tabular):
     tab_size = len(tabular)
     if isinstance(tabular, Table):
         _validate_schema(tabular.schema.types)
-    elif isinstance(tabular, DataFrame):
+    elif isinstance(tabular, pd.DataFrame):
         _validate_schema(ArrowSchema.from_pandas(tabular).types)
+    elif isinstance(tabular, pl.DataFrame):
+        warnings.warn("Validation of Polars.DataFrame is NotYetImplemented.", UserWarning, stacklevel=2)
     elif (
         isinstance(tabular, dict)
         and len(tabular.values()) >= 1
