@@ -38,6 +38,19 @@ from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.pandas_types import PandasBSONDtype, PandasDecimal128, PandasObjectId
 from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
 
+from pyarrow import DataType as _ArrowDataType
+from pyarrow import (
+    ExtensionScalar,
+    ExtensionType,
+    binary,
+    bool_,
+    float64,
+    int64,
+    list_,
+    string,
+    struct,
+    timestamp,
+)
 
 class PolarsTestBase(unittest.TestCase):
     @classmethod
@@ -135,13 +148,14 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 out_col = out_col.astype(in_col.dtype)
             pl.testing.assert_series_equal(in_col, out_col)
 
-    def round_trip(self, data, schema=None, coll=None):
+    def round_trip(self, df_in, schema=None, coll=None):
         if coll is None:
             coll = self.coll
         coll.drop()
-        res = write(self.coll, data)
-        self.assertEqual(len(data), res.raw_result["insertedCount"])
-        self._assert_frames_equal(data, find_polars_all(coll, {}, schema=schema))
+        res = write(self.coll, df_in)
+        self.assertEqual(len(df_in), res.raw_result["insertedCount"])
+        df_out = find_polars_all(coll, {}, schema=schema)
+        self._assert_frames_equal(df_in, df_out)
         return res
 
     def test_datetime(self):
@@ -189,12 +203,40 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 self.assertEqual(n, awe.details["nInserted"])
                 raise awe
 
-    def create_schema(self):
+    def create_dataframe(self):
         arrow_schema = {
-            k.__name__: v(True) if k != Binary else v(10)
-            for k, v in _TYPE_NORMALIZER_FACTORY.items()
+            k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items()
+            if k.__name__ not in ("ObjectId", "Decimal128", "Binary", "Code")
         }
-        return arrow_schema
+        # The following was my first attempt to replace the extension types with their base types
+        # arrow_schema['ObjectId'] = pa.binary(12)
+        # arrow_schema['Binary'] = pa.binary()
+        # arrow_schema["Code"] = pa.string()
+        # arrow_schema["Decimal128"] = pa.decimal128(28)
+        arrow_schema["_id"] = int32()  # This is here as we currently require _id column in write()
+
+        df = pl.DataFrame(
+            data={
+                "_id": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int32),
+                "Int64": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int64),
+                "float": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Float64),
+                "int": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int64),
+                "datetime": pl.Series(values=[datetime(1970 + i, 1, 1) for i in range(2)] + [None], dtype=pl.Datetime(time_unit="ms")),
+                "str": pl.Series(values=[f"a{i}" for i in range(2)] + [None], dtype=pl.String),
+                "bool": pl.Series(values=[True, False, None], dtype=pl.Boolean),
+                # Extension Types
+                # "ObjectId": pl.Series(values=[ObjectId().binary for i in range(2)] + [None], dtype=pl.Binary),
+                # "Binary": pl.Series(values=[Binary(bytes(i), 10) for i in range(2)] + [None], dtype=pl.Binary),
+                # "Decimal128": pl.Series(values=[10, 20, None], dtype=pl.Decimal(28)),
+                # "Code": pl.Series(values=[Code(str(i)) for i in range(2)] + [None], dtype=pl.String)
+            }
+        )
+
+        return arrow_schema, df
+
+    def test_write_schema_validation(self):
+        arrow_schema, df = self.create_dataframe()
+        self.round_trip(df, Schema(arrow_schema))
 
     def test_auto_schema_fails_on_find(self):
         """Polars will fail when _id is automatically generated as we do not support ObjectID extension type"""
