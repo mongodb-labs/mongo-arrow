@@ -13,7 +13,7 @@ description = '"Tools for using NumPy, Pandas and PyArrow with MongoDB"'
 license = {text = "Apache License, Version 2.0"}
 authors = [{name = "Prashant Mital"}]
 maintainers = [{name = "MongoDB"}, {name = "Inc."}]
-keywords = ["mongo", "mongodb", "pymongo", "arrow", "bson", "numpy", "pandas"]
+keywords = ["mongo", "mongodb", "pymongo", "arrow", "bson", "numpy", "pandas", "polars"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -38,7 +38,8 @@ dependencies = [
     "pyarrow >=14.0,<14.1",
     "pymongo >=4.4,<5",
     "pandas >=1.3.5,<3",
-    "packaging >=23.2,<24"
+    "packaging >=23.2,<24",
+    "polars >= 0.20.4,<2.0.0"
 ]
 dynamic = ["version"]
 
