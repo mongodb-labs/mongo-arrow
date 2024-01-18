@@ -314,8 +314,7 @@ def _cast_away_extension_types_on_table(table: pa.Table) -> pa.Table:
         _cast_away_extension_types_on_array(table.column(i)) for i in range(table.num_columns)
     ]
     # Reconstruct the Arrow table
-    converted_table = pa.Table.from_arrays(converted_fields, names=table.column_names)
-    return converted_table
+    return pa.Table.from_arrays(converted_fields, names=table.column_names)
 
 
 def _arrow_to_polars(arrow_table):
