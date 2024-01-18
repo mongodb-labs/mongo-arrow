@@ -295,6 +295,7 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, **kwargs):
         aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs), schema
     )
 
+
 def _cast_away_extension_types_on_array(array: pa.Array) -> pa.Array:
     """Return an Array where ExtensionTypes have been cast to their base pyarrow types"""
     if isinstance(array.type, pa.ExtensionType):
@@ -305,14 +306,17 @@ def _cast_away_extension_types_on_array(array: pa.Array) -> pa.Array:
     #     ...
     return array
 
+
 def _cast_away_extension_types_on_table(table: pa.Table) -> pa.Table:
     """Given arrow_table that may ExtensionTypes, cast these to the base pyarrow types"""
     # Convert all fields in the Arrow table
-    converted_fields = [_cast_away_extension_types_on_array(table.column(i)) for i in
-                        range(table.num_columns)]
+    converted_fields = [
+        _cast_away_extension_types_on_array(table.column(i)) for i in range(table.num_columns)
+    ]
     # Reconstruct the Arrow table
     converted_table = pa.Table.from_arrays(converted_fields, names=table.column_names)
     return converted_table
+
 
 def _arrow_to_polars(arrow_table):
     """Helper function that converts an Arrow Table to a Polars DataFrame.
@@ -362,9 +366,7 @@ def aggregate_polars_all(collection, pipeline, *, schema=None, **kwargs):
     :Returns:
       An instance of class:`polars.DataFrame`.
     """
-    return _arrow_to_polars(
-        aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs)
-    )
+    return _arrow_to_polars(aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs))
 
 
 def _transform_bwe(bwe, offset):
@@ -383,7 +385,9 @@ def _tabular_generator(tabular):
         for i in tabular.to_batches():
             for row in i.to_pylist():
                 yield row
-    elif pd.DataFrame is not None and isinstance(tabular, pd.DataFrame):  # todo how could DataFrame be None?
+    elif pd.DataFrame is not None and isinstance(
+        tabular, pd.DataFrame
+    ):  # todo how could DataFrame be None?
         for row in tabular.to_dict("records"):
             yield row
     elif isinstance(tabular, pl.DataFrame):

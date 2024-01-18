@@ -13,40 +13,27 @@
 # limitations under the License.
 
 import datetime
-from datetime import datetime, timedelta
-
 import unittest
 import unittest.mock as mock
+from datetime import datetime, timedelta
 from test import client_context
-from test.utils import AllowListEventListener, NullsTestMixin
+from test.utils import AllowListEventListener
 
 import polars as pl
 import pyarrow as pa
-from bson import Binary, Code, CodecOptions, Decimal128, ObjectId
-from polars.testing import assert_frame_equal
-from pyarrow import decimal256, int32, int64
+from bson import Decimal128, ObjectId
+from pyarrow import (
+    int32,
+    int64,
+)
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
+
 from pymongoarrow import api
-
-from pymongoarrow.api import Schema, find_arrow_all
-from pymongoarrow.api import aggregate_polars_all, find_polars_all, write
+from pymongoarrow.api import Schema, aggregate_polars_all, find_arrow_all, find_polars_all, write
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
+from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY
 
-
-from pyarrow import (
-    ExtensionScalar,
-    ExtensionType,
-    binary,
-    bool_,
-    float64,
-    int64,
-    list_,
-    string,
-    struct,
-    timestamp,
-)
 
 class PolarsTestBase(unittest.TestCase):
     @classmethod
@@ -120,18 +107,14 @@ class TestExplicitPolarsApi(PolarsTestBase):
             }
         )
         projection = {"_id": True, "data": {"$multiply": [2, "$data"]}}
-        table = aggregate_polars_all(
-            self.coll, [{"$project": projection}], schema=self.schema
-        )
+        table = aggregate_polars_all(self.coll, [{"$project": projection}], schema=self.schema)
         self.assertTrue(table.equals(expected))
 
         agg_cmd = self.cmd_listener.results["started"][-1]
         self.assertEqual(agg_cmd.command_name, "aggregate")
         assert len(agg_cmd.command["pipeline"]) == 2
         self.assertEqual(agg_cmd.command["pipeline"][0]["$project"], projection)
-        self.assertEqual(
-            agg_cmd.command["pipeline"][1]["$project"], {"_id": True, "data": True}
-        )
+        self.assertEqual(agg_cmd.command["pipeline"][1]["$project"], {"_id": True, "data": True})
 
     def _assert_frames_equal(self, incoming, outgoing):
         for name in incoming.columns:
@@ -162,8 +145,7 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 "_id": pl.Series(values=range(n), dtype=pl.Int32),
                 "data": pl.Series(
                     values=[
-                        datetime(2024, 1, i) + timedelta(milliseconds=10)
-                        for i in range(1, n + 1)
+                        datetime(2024, 1, i) + timedelta(milliseconds=10) for i in range(1, n + 1)
                     ],
                     dtype=pl.Datetime(time_unit="ms"),
                 ),
@@ -171,14 +153,10 @@ class TestExplicitPolarsApi(PolarsTestBase):
         )
         self.round_trip(expected, schema=None)
 
-    @mock.patch.object(
-        Collection, "insert_many", side_effect=Collection.insert_many, autospec=True
-    )
+    @mock.patch.object(Collection, "insert_many", side_effect=Collection.insert_many, autospec=True)
     def test_write_batching(self, mock):
         # todo - review how we now that call_count will be 2. Is N guaranteed to be large enough?
-        data = pl.DataFrame(
-            data={"_id": pl.Series(values=range(100040), dtype=pl.Int64)}
-        )
+        data = pl.DataFrame(data={"_id": pl.Series(values=range(100040), dtype=pl.Int64)})
         self.round_trip(data, Schema(dict(_id=int64())), coll=self.coll)
         self.assertEqual(mock.call_count, 2)
 
@@ -202,7 +180,8 @@ class TestExplicitPolarsApi(PolarsTestBase):
     def create_dataframe(self):
         """First attempt to write to all PyMongoArrow types from similar Polars ones."""
         arrow_schema = {
-            k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items()
+            k.__name__: v(True)
+            for k, v in _TYPE_NORMALIZER_FACTORY.items()
             # if k.__name__ not in ("ObjectId", "Decimal128", "Binary", "Code")
         }
         # The following was my first attempt to replace the extension types with their base types
@@ -218,7 +197,10 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 "Int64": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int64),
                 "float": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Float64),
                 "int": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int64),
-                "datetime": pl.Series(values=[datetime(1970 + i, 1, 1) for i in range(2)] + [None], dtype=pl.Datetime(time_unit="ms")),
+                "datetime": pl.Series(
+                    values=[datetime(1970 + i, 1, 1) for i in range(2)] + [None],
+                    dtype=pl.Datetime(time_unit="ms"),
+                ),
                 "str": pl.Series(values=[f"a{i}" for i in range(2)] + [None], dtype=pl.String),
                 "bool": pl.Series(values=[True, False, None], dtype=pl.Boolean),
                 # Extension Types
@@ -247,14 +229,11 @@ class TestExplicitPolarsApi(PolarsTestBase):
         self.coll.drop()
         self.coll.insert_many(data)  # ObjectID autogenerated here
 
-
         df_out = find_polars_all(self.coll, {})
         assert df_out.columns == ["_id", "a"]
         assert df_out.shape == (4, 2)
         assert df_out.dtypes == [pl.Binary, pl.Int32]
-        print(f'{df_out=}')
-
-
+        print(f"{df_out=}")
 
     # 3a. Create test with all types supported by MongoDB
     # This tests api._arrow_to_polars, now casting to base Arrow types
@@ -289,14 +268,13 @@ class TestExplicitPolarsApi(PolarsTestBase):
         arrow_cast = api._cast_away_extension_types_on_table(arrow_table_in)
         pl.testing.assert_frame_equal(df_out, pl.from_arrow(arrow_cast))
 
-
     def test_cast_away_extension_types_on_table(self):
         arrow_schema, arrow_table_in = self._create_arrow_table()
         write(self.coll, arrow_table_in)
         arrow_table_out = find_arrow_all(self.coll, query={}, schema=arrow_schema)
-        print(f'{arrow_table_out=}\n\n\n')
+        print(f"{arrow_table_out=}\n\n\n")
         # Now cast
         arrow_table_cast = api._cast_away_extension_types_on_table(arrow_table_out)
-        print(f'{arrow_table_cast=}\n\n\n')
+        print(f"{arrow_table_cast=}\n\n\n")
         df_polars = pl.from_arrow(arrow_table_cast)
-        print(f'{df_polars=}')
+        print(f"{df_polars=}")
