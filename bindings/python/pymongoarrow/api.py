@@ -16,6 +16,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pymongo.errors
 from bson import encode
 from bson.codec_options import TypeEncoder, TypeRegistry
@@ -294,10 +295,32 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, **kwargs):
         aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs), schema
     )
 
+def _cast_away_extension_types_on_array(array: pa.Array) -> pa.Array:
+    """Return an Array where ExtensionTypes have been cast to their base pyarrow types"""
+    if isinstance(array.type, pa.ExtensionType):
+        return array.cast(array.type.storage_type)
+    # elif pa.types.is_struct(field.type):
+    #     ...
+    # elif pa.types.is_list(field.type):
+    #     ...
+    return array
+
+def _cast_away_extension_types_on_table(table: pa.Table) -> pa.Table:
+    """Given arrow_table that may ExtensionTypes, cast these to the base pyarrow types"""
+    # Convert all fields in the Arrow table
+    converted_fields = [_cast_away_extension_types_on_array(table.column(i)) for i in
+                        range(table.num_columns)]
+    # Reconstruct the Arrow table
+    converted_table = pa.Table.from_arrays(converted_fields, names=table.column_names)
+    return converted_table
 
 def _arrow_to_polars(arrow_table):
-    """Helper function that converts an Arrow Table to a Polars DataFrame"""
-    return pl.from_arrow(arrow_table)
+    """Helper function that converts an Arrow Table to a Polars DataFrame.
+
+    Note: Polars lacks ExtensionTypes. We cast them  to their base arrow classes.
+    """
+    arrow_table_without_extensions = _cast_away_extension_types_on_table(arrow_table)
+    return pl.from_arrow(arrow_table_without_extensions)
 
 
 def find_polars_all(collection, query, *, schema=None, **kwargs):
@@ -407,9 +430,7 @@ def write(collection, tabular):
     elif isinstance(tabular, pd.DataFrame):
         _validate_schema(ArrowSchema.from_pandas(tabular).types)
     elif isinstance(tabular, pl.DataFrame):
-        if '_id' not in tabular.columns:
-            raise ValueError("Writing Polars Dataframes require an explicit '_id' column. ObjectIDType not yet supported")
-            warnings.warn("NotYetImplemented - Complete validation of Polars.DataFrame", UserWarning, stacklevel=2)
+        pass  # TODO
     elif (
         isinstance(tabular, dict)
         and len(tabular.values()) >= 1
