@@ -177,6 +177,14 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 self.assertEqual(n, awe.details["nInserted"])
                 raise awe
 
+    # TODO START HERE.
+    #   *  We are creating two dataframes that are very similar. Can they be combined?
+    #       Clarify their intent.
+    #       - arrow table is to write all types and make sure we can round trip with find_polars_all
+    #   * Add [None] to Series
+    #   * Add tests of Struct  (and passing in dicts)
+    #   * Retry the commented out attempt at Extension types in df below. Add test with exception.
+
     def create_dataframe(self):
         """First attempt to write to all PyMongoArrow types from similar Polars ones."""
         arrow_schema = {
@@ -189,11 +197,11 @@ class TestExplicitPolarsApi(PolarsTestBase):
         # arrow_schema['Binary'] = pa.binary()
         # arrow_schema["Code"] = pa.string()
         # arrow_schema["Decimal128"] = pa.decimal128(28)
-        arrow_schema["_id"] = int32()  # This is here as we currently require _id column in write()
+        # arrow_schema["_id"] = int32()  # This is here as we currently require _id column in write()
 
         df = pl.DataFrame(
             data={
-                "_id": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int32),
+                # "_id": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int32),
                 "Int64": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int64),
                 "float": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Float64),
                 "int": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int64),
@@ -267,3 +275,60 @@ class TestExplicitPolarsApi(PolarsTestBase):
         # Now test_cast_away_extension_types_on_table
         arrow_cast = api._cast_away_extension_types_on_table(arrow_table_in)
         assert_frame_equal(df_out, pl.from_arrow(arrow_cast))
+
+    def test_exceptions_for_unsupported_datatypes(self):
+        """Confirms exceptions thrown are expected.
+        Tracks future changes in any packages."""
+
+        # Series:  PyMongoError does not support
+        with self.assertRaises(ValueError) as exc:
+            pls = pl.Series(values=range(2))
+            write(self.coll, pls)
+        self.assertTrue("Invalid tabular data object" in exc.exception.args[0])
+
+        # Polars has an Object Type, similar in concept to Pandas
+        class MyObject:
+            pass
+
+        with self.assertRaises(pl.PolarsPanicError) as exc:
+            df_in = pl.DataFrame(data=[MyObject()] * 2)
+            write(self.coll, df_in)
+        self.assertTrue("not implemented" in exc.exception.args[0])
+
+    def test_polars_binary_type(self):
+        """Demonstrates roundtrip behavior of Polar Binary Type.
+
+        It also shows that the automatically assigned _id column has this type.
+        """
+        # 1. _id added by MongoDB
+        self.coll.drop()
+        df_in = pl.DataFrame({"Binary": [b"1", b"one"]}, schema={"Binary": pl.Binary})
+        write(self.coll, df_in)
+        df_out = find_polars_all(self.coll, {})
+        self.assertTrue(df_out.columns == ["_id", "Binary"])
+        self.assertTrue(all([isinstance(c, pl.Binary) for c in df_out.dtypes]))
+        self.assertTrue(assert_frame_equal(df_in, df_out.select("Binary")) is None)
+        # 2. Explicit Binary _id
+        self.coll.drop()
+        df_in = pl.DataFrame(
+            data=dict(_id=[b"0", b"1"], Binary=[b"1", b"one"]),
+            schema=dict(_id=pl.Binary, Binary=pl.Binary),
+        )
+        write(self.coll, df_in)
+        df_out = find_polars_all(self.coll, {})
+        self.assertEqual(df_out.columns, ["_id", "Binary"])
+        self.assertTrue(all([isinstance(c, pl.Binary) for c in df_out.dtypes]))
+        self.assertTrue(assert_frame_equal(df_in, df_out) is None)
+        # 3. Explicit Int32 _id
+        self.coll.drop()
+        df_in = pl.DataFrame(
+            data={"_id": [0, 1], "Binary": [b"1", b"one"]},
+            schema={"_id": pl.Int32, "Binary": pl.Binary},
+        )
+        write(self.coll, df_in)
+        df_out = find_polars_all(self.coll, {})
+        self.assertEqual(df_out.columns, ["_id", "Binary"])
+        out_types = df_out.dtypes
+        self.assertTrue(isinstance(out_types[0], pl.Int32))
+        self.assertTrue(isinstance(out_types[1], pl.Binary))
+        self.assertTrue(assert_frame_equal(df_in, df_out) is None)
