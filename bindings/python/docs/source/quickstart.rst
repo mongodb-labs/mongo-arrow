@@ -44,7 +44,7 @@ e.g. :meth:`~pymongoarrow.api.find_pandas_all`.
 
 Test data
 ^^^^^^^^^
-Before we begein, we must first add some data to our cluster that we can
+Before we begin, we must first add some data to our cluster that we can
 query. We can do so using **PyMongo**::
 
   from datetime import datetime
@@ -119,6 +119,7 @@ Nested data (embedded documents) are also supported::
 Arrays (and nested arrays) are also supported::
 
   from pymongoarrow.api import Schema
+  from pyarrow import int32, list_
   schema = Schema({'_id': int, 'amount': float, 'txns': list_(int32())})
   arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
 
@@ -142,29 +143,8 @@ Nested data (embedded documents) are also supported::
   arrow_table = client.db.data.aggregate_arrow_all([{'$match': {'amount': {'$lte': 10}}}], schema=schema)
 
 
-Writing to other formats
-------------------------
-Result sets that have been loaded as Arrow's :class:`~pyarrow.Table` type can
-be easily written to one of the formats supported by
-`PyArrow <https://arrow.apache.org/docs/python/index.html>`_. For example,
-to write the table referenced by the variable ``arrow_table`` to a Parquet
-file ``example.parquet``, run::
 
-  import pyarrow.parquet as pq
-  pq.write_table(arrow_table, 'example.parquet')
-
-Pandas also supports writing :class:`~pandas.DataFrame` instances to a variety
-of formats including CSV, and HDF. For example, to write the data frame
-referenced by the variable ``df`` to a CSV file ``out.csv``, run::
-
-  df.to_csv('out.csv', index=False)
-
-.. note::
-
-  Nested data is supported for parquet read/write but is not well supported
-  by Arrow or Pandas for CSV read/write.
-
-Writing back to MongoDB
+Writing to MongoDB
 -----------------------
 Result sets that have been loaded as Arrow's :class:`~pyarrow.Table` type, Pandas'
 :class:`~pandas.DataFrame` type, or NumPy's :class:`~numpy.ndarray` type can
@@ -176,3 +156,24 @@ be easily written to your MongoDB database using the :meth:`~pymongoarrow.api.wr
   write(coll, df)
   write(coll, arrow_table)
   write(coll, ndarrays)
+
+Writing to other formats
+------------------------
+Once result sets have been loaded, one can then write them to any format that the package supports.
+
+For example, to write the table referenced by the variable ``arrow_table`` to a Parquet
+file ``example.parquet``, run::
+
+  import pyarrow.parquet as pq
+  pq.write_table(arrow_table, 'example.parquet')
+
+Pandas also supports writing :class:`~pandas.DataFrame` instances to a variety
+of formats including CSV, and HDF. To write the data frame
+referenced by the variable ``df`` to a CSV file ``out.csv``, for example, run::
+
+  df.to_csv('out.csv', index=False)
+
+.. note::
+
+  Nested data is supported for parquet read/write but is not well supported
+  by Arrow or Pandas for CSV read/write.
