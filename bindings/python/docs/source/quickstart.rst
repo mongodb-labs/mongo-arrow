@@ -51,11 +51,10 @@ query. We can do so using **PyMongo**::
   from pymongo import MongoClient
   client = MongoClient()
   client.db.data.insert_many([
-      {'_id': 1, 'amount': 21, 'last_updated': datetime(2020, 12, 10, 1, 3, 1), 'account': { 'name': "Customer1", 'account_number': 1}}, "txns": [1, 2, 3]},
-      {'_id': 2, 'amount': 16, 'last_updated': datetime(2020, 7, 23, 6, 7, 11), 'account': { 'name': "Customer2", 'account_number': 2}}, "txns": [1, 2, 3]},
-      {'_id': 3, 'amount': 3, 'last_updated': datetime(2021, 3, 10, 18, 43, 9), 'account': { 'name': "Customer3", 'account_number': 3}}, "txns": [1, 2, 3]},
-      {'_id': 4, 'amount': 0, 'last_updated': datetime(2021, 2, 25, 3, 50, 31), 'account': { 'name': "Customer4", 'account_number': 4}}, "txns": [1, 2, 3]}])
-
+    {'_id': 1, 'amount': 21, 'last_updated': datetime(2020, 12, 10, 1, 3, 1), 'account': {'name': 'Customer1', 'account_number': 1}, 'txns': ['A']},
+    {'_id': 2, 'amount': 16, 'last_updated': datetime(2020, 7, 23, 6, 7, 11), 'account': {'name': 'Customer2', 'account_number': 2}, 'txns': ['A', 'B']},
+    {'_id': 3, 'amount': 3,  'last_updated': datetime(2021, 3, 10, 18, 43, 9), 'account': {'name': 'Customer3', 'account_number': 3}, 'txns': ['A', 'B', 'C']},
+    {'_id': 4, 'amount': 0,  'last_updated': datetime(2021, 2, 25, 3, 50, 31), 'account': {'name': 'Customer4', 'account_number': 4}, 'txns': ['A', 'B', 'C', 'D']}])
 Defining the schema
 -------------------
 **PyMongoArrow** relies upon a data schema to marshall
@@ -73,12 +72,11 @@ For a full-list of data types and associated type-identifiers see
 
 Nested data (embedded documents) are also supported::
 
-  from pymongoarrow.api import Schema
   schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
 
 Arrays (and nested arrays) are also supported::
 
-  from pymongoarrow.api import Schema
+  from pyarrow import int32, list_
   schema = Schema({'_id': int, 'amount': float, 'txns': list_(int32())})
 
 .. note::
@@ -112,37 +110,30 @@ names and values are the corresponding arrays.
 
 Nested data (embedded documents) are also supported::
 
-  from pymongoarrow.api import Schema
   schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
   arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
 
 Arrays (and nested arrays) are also supported::
 
-  from pymongoarrow.api import Schema
-  from pyarrow import int32, list_
   schema = Schema({'_id': int, 'amount': float, 'txns': list_(int32())})
   arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
 
 Aggregate operations
 --------------------
-Running ``aggregate`` operations is similar to ``find``. Here is an example of
-an aggregation that loads all records with an ``amount`` less than 10::
+Running an ``aggregate`` operation is similar to ``find``, but it takes a sequence of operations to perform.
+Here is a simple example of ``aggregate_pandas_all`` that outputs a new dataframe
+in which all ``_id`` values are grouped together and their ``amount`` values summed::
 
-  # pandas
-  df = client.db.data.aggregate_pandas_all([{'$match': {'amount': {'$lte': 10}}}], schema=schema)
-  # arrow
-  arrow_table = client.db.data.aggregate_arrow_all([{'$match': {'amount': {'$lte': 10}}}], schema=schema)
-  # numpy
-  ndarrays = client.db.data.aggregate_numpy_all([{'$match': {'amount': {'$lte': 10}}}], schema=schema)
+  df = client.db.data.aggregate_pandas_all([{'$group': {'_id': None, 'total_amount': { '$sum': '$amount' }}}])
 
-Nested data (embedded documents) are also supported::
+Nested data (embedded documents) are also supported.
+In this more complex example, we unwind values in the nested ``txn`` field, count the number of each,
+then return as a list of numpy ndarrays sorted in decreasing order::
 
-  from pymongoarrow.api import Schema
-  schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
-  arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
-  arrow_table = client.db.data.aggregate_arrow_all([{'$match': {'amount': {'$lte': 10}}}], schema=schema)
+  pipeline = [{'$unwind': '$txns'}, {'$group': {'_id': '$txns', 'count': {'$sum': 1}}}, {'$sort': {"count": -1}}]
+  ndarrays = client.db.data.aggregate_numpy_all(pipeline)
 
-
+More information on aggregation pipelines can be found `here <https://www.mongodb.com/docs/manual/core/aggregation-pipeline/>`_.
 
 Writing to MongoDB
 -----------------------
