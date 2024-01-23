@@ -14,25 +14,29 @@
 
 import unittest
 import unittest.mock as mock
-from datetime import datetime, timedelta
+import uuid
+from datetime import datetime
 from test import client_context
 from test.utils import AllowListEventListener
 
+import bson
 import polars as pl
 import pyarrow as pa
-from bson import Decimal128, ObjectId
 from polars.testing import assert_frame_equal
-from pyarrow import (
-    int32,
-    int64,
-)
+from pyarrow import int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
 
 from pymongoarrow import api
-from pymongoarrow.api import Schema, aggregate_polars_all, find_polars_all, write
+from pymongoarrow.api import Schema, aggregate_polars_all, find_arrow_all, find_polars_all, write
 from pymongoarrow.errors import ArrowWriteError
-from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY
+from pymongoarrow.types import (
+    _TYPE_NORMALIZER_FACTORY,
+    BinaryType,
+    CodeType,
+    Decimal128Type,
+    ObjectIdType,
+)
 
 
 class PolarsTestBase(unittest.TestCase):
@@ -43,7 +47,8 @@ class PolarsTestBase(unittest.TestCase):
         cls.cmd_listener = AllowListEventListener("find", "aggregate")
         cls.getmore_listener = AllowListEventListener("getMore")
         cls.client = client_context.get_client(
-            event_listeners=[cls.getmore_listener, cls.cmd_listener]
+            event_listeners=[cls.getmore_listener, cls.cmd_listener],
+            uuidRepresentation="standard",
         )
 
 
@@ -57,6 +62,7 @@ class TestExplicitPolarsApi(PolarsTestBase):
         )
 
     def setUp(self):
+        """Insert simple use case data."""
         self.coll.drop()
         self.coll.insert_many(
             [
@@ -68,6 +74,15 @@ class TestExplicitPolarsApi(PolarsTestBase):
         )
         self.cmd_listener.reset()
         self.getmore_listener.reset()
+
+    def round_trip(self, df_in, schema=None, **kwargs):
+        """Helper tests pl.DataFrame written matches that found."""
+        self.coll.drop()
+        res = write(self.coll, df_in)
+        self.assertEqual(len(df_in), res.raw_result["insertedCount"])
+        df_out = find_polars_all(self.coll, {}, schema=schema, **kwargs)
+        pl.testing.assert_frame_equal(df_in, df_out)
+        return res
 
     def test_find_simple(self):
         expected = pl.DataFrame(
@@ -116,51 +131,13 @@ class TestExplicitPolarsApi(PolarsTestBase):
         self.assertEqual(agg_cmd.command["pipeline"][0]["$project"], projection)
         self.assertEqual(agg_cmd.command["pipeline"][1]["$project"], {"_id": True, "data": True})
 
-    def _assert_frames_equal(self, incoming, outgoing):
-        for name in incoming.columns:
-            in_col = incoming[name]
-            out_col = outgoing[name]
-            # Object types may lose type information in a round trip.
-            # Integer types with missing values are converted to floating
-            # point in a round trip.
-            if str(out_col.dtype) in ["object", "float64", "datetime64[ms]"]:
-                out_col = out_col.astype(in_col.dtype)
-            pl.testing.assert_series_equal(in_col, out_col)
-
-    def round_trip(self, df_in, schema=None, coll=None):
-        if coll is None:
-            coll = self.coll
-        coll.drop()
-        res = write(self.coll, df_in)
-        self.assertEqual(len(df_in), res.raw_result["insertedCount"])
-        df_out = find_polars_all(coll, {}, schema=schema)
-        self._assert_frames_equal(df_in, df_out)
-        return res
-
-    def test_datetime(self):
-        """Test round trip of type: datetime"""
-        n = 4
-        expected = pl.DataFrame(
-            data={
-                "_id": pl.Series(values=range(n), dtype=pl.Int32),
-                "data": pl.Series(
-                    values=[
-                        datetime(2024, 1, i) + timedelta(milliseconds=10) for i in range(1, n + 1)
-                    ],
-                    dtype=pl.Datetime(time_unit="ms"),
-                ),
-            }
-        )
-        self.round_trip(expected, schema=None)
-
     @mock.patch.object(Collection, "insert_many", side_effect=Collection.insert_many, autospec=True)
     def test_write_batching(self, mock):
-        # todo - review how we now that call_count will be 2. Is N guaranteed to be large enough?
         data = pl.DataFrame(data={"_id": pl.Series(values=range(100040), dtype=pl.Int64)})
-        self.round_trip(data, Schema(dict(_id=int64())), coll=self.coll)
+        self.round_trip(data, Schema(dict(_id=int64())))
         self.assertEqual(mock.call_count, 2)
 
-    def test_write_error(self):
+    def test_duplicate_key_error(self):
         """Confirm expected error is raised, simple duplicate key case."""
         n = 3
         data = pl.DataFrame(
@@ -177,53 +154,51 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 self.assertEqual(n, awe.details["nInserted"])
                 raise awe
 
-    # TODO START HERE.
-    #   *  We are creating two dataframes that are very similar. Can they be combined?
-    #       Clarify their intent.
-    #       - arrow table is to write all types and make sure we can round trip with find_polars_all
-    #   * Add [None] to Series
-    #   * Add tests of Struct  (and passing in dicts)
-    #   * Retry the commented out attempt at Extension types in df below. Add test with exception.
+    def test_polars_types(self):
+        """Test round-trip of DataFrame consisting of Polar.DataTypes.
 
-    def create_dataframe(self):
-        """First attempt to write to all PyMongoArrow types from similar Polars ones."""
-        arrow_schema = {
-            k.__name__: v(True)
-            for k, v in _TYPE_NORMALIZER_FACTORY.items()
-            # if k.__name__ not in ("ObjectId", "Decimal128", "Binary", "Code")
+        This does NOT include ExtensionTypes as Polars doesn't support them (yet).
+        """
+        pl_typenames = ["Int64", "Int32", "Float64", "Datetime", "String", "Boolean"]
+        pl_types = [pl.Int64, pl.Int32, pl.Float64, pl.Datetime("ms"), pl.String, pl.Boolean]
+        pa_types = [
+            pa.int64(),
+            pa.int32(),
+            pa.float64(),
+            pa.timestamp("ms"),
+            pa.string(),
+            pa.bool_(),
+        ]
+
+        pl_schema = dict(zip(pl_typenames, pl_types))
+        pa_schema = dict(zip(pl_typenames, pa_types))
+
+        data = {
+            "Int64": pl.Series([i for i in range(2)] + [None]),
+            "Int32": pl.Series([i for i in range(2)] + [None]),
+            "Float64": pl.Series([i for i in range(2)] + [None]),
+            "Datetime": pl.Series([datetime(1970 + i, 1, 1) for i in range(2)] + [None]),
+            "String": pl.Series([f"a{i}" for i in range(2)] + [None]),
+            "Boolean": pl.Series([True, False, None]),
         }
-        # The following was my first attempt to replace the extension types with their base types
-        # arrow_schema['ObjectId'] = pa.binary(12)
-        # arrow_schema['Binary'] = pa.binary()
-        # arrow_schema["Code"] = pa.string()
-        # arrow_schema["Decimal128"] = pa.decimal128(28)
-        # arrow_schema["_id"] = int32()  # This is here as we currently require _id column in write()
 
-        df = pl.DataFrame(
-            data={
-                # "_id": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int32),
-                "Int64": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int64),
-                "float": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Float64),
-                "int": pl.Series(values=[i for i in range(2)] + [None], dtype=pl.Int64),
-                "datetime": pl.Series(
-                    values=[datetime(1970 + i, 1, 1) for i in range(2)] + [None],
-                    dtype=pl.Datetime(time_unit="ms"),
-                ),
-                "str": pl.Series(values=[f"a{i}" for i in range(2)] + [None], dtype=pl.String),
-                "bool": pl.Series(values=[True, False, None], dtype=pl.Boolean),
-                # Extension Types
-                # "ObjectId": pl.Series(values=[ObjectId().binary for i in range(2)] + [None], dtype=pl.Binary),
-                # "Binary": pl.Series(values=[Binary(bytes(i), 10) for i in range(2)] + [None], dtype=pl.Binary),
-                # "Decimal128": pl.Series(values=[10, 20, None], dtype=pl.Decimal(28)),
-                # "Code": pl.Series(values=[Code(str(i)) for i in range(2)] + [None], dtype=pl.String)
-            }
-        )
+        df_in = pl.DataFrame._from_dict(data=data, schema=pl_schema)
+        self.coll.drop()
+        write(self.coll, df_in)
+        df_out = find_polars_all(self.coll, {}, schema=Schema(pa_schema))
+        pl.testing.assert_frame_equal(df_in, df_out.drop("_id"))
 
-        return arrow_schema, df
+    def test_extension_types_fail(self):
+        """Confirm failure on ExtensionTypes for Polars.DataFrame.from_arrow"""
 
-    def test_write_schema_validation(self):
-        arrow_schema, df = self.create_dataframe()
-        self.round_trip(df, Schema(arrow_schema))
+        for ext_type, data in (
+            (ObjectIdType(), [bson.ObjectId().binary, bson.ObjectId().binary]),
+            (Decimal128Type(), [bson.Decimal128(str(i)).bid for i in range(2)]),
+            (CodeType(), [str(i) for i in range(2)]),
+        ):
+            table = pa.Table.from_pydict({"foo": data}, pa.schema({"foo": ext_type}))
+            with self.assertRaises(pl.exceptions.ComputeError):
+                pl.from_arrow(table)
 
     def test_auto_schema_succeeds_on_find(self):
         """Confirms Polars can read ObjectID Extension type.
@@ -242,12 +217,10 @@ class TestExplicitPolarsApi(PolarsTestBase):
         self.assertEqual(df_out.shape, (4, 2))
         self.assertEqual(df_out.dtypes, [pl.Binary, pl.Int32])
 
-    # 3a. Create test with all types supported by MongoDB
-    # This tests api._arrow_to_polars, now casting to base Arrow types
-    def _create_arrow_table(self):
-        """Helper function creates n Arrow Table with all supported data types"""
-        schema = {k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items()}
-        data = pa.Table.from_pydict(
+    def test_arrow_to_polars(self):
+        """Test reading Polars data from written Arrow Data."""
+        arrow_schema = {k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items()}
+        arrow_table_in = pa.Table.from_pydict(
             {
                 "Int64": [i for i in range(2)],
                 "float": [i for i in range(2)],
@@ -256,29 +229,28 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 "int": [i for i in range(2)],
                 "bool": [True, False],
                 "Binary": [b"1", b"23"],
-                "ObjectId": [ObjectId().binary, ObjectId().binary],
-                "Decimal128": [Decimal128(str(i)).bid for i in range(2)],
+                "ObjectId": [bson.ObjectId().binary, bson.ObjectId().binary],
+                "Decimal128": [bson.Decimal128(str(i)).bid for i in range(2)],
                 "Code": [str(i) for i in range(2)],
             },
-            pa.schema(schema),
+            pa.schema(arrow_schema),
         )
-        return Schema(schema), data
 
-    def test_polars_succeeds_to_find_all_bson_types(self):
-        """find_polars_all from collection written from an Arrow.Table"""
         self.coll.drop()
-        arrow_schema, arrow_table_in = self._create_arrow_table()
         res = write(self.coll, arrow_table_in)
         self.assertEqual(len(arrow_table_in), res.raw_result["insertedCount"])
-        df_out = find_polars_all(self.coll, query={}, schema=arrow_schema)
+        df_out = find_polars_all(self.coll, query={}, schema=Schema(arrow_schema))
 
-        # Now test_cast_away_extension_types_on_table
+        # Sanity check: compare with cast_away_extension_types_on_table
         arrow_cast = api._cast_away_extension_types_on_table(arrow_table_in)
         assert_frame_equal(df_out, pl.from_arrow(arrow_cast))
 
-    def test_exceptions_for_unsupported_datatypes(self):
-        """Confirms exceptions thrown are expected.
-        Tracks future changes in any packages."""
+    def test_exceptions_for_unsupported_polar_types(self):
+        """Confirm exceptions thrown are expected.
+
+        Currently, pl.Series, and pl.Object
+        Tracks future changes in any packages.
+        """
 
         # Series:  PyMongoError does not support
         with self.assertRaises(ValueError) as exc:
@@ -307,7 +279,7 @@ class TestExplicitPolarsApi(PolarsTestBase):
         df_out = find_polars_all(self.coll, {})
         self.assertTrue(df_out.columns == ["_id", "Binary"])
         self.assertTrue(all([isinstance(c, pl.Binary) for c in df_out.dtypes]))
-        self.assertTrue(assert_frame_equal(df_in, df_out.select("Binary")) is None)
+        self.assertIsNone(assert_frame_equal(df_in, df_out.select("Binary")))
         # 2. Explicit Binary _id
         self.coll.drop()
         df_in = pl.DataFrame(
@@ -318,7 +290,7 @@ class TestExplicitPolarsApi(PolarsTestBase):
         df_out = find_polars_all(self.coll, {})
         self.assertEqual(df_out.columns, ["_id", "Binary"])
         self.assertTrue(all([isinstance(c, pl.Binary) for c in df_out.dtypes]))
-        self.assertTrue(assert_frame_equal(df_in, df_out) is None)
+        self.assertIsNone(assert_frame_equal(df_in, df_out))
         # 3. Explicit Int32 _id
         self.coll.drop()
         df_in = pl.DataFrame(
@@ -332,3 +304,92 @@ class TestExplicitPolarsApi(PolarsTestBase):
         self.assertTrue(isinstance(out_types[0], pl.Int32))
         self.assertTrue(isinstance(out_types[1], pl.Binary))
         self.assertTrue(assert_frame_equal(df_in, df_out) is None)
+
+    def test_bson_types(self):
+        """Test reading Polars and Arrow data from written BSON Data.
+
+        This is meant to capture the use case of reading data in Python
+        that has been written to a DB from another language.
+
+        Note that this tests only types currently supported by Arrow.
+        bson.Regex is not included, for example.
+        """
+
+        # 1. Use pymongo / bson packages to build create and write tabular data
+        self.coll.drop()
+        collection = self.coll
+
+        data_type_map = [
+            {"type": "int", "value": 42, "atype": pa.int32(), "ptype": pl.Int32},
+            {"type": "long", "value": 1234567890123456789, "atype": pa.int64(), "ptype": pl.Int64},
+            {"type": "double", "value": 10.5, "atype": pa.float64(), "ptype": pl.Float64},
+            {"type": "string", "value": "hello world", "atype": pa.string(), "ptype": pl.String},
+            {"type": "boolean", "value": True, "atype": pa.bool_(), "ptype": pl.Boolean},
+            {
+                "type": "date",
+                "value": datetime(2025, 1, 21),
+                "atype": pa.timestamp("ms"),
+                "ptype": pl.Datetime,
+            },
+            {
+                "type": "object",
+                "value": {"a": 1, "b": 2},
+                "atype": pa.struct({"a": pa.int32(), "b": pa.int32()}),
+                "ptype": pl.Struct({"a": pl.Int32, "b": pl.Int32}),
+            },
+            {
+                "type": "array",
+                "value": [1, 2, 3],
+                "atype": pa.list_(pa.int32()),
+                "ptype": pl.List(pl.Int32),
+            },
+            {
+                "type": "bytes",
+                "value": b"\x00\x01\x02\x03\x04",
+                "atype": BinaryType(pa.binary()),
+                "ptype": pl.Binary,
+            },
+            {
+                "type": "binary data",
+                "value": bson.Binary(b"\x00\x01\x02\x03\x04"),
+                "atype": BinaryType(pa.binary()),
+                "ptype": pl.Binary,
+            },
+            {
+                "type": "object id",
+                "value": bson.ObjectId(),
+                "atype": ObjectIdType(),
+                "ptype": pl.Object,
+            },
+            {
+                "type": "javascript",
+                "value": bson.Code("function() { return x; }"),
+                "atype": CodeType(),
+                "ptype": pl.String,
+            },
+            {
+                "type": "decimal128",
+                "value": bson.Decimal128("10.99"),
+                "atype": Decimal128Type(),
+                "ptype": pl.Decimal,
+            },
+            {
+                "type": "uuid",
+                "value": uuid.uuid4(),
+                "atype": BinaryType(pa.binary()),
+                "ptype": pl.Binary,
+            },
+        ]
+
+        # Iterate over types
+        for data_type in data_type_map:
+            collection.insert_one({"data_type": data_type["type"], "value": data_type["value"]})
+            table = find_arrow_all(collection=collection, query={"data_type": data_type["type"]})
+            doc = collection.find_one({"data_type": data_type["type"]})
+            assert table.shape == (1, 3)
+            assert table["value"].type == data_type["atype"]
+            try:
+                dfpl = pl.from_arrow(table.drop("_id"))
+                assert dfpl["value"].dtype == data_type["ptype"]
+            except pl.ComputeError:
+                assert isinstance(table["value"].type, pa.ExtensionType)
