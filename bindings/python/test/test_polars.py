@@ -385,7 +385,6 @@ class TestExplicitPolarsApi(PolarsTestBase):
         for data_type in data_type_map:
             collection.insert_one({"data_type": data_type["type"], "value": data_type["value"]})
             table = find_arrow_all(collection=collection, query={"data_type": data_type["type"]})
-            doc = collection.find_one({"data_type": data_type["type"]})
             assert table.shape == (1, 3)
             assert table["value"].type == data_type["atype"]
             try:
