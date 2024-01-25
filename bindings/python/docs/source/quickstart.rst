@@ -55,6 +55,7 @@ query. We can do so using **PyMongo**::
     {'_id': 2, 'amount': 16, 'last_updated': datetime(2020, 7, 23, 6, 7, 11), 'account': {'name': 'Customer2', 'account_number': 2}, 'txns': ['A', 'B']},
     {'_id': 3, 'amount': 3,  'last_updated': datetime(2021, 3, 10, 18, 43, 9), 'account': {'name': 'Customer3', 'account_number': 3}, 'txns': ['A', 'B', 'C']},
     {'_id': 4, 'amount': 0,  'last_updated': datetime(2021, 2, 25, 3, 50, 31), 'account': {'name': 'Customer4', 'account_number': 4}, 'txns': ['A', 'B', 'C', 'D']}])
+
 Defining the schema
 -------------------
 **PyMongoArrow** relies upon a data schema to marshall
@@ -66,27 +67,14 @@ to type-specifiers, e.g.::
   from pymongoarrow.api import Schema
   schema = Schema({'_id': int, 'amount': float, 'last_updated': datetime})
 
-There are multiple permissible type-identifiers for each supported BSON type.
-For a full-list of data types and associated type-identifiers see
-:doc:`data_types`.
 
 Nested data (embedded documents) are also supported::
 
   schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
 
-Arrays (and nested arrays) are also supported::
-
-  from pyarrow import int32, list_
-  schema = Schema({'_id': int, 'amount': float, 'txns': list_(int32())})
-
-.. note::
-
-   For all of the examples below, the schema can be omitted like so::
-
-    arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}})
-
-   In this case, PyMongoArrow will try to automatically apply a schema based on
-   the data contained in the first batch.
+There are multiple permissible type-identifiers for each supported BSON type.
+For a full-list of data types and associated type-identifiers see
+:doc:`data_types`.
 
 
 Find operations
@@ -101,22 +89,27 @@ We can also load the same result set as a :class:`pyarrow.Table` instance::
 
   arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
 
-Or as :class:`numpy.ndarray` instances::
+In the NumPy case, the return value is a dictionary where the keys are field
+names and values are corresponding :class:`numpy.ndarray` instances::
 
   ndarrays = client.db.data.find_numpy_all({'amount': {'$gt': 0}}, schema=schema)
 
-In the NumPy case, the return value is a dictionary where the keys are field
-names and values are the corresponding arrays.
-
-Nested data (embedded documents) are also supported::
-
-  schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
-  arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
 
 Arrays (and nested arrays) are also supported::
 
+  from pyarrow import int32, list_
   schema = Schema({'_id': int, 'amount': float, 'txns': list_(int32())})
   arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
+
+
+.. note::
+   For all of the examples above, the schema can be omitted like so::
+
+    arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}})
+
+   In this case, PyMongoArrow will try to automatically apply a schema based on
+   the data contained in the first batch.
+
 
 Aggregate operations
 --------------------
