@@ -55,8 +55,8 @@ class Schema:
     def __iter__(self):
         yield from self.typemap
 
-    def __repr_(self):
-        return self.typemap
+    def __repr__(self):
+        return str(self.typemap)
 
     @staticmethod
     def _normalize_mapping(mapping):
