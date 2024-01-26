@@ -97,8 +97,8 @@ names and values are corresponding :class:`numpy.ndarray` instances::
 
 Arrays (and nested arrays) are also supported::
 
-  from pyarrow import int32, list_
-  schema = Schema({'_id': int, 'amount': float, 'txns': list_(int32())})
+  from pyarrow import list_, string
+  schema = Schema({'_id': int, 'amount': float, 'txns': list_(string())})
   arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
 
 
