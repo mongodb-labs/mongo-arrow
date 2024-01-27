@@ -56,9 +56,7 @@ class Schema:
         yield from self.typemap
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} {repr(self.typemap)}>"
-
-
+        return f"<{self.__class__.__name__} {self.typemap!r}>"
 
     @staticmethod
     def _normalize_mapping(mapping):
