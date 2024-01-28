@@ -43,5 +43,6 @@ libbson
 mongo-c-driver-*
 
 
-# Benchmark output files
+# Benchmark and test output files
 results/*
+xunit-results/
