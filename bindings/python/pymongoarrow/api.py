@@ -384,9 +384,7 @@ def _tabular_generator(tabular):
         for i in tabular.to_batches():
             for row in i.to_pylist():
                 yield row
-    elif pd.DataFrame is not None and isinstance(
-        tabular, pd.DataFrame
-    ):  # todo how could DataFrame be None?
+    elif isinstance(tabular, pd.DataFrame):
         for row in tabular.to_dict("records"):
             yield row
     elif isinstance(tabular, pl.DataFrame):
