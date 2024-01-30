@@ -98,38 +98,68 @@ class TestDateTimeType(unittest.TestCase):
         self.assertEqual(table, expected)
 
     def test_timezone_specified_in_codec_options(self):
-        # 1. When specified, CodecOptions.tzinfo will modify timestamp
-        #    type specifiers in the schema to inherit the specified timezone
-        tz = pytz.timezone("US/Pacific")
-        codec_options = CodecOptions(tz_aware=True, tzinfo=tz)
-        expected = Table.from_pydict(
-            {"_id": [1, 2], "data": self.expected_times},
-            ArrowSchema([("_id", int32()), ("data", timestamp("ms", tz=tz))]),
-        )
+        """Test behavior of setting tzinfo CodecOptions in Collection.with_options.
 
-        schemas = [
-            Schema({"_id": int32(), "data": timestamp("ms")}),
-            Schema({"_id": int32(), "data": datetime}),
-        ]
-        for schema in schemas:
-            table = find_arrow_all(
-                self.coll.with_options(codec_options=codec_options),
-                {},
-                schema=schema,
-                sort=[("_id", ASCENDING)],
-            )
+        When provided, timestamp type specifiers in the schema to inherit the specified timezone.
+        Read values will maintain this information for timestamps whether schema is passed or not.
 
-            self.assertEqual(table, expected)
+        Note, this does not apply to datetimes.
+        We also test here that if one asks for a different timezone upon reading,
+        on returns the requested timezone. # TODO Confirm whether time is adjusted!!!
+        """
 
-        # 2. CodecOptions.tzinfo will be ignored when tzinfo is specified
-        #    in the original schema type specifier.
-        tz_east = pytz.timezone("US/Eastern")
-        codec_options = CodecOptions(tz_aware=True, tzinfo=tz_east)
-        schema = Schema({"_id": int32(), "data": timestamp("ms", tz=tz)})
-        table = find_arrow_all(
-            self.coll.with_options(codec_options=codec_options),
-            {},
-            schema=schema,
+        # 1. We pass tzinfo to Collection.with_options, and same tzinfo in schema of find_arrow_all
+        tz_west = pytz.timezone("US/Pacific")
+        codec_options = CodecOptions(tz_aware=True, tzinfo=tz_west)
+        coll_west = self.coll.with_options(codec_options=codec_options)
+
+        schema_west = ArrowSchema([("_id", int32()), ("data", timestamp("ms", tz=tz_west))])
+        table_west = find_arrow_all(
+            collection=coll_west,
+            query={},
+            schema=Schema.from_arrow(schema_west),
             sort=[("_id", ASCENDING)],
         )
-        self.assertEqual(table, expected)
+
+        expected_west = Table.from_pydict(
+            {"_id": [1, 2], "data": self.expected_times}, schema=schema_west
+        )
+        self.assertTrue(table_west.equals(expected_west))
+
+        # 2. We pass tzinfo to Collection.with_options, but do NOT include a schema in find_arrow_all
+        table_none = find_arrow_all(
+            collection=coll_west,
+            query={},
+            schema=None,
+            sort=[("_id", ASCENDING)],
+        )
+        self.assertTrue(table_none.equals(expected_west))
+
+        # 3. Now we pass a DIFFERENT timezone to the schema in find_arrow_all than we did to the Collection
+        schema_east = Schema(
+            {"_id": int32(), "data": timestamp("ms", tz=pytz.timezone("US/Eastern"))}
+        )
+        table_east = find_arrow_all(
+            collection=coll_west,
+            query={},
+            schema=schema_east,
+            sort=[("_id", ASCENDING)],
+        )
+        # Confirm that we get the timezone we requested
+        self.assertTrue(table_east.schema.types == [int32(), timestamp(unit="ms", tz="US/Eastern")])
+        # Confirm that the times have been adjusted
+        times_west = table_west["data"].to_pylist()
+        times_east = table_east["data"].to_pylist()
+        self.assertTrue(all([times_west[i] == times_east[i] for i in range(len(table_east))]))
+
+        # 4. Test behavior of datetime. Output will be pyarrow.timestamp("ms") without timezone
+        schema_dt = Schema({"_id": int32(), "data": datetime})
+        table_dt = find_arrow_all(
+            collection=coll_west,
+            query={},
+            schema=schema_dt,
+            sort=[("_id", ASCENDING)],
+        )
+        self.assertTrue(table_dt.schema.types == [int32(), timestamp(unit="ms")])
+        times = table_dt["data"].to_pylist()
+        self.assertTrue(times == self.expected_times)
