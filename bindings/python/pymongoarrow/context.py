@@ -121,4 +121,6 @@ class PyMongoArrowContext:
         for fname, builder in self.builder_map.items():
             arrays.append(builder.finish())
             names.append(fname.decode("utf-8"))
+        if self.schema is not None:
+            return Table.from_arrays(arrays=arrays, schema=self.schema.to_arrow())
         return Table.from_arrays(arrays=arrays, names=names)

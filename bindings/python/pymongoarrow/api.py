@@ -431,7 +431,8 @@ def write(collection, tabular):
     elif isinstance(tabular, pd.DataFrame):
         _validate_schema(ArrowSchema.from_pandas(tabular).types)
     elif isinstance(tabular, pl.DataFrame):
-        pass  # TODO
+        tabular = tabular.to_arrow()  # zero-copy in most cases and done in tabular_gen anyway
+        _validate_schema(tabular.schema.types)
     elif (
         isinstance(tabular, dict)
         and len(tabular.values()) >= 1
