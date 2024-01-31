@@ -268,42 +268,43 @@ class TestExplicitPolarsApi(PolarsTestBase):
         self.assertTrue("not implemented" in exc.exception.args[0])
 
     def test_polars_binary_type(self):
-        """Demonstrates roundtrip behavior of Polar Binary Type.
+        """Demonstrates that binary data is not yet supported. TODO [ARROW-214]
 
-        It also shows that the automatically assigned _id column has this type.
+        Will demonstrate roundtrip behavior of Polar Binary Type.
         """
         # 1. _id added by MongoDB
         self.coll.drop()
-        df_in = pl.DataFrame({"Binary": [b"1", b"one"]}, schema={"Binary": pl.Binary})
-        write(self.coll, df_in)
-        df_out = find_polars_all(self.coll, {})
-        self.assertTrue(df_out.columns == ["_id", "Binary"])
-        self.assertTrue(all([isinstance(c, pl.Binary) for c in df_out.dtypes]))
-        self.assertIsNone(assert_frame_equal(df_in, df_out.select("Binary")))
-        # 2. Explicit Binary _id
-        self.coll.drop()
-        df_in = pl.DataFrame(
-            data=dict(_id=[b"0", b"1"], Binary=[b"1", b"one"]),
-            schema=dict(_id=pl.Binary, Binary=pl.Binary),
-        )
-        write(self.coll, df_in)
-        df_out = find_polars_all(self.coll, {})
-        self.assertEqual(df_out.columns, ["_id", "Binary"])
-        self.assertTrue(all([isinstance(c, pl.Binary) for c in df_out.dtypes]))
-        self.assertIsNone(assert_frame_equal(df_in, df_out))
-        # 3. Explicit Int32 _id
-        self.coll.drop()
-        df_in = pl.DataFrame(
-            data={"_id": [0, 1], "Binary": [b"1", b"one"]},
-            schema={"_id": pl.Int32, "Binary": pl.Binary},
-        )
-        write(self.coll, df_in)
-        df_out = find_polars_all(self.coll, {})
-        self.assertEqual(df_out.columns, ["_id", "Binary"])
-        out_types = df_out.dtypes
-        self.assertTrue(isinstance(out_types[0], pl.Int32))
-        self.assertTrue(isinstance(out_types[1], pl.Binary))
-        self.assertTrue(assert_frame_equal(df_in, df_out) is None)
+        with self.assertRaises(ValueError):
+            df_in = pl.DataFrame({"Binary": [b"1", b"one"]}, schema={"Binary": pl.Binary})
+            write(self.coll, df_in)
+            df_out = find_polars_all(self.coll, {})
+            self.assertTrue(df_out.columns == ["_id", "Binary"])
+            self.assertTrue(all([isinstance(c, pl.Binary) for c in df_out.dtypes]))
+            self.assertIsNone(assert_frame_equal(df_in, df_out.select("Binary")))
+            # 2. Explicit Binary _id
+            self.coll.drop()
+            df_in = pl.DataFrame(
+                data=dict(_id=[b"0", b"1"], Binary=[b"1", b"one"]),
+                schema=dict(_id=pl.Binary, Binary=pl.Binary),
+            )
+            write(self.coll, df_in)
+            df_out = find_polars_all(self.coll, {})
+            self.assertEqual(df_out.columns, ["_id", "Binary"])
+            self.assertTrue(all([isinstance(c, pl.Binary) for c in df_out.dtypes]))
+            self.assertIsNone(assert_frame_equal(df_in, df_out))
+            # 3. Explicit Int32 _id
+            self.coll.drop()
+            df_in = pl.DataFrame(
+                data={"_id": [0, 1], "Binary": [b"1", b"one"]},
+                schema={"_id": pl.Int32, "Binary": pl.Binary},
+            )
+            write(self.coll, df_in)
+            df_out = find_polars_all(self.coll, {})
+            self.assertEqual(df_out.columns, ["_id", "Binary"])
+            out_types = df_out.dtypes
+            self.assertTrue(isinstance(out_types[0], pl.Int32))
+            self.assertTrue(isinstance(out_types[1], pl.Binary))
+            self.assertTrue(assert_frame_equal(df_in, df_out) is None)
 
     def test_bson_types(self):
         """Test reading Polars and Arrow data from written BSON Data.
