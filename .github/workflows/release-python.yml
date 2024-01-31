@@ -86,7 +86,7 @@ jobs:
         if: ${{ matrix.python == 'cp39' && matrix.buildplat[0] == 'macos-11' }}
         env:
           MACOS_TEST_SKIP: "*arm64"
-          CIBW_BUILD: "cp39-macosx_x86_64 cp39-macosx_arm64"
+          CIBW_BUILD: cp39-macosx_*
           MACOSX_DEPLOYMENT_TARGET: "10.14"
         run: python -m cibuildwheel --output-dir wheelhouse
 
