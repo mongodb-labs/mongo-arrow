@@ -49,7 +49,12 @@ Source = "https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python"
 Tracker = "https://jira.mongodb.org/projects/ARROW/issues"
 
 [project.optional-dependencies]
-docs = ["sphinx"]
+docs = [
+  "sphinx>=5.3,<8",
+  "sphinx_rtd_theme>=2,<3",
+  "sphinxcontrib-shellcheck>=1,<2",
+  "furo==2023.9.10",
+]
 test = ["pytz", "pytest"]
 
 [tool.setuptools]
