@@ -82,7 +82,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
         run: python -m cibuildwheel --output-dir wheelhouse
 
-      - name: Build MacOS Py39 Wheel
+      - name: Build MacOS Py39 Wheels
         if: ${{ matrix.python == 'cp39' && matrix.buildplat[0] == 'macos-11' }}
         env:
           MACOS_TEST_SKIP: "*arm64"
