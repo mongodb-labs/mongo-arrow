@@ -343,6 +343,8 @@ def find_polars_all(collection, query, *, schema=None, **kwargs):
 
     :Returns:
       An instance of class:`polars.DataFrame`.
+
+    .. versionadded:: 1.3
     """
     return _arrow_to_polars(find_arrow_all(collection, query, schema=schema, **kwargs))
 
