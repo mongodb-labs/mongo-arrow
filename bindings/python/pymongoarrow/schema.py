@@ -87,6 +87,7 @@ class Schema:
             return self.typemap == other.typemap
         return False
 
+    @classmethod
     def from_arrow(cls, aschema: pa.Schema):
         """Create a :class:`~pymongoarrow.schema.Schema` instance from a :class:`~pyarrow.Schema`
 
