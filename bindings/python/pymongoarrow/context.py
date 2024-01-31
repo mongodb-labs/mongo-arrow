@@ -21,6 +21,8 @@ try:
         BinaryBuilder,
         BoolBuilder,
         CodeBuilder,
+        Date32Builder,
+        Date64Builder,
         DatetimeBuilder,
         Decimal128Builder,
         DocumentBuilder,
@@ -45,6 +47,8 @@ try:
         _BsonArrowTypes.array: ListBuilder,
         _BsonArrowTypes.binary: BinaryBuilder,
         _BsonArrowTypes.code: CodeBuilder,
+        _BsonArrowTypes.date32: Date32Builder,
+        _BsonArrowTypes.date64: Date64Builder,
     }
 except ImportError:
     import traceback

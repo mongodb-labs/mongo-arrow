@@ -96,7 +96,7 @@ test-skip = "*arm64"
 [tool.pytest.ini_options]
 minversion = "7"
 addopts = ["-ra", "--strict-config", "--strict-markers", "--durations=5", "--junitxml=xunit-results/TEST-results.xml"]
-testpaths = ["test"]
+testpaths = ["test", "test/pandas_types"]
 log_cli_level = "INFO"
 norecursedirs = ["test/*"]
 faulthandler_timeout = 1500

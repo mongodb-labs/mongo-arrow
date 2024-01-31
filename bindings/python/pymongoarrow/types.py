@@ -53,6 +53,8 @@ class _BsonArrowTypes(enum.Enum):
     array = 10
     binary = 11
     code = 12
+    date32 = 13
+    date64 = 14
 
 
 # Custom Extension Types.
@@ -266,6 +268,8 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_boolean: _BsonArrowTypes.bool,
     _atypes.is_struct: _BsonArrowTypes.document,
     _atypes.is_list: _BsonArrowTypes.array,
+    _atypes.is_date32: _BsonArrowTypes.date32,
+    _atypes.is_date64: _BsonArrowTypes.date64,
 }
 
 

@@ -21,7 +21,8 @@ from bson.raw_bson import RawBSONDocument
 from numpy import ndarray
 from pandas import NA, DataFrame
 from pyarrow import Schema as ArrowSchema
-from pyarrow import Table
+from pyarrow import Table, timestamp
+from pyarrow.types import is_date32, is_date64
 from pymongo.bulk import BulkWriteError
 from pymongo.common import MAX_WRITE_BATCH_SIZE
 
@@ -347,6 +348,17 @@ def write(collection, tabular):
     }
     tab_size = len(tabular)
     if isinstance(tabular, Table):
+        # Convert date objects to datetime objects.
+        changed = False
+        new_types = []
+        for dtype in tabular.schema.types:
+            if is_date32(dtype) or is_date64(dtype):
+                changed = True
+                dtype = timestamp("ms")  # noqa: PLW2901
+            new_types.append(dtype)
+        if changed:
+            cols = [tabular.column(i).cast(new_types[i]) for i in range(tabular.num_columns)]
+            tabular = Table.from_arrays(cols, names=tabular.column_names)
         _validate_schema(tabular.schema.types)
     elif isinstance(tabular, DataFrame):
         _validate_schema(ArrowSchema.from_pandas(tabular).types)
