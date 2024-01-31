@@ -105,7 +105,7 @@ class TestDateTimeType(unittest.TestCase):
 
         Note, this does not apply to datetimes.
         We also test here that if one asks for a different timezone upon reading,
-        on returns the requested timezone. # TODO Confirm whether time is adjusted!!!
+        on returns the requested timezone.
         """
 
         # 1. We pass tzinfo to Collection.with_options, and same tzinfo in schema of find_arrow_all

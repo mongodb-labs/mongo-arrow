@@ -266,7 +266,6 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_boolean: _BsonArrowTypes.bool,
     _atypes.is_struct: _BsonArrowTypes.document,
     _atypes.is_list: _BsonArrowTypes.array,
-    _atypes.is_large_binary: _BsonArrowTypes.binary,
     _atypes.is_large_string: _BsonArrowTypes.string,
     _atypes.is_large_list: _BsonArrowTypes.array,
 }
