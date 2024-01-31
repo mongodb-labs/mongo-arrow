@@ -32,6 +32,8 @@ from pyarrow import (
     field,
     int32,
     int64,
+    large_list,
+    large_string,
     list_,
     string,
     struct,
@@ -706,6 +708,46 @@ class ArrowApiTestMixin:
         self.assertIsInstance(new_obj.type[1].type, Decimal128Type)
         self.assertIsInstance(new_obj.type[2].type, BinaryType)
         self.assertIsInstance(new_obj.type[3].type, CodeType)
+
+    def test_large_string_type(self):
+        """Tests pyarrow._large_string() DataType"""
+        data = Table.from_pydict(
+            {"string": ["A", "B", "C"], "large_string": ["C", "D", "E"]},
+            ArrowSchema({"string": string(), "large_string": large_string()}),
+        )
+        self.round_trip(data, Schema({"string": str, "large_string": large_string()}))
+
+    def test_large_list_type(self):
+        """Tests pyarrow._large_list() DataType
+
+        1. Test large_list of large_string
+            - with schema in query, one gets full roundtrip consistency
+            - without schema, normal list and string will be inferred
+
+        2. Test nested as well
+        """
+
+        schema = ArrowSchema([field("_id", int32()), field("txns", large_list(large_string()))])
+
+        data = {
+            "_id": [1, 2, 3, 4],
+            "txns": [["A"], ["A", "B"], ["A", "B", "C"], ["A", "B", "C", "D"]],
+        }
+        table_orig = pa.Table.from_pydict(data, schema)
+        self.coll.drop()
+        res = write(self.coll, table_orig)
+        # 1a.
+        self.assertEqual(len(data["_id"]), res.raw_result["insertedCount"])
+        table_schema = find_arrow_all(self.coll, {}, schema=Schema.from_arrow(schema))
+        self.assertTrue(table_schema, table_orig)
+        # 1b.
+        table_none = find_arrow_all(self.coll, {}, schema=None)
+        self.assertTrue(table_none.schema.types == [int32(), list_(string())])
+        self.assertTrue(table_none.to_pydict() == data)
+
+        # 2. Test in sublist
+        schema, data = self._create_nested_data((large_list(int32()), list(range(3))))
+        self.round_trip(data, Schema(schema))
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):

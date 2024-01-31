@@ -266,6 +266,8 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_boolean: _BsonArrowTypes.bool,
     _atypes.is_struct: _BsonArrowTypes.document,
     _atypes.is_list: _BsonArrowTypes.array,
+    _atypes.is_large_string: _BsonArrowTypes.string,
+    _atypes.is_large_list: _BsonArrowTypes.array,
 }
 
 
@@ -296,6 +298,7 @@ def _get_internal_typemap(typemap):
         for checker, internal_id in _TYPE_CHECKER_TO_INTERNAL_TYPE.items():
             if checker(ftype):
                 internal_typemap[fname] = internal_id
+                break
 
         if fname not in internal_typemap:
             msg = f'Unsupported data type in schema for field "{fname}" of type "{ftype}"'
