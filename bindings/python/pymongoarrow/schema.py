@@ -88,13 +88,19 @@ class Schema:
         return False
 
     @classmethod
-    def from_arrow(cls, aschema: pa.schema):
+    def from_arrow(cls, aschema: pa.Schema):
+        """Create a :class:`~pymongoarrow.schema.Schema` instance from a :class:`~pyarrow.Schema`
+
+        :Parameters:
+          - `aschema`: PyArrow Schema
+        """
         self = cls({})
         for field in aschema:
             self.typemap[field.name] = field.type
         return self
 
     def to_arrow(self):
+        """Output the Schema as an instance of class:`~pyarrow.Schema`."""
         fields = []
         for name, type_ in self.typemap.items():
             fields.append(pa.field(name=name, type=type_))
