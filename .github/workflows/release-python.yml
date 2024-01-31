@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     tags:
       - "**"
+  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -29,7 +30,7 @@ jobs:
         buildplat:
         - [ubuntu-20.04, manylinux_x86_64]
         - [ubuntu-20.04, manylinux_aarch64]
-        - [macos-11, macosx_*]
+        - [macos-14, macosx_*]
         - [windows-2019, win_amd64]
         python: ["cp38", "cp39", "cp310", "cp311", "cp312"]
 
