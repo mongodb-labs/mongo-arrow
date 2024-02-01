@@ -101,10 +101,8 @@ jobs:
         working-directory: ./bindings/python
         run: |
           set -ex
-          python -m pip install -U pip build
-          export LIBBSON_INSTALL_DIR="$(pwd)/libbson"
-          ./build-libbson.sh
-          python -m build --sdist .
+          tox -e build-libbson
+          tox -e build-dist --sdist
 
       - name: Test Sdist
         working-directory: ./bindings/python

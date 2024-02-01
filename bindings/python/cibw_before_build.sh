@@ -22,4 +22,4 @@ then
 fi
 
 # Build libbson with the appropriate arch.
-CMAKE_BUILD_TYPE=Release ./build-libbson.sh
+CMAKE_BUILD_TYPE=Release tox -e build-libbson

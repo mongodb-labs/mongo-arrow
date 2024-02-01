@@ -26,7 +26,8 @@ CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES:-"x86_64"}
 CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE:-"Debug"}
 
 # Directory where build artifacts will be placed
-LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR:-""}
+DEFAULT_INSTALL_DIR=$(pwd)/libbson
+LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR:-${DEFAULT_INSTALL_DIR}}
 
 # Replace a relative path with an absolute one for cmake
 LIBBSON_INSTALL_DIR="$(cd "$(dirname "$LIBBSON_INSTALL_DIR")"; pwd)/$(basename "$LIBBSON_INSTALL_DIR")"
