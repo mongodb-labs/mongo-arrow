@@ -49,6 +49,7 @@ jobs:
                   git checkout refs/bm/pr benchmarks/benchmarks.py
               fi
               git show --no-patch --format="%H (%s)"
+              cd bindings/python
               export LIBBSON_INSTALL_DIR=$(pwd)/libbson
               tox -e benchmark -- --set-commit-hash $(git rev-parse HEAD)
           }
