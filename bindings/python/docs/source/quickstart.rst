@@ -68,9 +68,15 @@ to type-specifiers, e.g.::
   schema = Schema({'_id': int, 'amount': float, 'last_updated': datetime})
 
 
-Nested data (embedded documents) are also supported::
+PyMongoArrow offers first-class support for Nested data (embedded documents)::
 
   schema = Schema({'_id': int, 'amount': float, 'account': { 'name': str, 'account_number': int}})
+
+Lists (and nested lists) are also supported::
+
+  from pyarrow import list_, string
+  schema = Schema({'txns': list_(string())})
+  polars_df = client.db.data.find_polars_all({'amount': {'$gt': 0}}, schema=schema)
 
 There are multiple permissible type-identifiers for each supported BSON type.
 For a full-list of data types and associated type-identifiers see
@@ -89,18 +95,16 @@ We can also load the same result set as a :class:`pyarrow.Table` instance::
 
   arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
 
-In the NumPy case, the return value is a dictionary where the keys are field
-names and values are corresponding :class:`numpy.ndarray` instances::
+a :class:`polars.DataFrame`::
+
+  df = client.db.data.find_polars_all({'amount': {'$gt': 0}}, schema=schema)
+
+or as **Numpy arrays**::
 
   ndarrays = client.db.data.find_numpy_all({'amount': {'$gt': 0}}, schema=schema)
 
-
-Arrays (and nested arrays) are also supported::
-
-  from pyarrow import list_, string
-  schema = Schema({'_id': int, 'amount': float, 'txns': list_(string())})
-  arrow_table = client.db.data.find_arrow_all({'amount': {'$gt': 0}}, schema=schema)
-
+In the NumPy case, the return value is a dictionary where the keys are field
+names and values are corresponding :class:`numpy.ndarray` instances.
 
 .. note::
    For all of the examples above, the schema can be omitted like so::
@@ -140,6 +144,8 @@ be easily written to your MongoDB database using the :meth:`~pymongoarrow.api.wr
  write(coll, df)
  write(coll, arrow_table)
  write(coll, ndarrays)
+
+(Keep in mind that NumPy arrays are specified as ``dict[str, ndarray]``.)
 
 Writing to other formats
 ------------------------
