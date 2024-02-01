@@ -56,6 +56,13 @@ platforms = ["Linux", "Mac OS X"]
 [tool.setuptools.package-data]
 pymongoarrow = ["*.pxd", "*.pyx", "*.pyi", "*.so.*", "*.dylib", "*.dll", "*.pyd"]
 
+[tool.setuptools.packages.find]
+exclude = [
+    "test",
+    "docs",
+]
+namespaces = false
+
 [tool.setuptools.dynamic]
 version = {attr = "pymongoarrow.version.__version__"}
 
