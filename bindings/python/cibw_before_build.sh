@@ -15,6 +15,7 @@ then
     export CMAKE_OSX_ARCHITECTURES="arm64"
   else
     platform="macosx_10_14_x86_64"
+    export CMAKE_OSX_ARCHITECTURES="x86_64"
   fi
 
   # Install pyarrow with the appropriate platform.
