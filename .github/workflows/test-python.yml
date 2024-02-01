@@ -81,7 +81,7 @@ jobs:
           tox -e import-check
       - name: Run the tests
         run: |
-          tox -e tests
+          tox -e test
       - name: Check the manifest
         run: |
           tox -e manifest

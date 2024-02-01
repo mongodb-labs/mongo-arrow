@@ -31,17 +31,10 @@ from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import _validate_schema, get_numpy_type
 
-try:
+try:  # noqa: SIM105
     from pymongoarrow.lib import process_bson_stream
 except ImportError:
-    import traceback
-
-    warnings.warn(
-        "Could not find compiled pymongoarrow.lib extension, please install "
-        "from source or report the following traceback on the issue tracker:\n"
-        f"{traceback.format_exc()}",
-        stacklevel=1,
-    )
+    pass
 
 __all__ = [
     "aggregate_arrow_all",
