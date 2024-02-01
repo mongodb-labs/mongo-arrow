@@ -105,6 +105,7 @@ jobs:
         working-directory: ./bindings/python
         run: |
           set -ex
+          export LIBBSON_INSTALL_DIR="$(pwd)/libbson"
           tox -e build-libbson
           tox -e build-dist -- --sdist
 
