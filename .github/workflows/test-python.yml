@@ -77,6 +77,7 @@ jobs:
           tox -e build-libbson
       - name: Ensure imports with no test deps
         run: |
+          echo "LIBBSON_INSTALL_DIR=$LIBBSON_INSTALL_DIR"
           tox -e import-check
       - name: Run the tests
         run: |
