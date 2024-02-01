@@ -19,7 +19,7 @@ copyright = "MongoDB, Inc. 2021-present. MongoDB, Mongo, and the leaf logo are r
 author = "Prashant Mital"
 html_show_sphinx = False
 
-version_file = p.abspath(p.join("../../", "pymongoarrow/version.py"))
+version_file = p.abspath(p.join("../../", "src/pymongoarrow/version.py"))
 version_data = {}
 with open(version_file) as vf:
     exec(vf.read(), {}, version_data)

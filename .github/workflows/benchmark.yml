@@ -38,10 +38,6 @@ jobs:
       - name: Install libbson
         run: |
           tox -e build-libbson
-      - name: Install Python dependencies
-        run: |
-          python -m pip install -U pip
-          python -m pip install asv virtualenv
 
       - name: Run benchmarks
         run: |
@@ -53,6 +49,7 @@ jobs:
                   git checkout refs/bm/pr benchmarks/benchmarks.py
               fi
               git show --no-patch --format="%H (%s)"
+              export LIBBSON_INSTALL_DIR=$(pwd)/libbson
               tox -e benchmark -- --set-commit-hash $(git rev-parse HEAD)
           }
 

@@ -70,6 +70,9 @@ test-command = "python -c \"from pymongoarrow.lib import libbson_version\""
 # Disable wheel repair, see https://jira.mongodb.org/browse/ARROW-122.
 repair-wheel-command = ""
 
+[tool.cibuildwheel.environment]
+LIBBSON_INSTALL_DIR = "./libbson"
+
 [tool.cibuildwheel.linux]
 archs = "x86_64 aarch64"
 manylinux-x86_64-image = "manylinux_2_28"
