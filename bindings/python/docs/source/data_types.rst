@@ -4,7 +4,11 @@ Data Types
 ==========
 
 PyMongoArrow supports a majority of the BSON types.
+As Arrow and Polars provide first-class support for Lists and Structs,
+this includes Embedded arrays and documents.
+
 Support for additional types will be added in subsequent releases.
+
 
 .. note:: For more information about BSON types, see the
    `BSON specification <http://bsonspec.org/spec.html>`_.
@@ -131,11 +135,12 @@ dataframe will be the appropriate ``bson`` type.
   >>> df["_id"][0]
   ObjectId('64408bf65ac9e208af220144')
 
+As of this writing, Polars does not support Extension Types.
 
 Null Values and Conversion to Pandas DataFrames
 -----------------------------------------------
 
-In Arrow, all Arrays are always nullable.
+In Arrow (and Polars), all Arrays are nullable.
 Pandas has experimental nullable data types as, e.g., "Int64" (note the capital "I").
 You can instruct Arrow to create a pandas DataFrame using nullable dtypes
 with the code below (taken from `here <https://arrow.apache.org/docs/python/pandas.html>`_)
