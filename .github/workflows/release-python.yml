@@ -106,7 +106,7 @@ jobs:
         run: |
           set -ex
           tox -e build-libbson
-          tox -e build-dist --sdist
+          tox -e build-dist -- --sdist
 
       - name: Test Sdist
         working-directory: ./bindings/python

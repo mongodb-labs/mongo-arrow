@@ -8,7 +8,7 @@ from sys import platform
 from setuptools import setup
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-BUILD_DIR = os.path.join(HERE, "pymongoarrow")
+BUILD_DIR = os.path.join(HERE, "src", "pymongoarrow")
 IS_WIN = platform == "win32"
 
 # Find and copy the binary libbson file, unless
@@ -33,7 +33,7 @@ def query_pkgconfig(cmd):
 def get_min_libbson_version():
     version_ns = {}
     here = os.path.dirname(__file__)
-    version_py = os.path.join(here, "pymongoarrow", "version.py")
+    version_py = os.path.join(here, "src", "pymongoarrow", "version.py")
     with open(version_py) as f:
         exec(compile(f.read(), version_py, "exec"), version_ns)
     return version_ns["_MIN_LIBBSON_VERSION"]
@@ -164,7 +164,7 @@ def get_extension_modules():
     except ImportError:
         warnings.warn("Cannot compile native C code, because of a missing build dependency")
         return []
-    modules = cythonize(["pymongoarrow/*.pyx"])
+    modules = cythonize(["src/pymongoarrow/*.pyx"])
     for module in modules:
         append_libbson_flags(module)
         append_arrow_flags(module)

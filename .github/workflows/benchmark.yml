@@ -53,7 +53,7 @@ jobs:
                   git checkout refs/bm/pr benchmarks/benchmarks.py
               fi
               git show --no-patch --format="%H (%s)"
-              tox -e benchmark --set-commit-hash $(git rev-parse HEAD)
+              tox -e benchmark -- --set-commit-hash $(git rev-parse HEAD)
           }
 
           asv machine --yes
