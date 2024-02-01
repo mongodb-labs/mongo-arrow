@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     tags:
       - "**"
+  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -29,9 +30,19 @@ jobs:
         buildplat:
         - [ubuntu-20.04, manylinux_x86_64]
         - [ubuntu-20.04, manylinux_aarch64]
-        - [macos-11, macosx_*]
+        - [macos-14, macosx_*]
         - [windows-2019, win_amd64]
         python: ["cp38", "cp39", "cp310", "cp311", "cp312"]
+        exclude:
+          - buildplat: [macos-14, macosx_*]
+            python: "cp38"
+          - buildplat: [macos-14, macosx_*]
+            python: "cp39"
+        include:
+          - buildplat: [macos-11, macosx_*]
+            python: "cp38"
+          - buildplat: [macos-11, macosx_*]
+            python: "cp39"
 
     steps:
       - name: Checkout pymongoarrow
@@ -71,8 +82,16 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
         run: python -m cibuildwheel --output-dir wheelhouse
 
+      - name: Build MacOS Py39 Wheels
+        if: ${{ matrix.python == 'cp39' && matrix.buildplat[0] == 'macos-11' }}
+        env:
+          MACOS_TEST_SKIP: "*arm64"
+          CIBW_BUILD: cp39-macosx_*
+          MACOSX_DEPLOYMENT_TARGET: "10.14"
+        run: python -m cibuildwheel --output-dir wheelhouse
+
       - name: Build wheels
-        if: ${{ matrix.python != 'cp38' || matrix.buildplat[0] != 'macos-11' }}
+        if: ${{ matrix.buildplat[0] != 'macos-11' }}
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
           MACOSX_DEPLOYMENT_TARGET: "10.14"

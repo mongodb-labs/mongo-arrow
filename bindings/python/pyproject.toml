@@ -96,7 +96,6 @@ repair-wheel-command = [
 
 [tool.cibuildwheel.macos]
 archs = "x86_64 arm64"
-test-skip = "*arm64"
 
 [tool.pytest.ini_options]
 minversion = "7"
