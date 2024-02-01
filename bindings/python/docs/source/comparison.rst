@@ -1,5 +1,5 @@
 Comparing to PyMongo
-===========
+====================
 
 This tutorial is intended as a comparison between using **PyMongoArrow**,
 versus just PyMongo. The reader is assumed to be familiar with basic
