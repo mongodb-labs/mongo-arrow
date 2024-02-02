@@ -102,8 +102,8 @@ jobs:
       - name: Build docs
         shell: bash -l {0}
         run: |
-          tox -e docs
+          NO_EXT=1 tox -e docs
       - name: Run linkcheck
         shell: bash -l {0}
         run: |
-          tox -e linkcheck
+          NO_EXT=1 tox -e linkcheck
