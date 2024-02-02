@@ -13,12 +13,15 @@ Python Compatibility
 
 PyMongoArrow is currently compatible with CPython 3.8, 3.9, 3.10, and 3.11.
 
-Using Pip
----------
-**PyMongoArrow** is available on
-`PyPI <http://pypi.python.org/pypi/pymongo/>`_. We recommend using
-`pip <http://pypi.python.org/pypi/pip>`_ to install ``pymongoarrow``
-on all platforms::
+Installation
+--------------------
+
+**PyMongoArrow** can be installed in three ways: via Pip, Conda, or Source.
+
+
+**Using Pip.** We recommend using pip to install pymongoarrow on all platforms.
+PyMongoArrow is available on
+`PyPI <http://pypi.python.org/pypi/pymongo/>`_.
 
   $ python -m pip install pymongoarrow
 
@@ -42,12 +45,11 @@ To upgrade using pip::
    We currently distribute wheels for macOS, Windows, and Linux on x86_64
    architectures.
 
-**PyMongoArrow** is also available for ``conda`` users by running::
+**Using Conda.** PyMongoArrow is available for ``conda`` users by running::
 
   $ conda install --channel conda-forge pymongoarrow
 
-
-If the above options still do not allow you to install ``pymongoarrow`` on your
+**From Source.** If the above options still do not allow you to install ``pymongoarrow`` on your
 system, you will have to install from source, see :doc:`developer/installation`.
 
 
@@ -76,8 +78,3 @@ as :class:`pandas.DataFrame` instances (e.g. :meth:`~pymongoarrow.api.find_panda
 must also have ``pandas`` installed::
 
   $ python -m pip install pandas
-
-Installing from source
-----------------------
-
-See :doc:`developer/installation`.

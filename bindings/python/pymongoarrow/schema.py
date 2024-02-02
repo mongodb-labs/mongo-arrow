@@ -13,7 +13,7 @@
 # limitations under the License.
 import collections.abc as abc
 
-from pyarrow import ListType, StructType
+import pyarrow as pa
 
 from pymongoarrow.types import _normalize_typeid
 
@@ -73,9 +73,9 @@ class Schema:
 
     def _get_field_projection_value(self, ftype):
         value = True
-        if isinstance(ftype, ListType):
+        if isinstance(ftype, pa.ListType):
             return self._get_field_projection_value(ftype.value_field.type)
-        if isinstance(ftype, StructType):
+        if isinstance(ftype, pa.StructType):
             projection = {}
             for nested_ftype in ftype:
                 projection[nested_ftype.name] = True
@@ -86,3 +86,22 @@ class Schema:
         if isinstance(other, type(self)):
             return self.typemap == other.typemap
         return False
+
+    @classmethod
+    def from_arrow(cls, aschema: pa.Schema):
+        """Create a :class:`~pymongoarrow.schema.Schema` instance from a :class:`~pyarrow.Schema`
+
+        :Parameters:
+          - `aschema`: PyArrow Schema
+        """
+        self = cls({})
+        for field in aschema:
+            self.typemap[field.name] = field.type
+        return self
+
+    def to_arrow(self):
+        """Output the Schema as an instance of class:`~pyarrow.Schema`."""
+        fields = []
+        for name, type_ in self.typemap.items():
+            fields.append(pa.field(name=name, type=type_))
+        return pa.schema(fields)

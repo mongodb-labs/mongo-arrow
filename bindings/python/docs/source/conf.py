@@ -34,7 +34,23 @@ pygments_style = "sphinx"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.intersphinx"]
+# Add any Sphinx extension module names here, as strings. They can be extensions
+# coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.doctest",
+    "sphinx.ext.coverage",
+    "sphinx.ext.todo",
+    "sphinx.ext.intersphinx",
+]
+
+# Add optional extensions
+try:
+    import sphinxcontrib.shellcheck  # noqa: F401
+
+    extensions += ["sphinxcontrib.shellcheck"]
+except ImportError:
+    pass
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -44,15 +60,32 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+# If true, the current module name will be prepended to all description
+# unit titles (such as .. function::).
+add_module_names = True
+
+# The name of the Pygments (syntax highlighting) style to use.
+pygments_style = "sphinx"
+
+# -- Options for extensions ----------------------------------------------------
+autoclass_content = "init"
+
+autodoc_typehints = "description"
 
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "pydoctheme"
-html_theme_path = ["."]
-html_theme_options = {"collapsiblesidebar": True, "googletag": False}
+try:
+    import furo  # noqa: F401
+
+    html_theme = "furo"
+except ImportError:
+    # Theme gratefully vendored from CPython source.
+    html_theme = "pydoctheme"
+    html_theme_path = ["."]
+    html_theme_options = {"collapsiblesidebar": True, "googletag": False}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

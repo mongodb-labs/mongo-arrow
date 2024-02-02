@@ -807,11 +807,15 @@ cdef object get_field_builder(object field, object tzinfo):
         field_builder = DatetimeBuilder(field_type)
     elif _atypes.is_string(field_type):
         field_builder = StringBuilder()
+    elif _atypes.is_large_string(field_type):
+        field_builder = StringBuilder()
     elif _atypes.is_boolean(field_type):
         field_builder = BoolBuilder()
     elif _atypes.is_struct(field_type):
         field_builder = DocumentBuilder(field_type, tzinfo)
     elif _atypes.is_list(field_type):
+        field_builder = ListBuilder(field_type, tzinfo)
+    elif _atypes.is_large_list(field_type):
         field_builder = ListBuilder(field_type, tzinfo)
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.objectid:
         field_builder = ObjectIdBuilder()
@@ -896,8 +900,8 @@ cdef class ListBuilder(_ArrayBuilderBase):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         cdef shared_ptr[CArrayBuilder] grandchild_builder
         self.dtype = dtype
-        if not _atypes.is_list(dtype):
-            raise ValueError("dtype must be a list_()")
+        if not (_atypes.is_list(dtype) or _atypes.is_large_list(dtype)):
+            raise ValueError("dtype must be a list_() or large_list()")
         self.context = context = PyMongoArrowContext(None, {})
         self.context.tzinfo = tzinfo
         field_builder = <StringBuilder>get_field_builder(self.dtype.value_type, tzinfo)
