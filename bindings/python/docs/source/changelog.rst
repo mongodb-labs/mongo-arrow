@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Changes in Version 1.3.0
+------------------------
+- Support for Polars
+- Support for PyArrow.DataTypes: large_list, large_string
+
 Changes in Version 1.2.0
 ------------------------
 - Support for PyArrow 14.0.

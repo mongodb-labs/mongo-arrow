@@ -6,7 +6,8 @@ Overview
 **PyMongoArrow** is a `PyMongo <http://pymongo.readthedocs.io/>`_ extension
 containing tools for loading `MongoDB <http://www.mongodb.org>`_ query result
 sets as  `Apache Arrow <http://arrow.apache.org>`_ tables,
-`Pandas <https://pandas.pydata.org>`_ and `NumPy <https://numpy.org>`_ arrays.
+`NumPy <https://numpy.org>`_ arrays, and `Pandas <https://pandas.pydata.org>`_
+or `Polars <https://pola.rs/>`_ DataFrames.
 PyMongoArrow is the recommended way to materialize MongoDB query result sets as
 contiguous-in-memory, typed arrays suited for in-memory analytical processing
 applications. This documentation attempts to explain everything you need to

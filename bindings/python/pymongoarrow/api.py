@@ -14,12 +14,19 @@
 import warnings
 
 import numpy as np
+import pandas as pd
+
+try:
+    import polars as pl
+except ImportError:
+    pl = None
+
+import pyarrow as pa
 import pymongo.errors
 from bson import encode
 from bson.codec_options import TypeEncoder, TypeRegistry
 from bson.raw_bson import RawBSONDocument
 from numpy import ndarray
-from pandas import NA, DataFrame
 from pyarrow import Schema as ArrowSchema
 from pyarrow import Table
 from pymongo.bulk import BulkWriteError
@@ -43,6 +50,8 @@ __all__ = [
     "find_pandas_all",
     "aggregate_numpy_all",
     "find_numpy_all",
+    "aggregate_polars_all",
+    "find_polars_all",
     "write",
     "Schema",
 ]
@@ -55,6 +64,8 @@ _PATCH_METHODS = [
     "find_pandas_all",
     "aggregate_numpy_all",
     "find_numpy_all",
+    "aggregate_polars_all",
+    "find_polars_all",
 ]
 
 # MongoDB 3.6's maxMessageSizeBytes minus some overhead to account
@@ -283,6 +294,83 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, **kwargs):
     )
 
 
+def _cast_away_extension_types_on_array(array: pa.Array) -> pa.Array:
+    """Return an Array where ExtensionTypes have been cast to their base pyarrow types"""
+    if isinstance(array.type, pa.ExtensionType):
+        return array.cast(array.type.storage_type)
+    # elif pa.types.is_struct(field.type):
+    #     ...
+    # elif pa.types.is_list(field.type):
+    #     ...
+    return array
+
+
+def _cast_away_extension_types_on_table(table: pa.Table) -> pa.Table:
+    """Given arrow_table that may ExtensionTypes, cast these to the base pyarrow types"""
+    # Convert all fields in the Arrow table
+    converted_fields = [
+        _cast_away_extension_types_on_array(table.column(i)) for i in range(table.num_columns)
+    ]
+    # Reconstruct the Arrow table
+    return pa.Table.from_arrays(converted_fields, names=table.column_names)
+
+
+def _arrow_to_polars(arrow_table):
+    """Helper function that converts an Arrow Table to a Polars DataFrame.
+
+    Note: Polars lacks ExtensionTypes. We cast them  to their base arrow classes.
+    """
+    if pl is None:
+        msg = "polars is not installed. Try pip install polars."
+        raise ValueError(msg)
+    arrow_table_without_extensions = _cast_away_extension_types_on_table(arrow_table)
+    return pl.from_arrow(arrow_table_without_extensions)
+
+
+def find_polars_all(collection, query, *, schema=None, **kwargs):
+    """Method that returns the results of a find query as a
+    :class:`polars.DataFrame` instance.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``find`` operation.
+      - `query`: A mapping containing the query to use for the find operation.
+      - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
+        If the schema is not given, it will be inferred using the first
+        document in the result set.
+
+    Additional keyword-arguments passed to this method will be passed
+    directly to the underlying ``find`` operation.
+
+    :Returns:
+      An instance of class:`polars.DataFrame`.
+
+    .. versionadded:: 1.3
+    """
+    return _arrow_to_polars(find_arrow_all(collection, query, schema=schema, **kwargs))
+
+
+def aggregate_polars_all(collection, pipeline, *, schema=None, **kwargs):
+    """Method that returns the results of an aggregation pipeline as a
+    :class:`polars.DataFrame` instance.
+
+    :Parameters:
+      - `collection`: Instance of :class:`~pymongo.collection.Collection`.
+        against which to run the ``find`` operation.
+      - `pipeline`: A list of aggregation pipeline stages.
+      - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
+        If the schema is not given, it will be inferred using the first
+        document in the result set.
+
+    Additional keyword-arguments passed to this method will be passed
+    directly to the underlying ``aggregate`` operation.
+
+    :Returns:
+      An instance of class:`polars.DataFrame`.
+    """
+    return _arrow_to_polars(aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs))
+
+
 def _transform_bwe(bwe, offset):
     bwe["nInserted"] += offset
     for i in bwe["writeErrors"]:
@@ -299,9 +387,11 @@ def _tabular_generator(tabular):
         for i in tabular.to_batches():
             for row in i.to_pylist():
                 yield row
-    elif DataFrame is not None and isinstance(tabular, DataFrame):
+    elif isinstance(tabular, pd.DataFrame):
         for row in tabular.to_dict("records"):
             yield row
+    elif pl is not None and isinstance(tabular, pl.DataFrame):
+        yield from _tabular_generator(tabular.to_arrow())
     elif isinstance(tabular, dict):
         iter_dict = {k: np.nditer(v) for k, v in tabular.items()}
         try:
@@ -316,7 +406,7 @@ class _PandasNACodec(TypeEncoder):
 
     @property
     def python_type(self):
-        return NA.__class__
+        return pd.NA.__class__
 
     def transform_python(self, _):
         """Transform an NA object into 'None'"""
@@ -341,8 +431,11 @@ def write(collection, tabular):
     tab_size = len(tabular)
     if isinstance(tabular, Table):
         _validate_schema(tabular.schema.types)
-    elif isinstance(tabular, DataFrame):
+    elif isinstance(tabular, pd.DataFrame):
         _validate_schema(ArrowSchema.from_pandas(tabular).types)
+    elif pl is not None and isinstance(tabular, pl.DataFrame):
+        tabular = tabular.to_arrow()  # zero-copy in most cases and done in tabular_gen anyway
+        _validate_schema(tabular.schema.types)
     elif (
         isinstance(tabular, dict)
         and len(tabular.values()) >= 1
