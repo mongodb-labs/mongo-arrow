@@ -15,7 +15,12 @@ import warnings
 
 import numpy as np
 import pandas as pd
-import polars as pl
+
+try:
+    import polars as pl
+except ImportError:
+    pl = None
+
 import pyarrow as pa
 import pymongo.errors
 from bson import encode
@@ -315,6 +320,9 @@ def _arrow_to_polars(arrow_table):
 
     Note: Polars lacks ExtensionTypes. We cast them  to their base arrow classes.
     """
+    if pl is None:
+        msg = "polars is not installed. Try pip install polars."
+        raise ValueError(msg)
     arrow_table_without_extensions = _cast_away_extension_types_on_table(arrow_table)
     return pl.from_arrow(arrow_table_without_extensions)
 
@@ -382,7 +390,7 @@ def _tabular_generator(tabular):
     elif isinstance(tabular, pd.DataFrame):
         for row in tabular.to_dict("records"):
             yield row
-    elif isinstance(tabular, pl.DataFrame):
+    elif pl is not None and isinstance(tabular, pl.DataFrame):
         yield from _tabular_generator(tabular.to_arrow())
     elif isinstance(tabular, dict):
         iter_dict = {k: np.nditer(v) for k, v in tabular.items()}
@@ -425,7 +433,7 @@ def write(collection, tabular):
         _validate_schema(tabular.schema.types)
     elif isinstance(tabular, pd.DataFrame):
         _validate_schema(ArrowSchema.from_pandas(tabular).types)
-    elif isinstance(tabular, pl.DataFrame):
+    elif pl is not None and isinstance(tabular, pl.DataFrame):
         tabular = tabular.to_arrow()  # zero-copy in most cases and done in tabular_gen anyway
         _validate_schema(tabular.schema.types)
     elif (
