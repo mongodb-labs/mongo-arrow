@@ -373,9 +373,7 @@ class ProfileReadExtensionLarge(Read):
 class ProfileInsertSmall(Insert):
     large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
     schema = Schema({"x": pa.int64(), "y": pa.float64()})
-    dtypes = np.dtype(
-        [("x", np.int64), ("y", np.float64)]
-    )  # todo - unused. remove or implement original intention.
+    dtypes = np.dtype([("x", np.int64), ("y", np.float64)])
 
     def setup(self):
         coll = db.benchmark
@@ -395,9 +393,7 @@ class ProfileInsertSmall(Insert):
 class ProfileInsertLarge(Insert):
     large_doc_keys = [f"a{i}" for i in range(LARGE_DOC_SIZE)]
     schema = Schema({k: pa.float64() for k in large_doc_keys})
-    dtypes = np.dtype(
-        [(k, np.float64) for k in large_doc_keys]
-    )  # todo - unused. remove or implement original intention.
+    dtypes = np.dtype([(k, np.float64) for k in large_doc_keys])
 
     def setup(self):
         coll = db.benchmark
