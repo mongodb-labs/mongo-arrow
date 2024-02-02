@@ -47,15 +47,7 @@ try:
         _BsonArrowTypes.code: CodeBuilder,
     }
 except ImportError:
-    import traceback
-    import warnings
-
-    warnings.warn(
-        "Could not find compiled pymongoarrow.lib extension, please install "
-        "from source or report the following traceback on the issue tracker:\n"
-        f"{traceback.format_exc()}",
-        stacklevel=1,
-    )
+    pass
 
 
 class PyMongoArrowContext:

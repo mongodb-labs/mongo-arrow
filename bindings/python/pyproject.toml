@@ -50,12 +50,6 @@ Source = "https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python"
 Tracker = "https://jira.mongodb.org/projects/ARROW/issues"
 
 [project.optional-dependencies]
-docs = [
-  "sphinx>=5.3,<8",
-  "sphinx_rtd_theme>=2,<3",
-  "sphinxcontrib-shellcheck>=1,<2",
-  "furo==2023.9.10",
-]
 test = ["pytz", "pytest"]
 
 [tool.setuptools]
@@ -80,7 +74,7 @@ version = {attr = "pymongoarrow.version.__version__"}
 skip = "pp* *-manylinux_i686 *_ppc64le *_s390x *-musllinux*"
 before-build = "bash ./cibw_before_build.sh"
 build-frontend = "build"
-test-command = "python -c \"from pymongoarrow.lib import process_bson_stream\""
+test-command = "python -c \"from pymongoarrow.lib import libbson_version\""
 # Disable wheel repair, see https://jira.mongodb.org/browse/ARROW-122.
 repair-wheel-command = ""
 

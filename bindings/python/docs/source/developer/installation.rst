@@ -29,6 +29,7 @@ from sources::
 
   $ virtualenv pymongoarrow
   $ source ./pymongoarrow/bin/activate
+  $ pip install tox
 
 libbson
 ^^^^^^^
@@ -41,7 +42,7 @@ Detailed instructions for building/installing ``libbson`` can be found
 You can either use a system-provided version of ``libbson`` that is properly
 configured for use with ``pkg-config``, or use the provided ``build-libbson.sh`` script to build it::
 
-  $ LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
+  $ LIBBSON_INSTALL_DIR=$(pwd)/libbson tox -e build-libbson
 
 On macOS, users can install the latest ``libbson`` using Homebrew::
 
@@ -57,7 +58,10 @@ If you try to build with a lower version a ``ValueError`` will be raised.
 Build
 -----
 
-In the previously created virtualenv, install PyMongoArrow and its test dependencies in editable mode::
+Typically we will use the provided ``tox`` scripts and will not build directly, but you can build and
+test in the created virtualenv.
+
+In the previously created virtualenv, to install PyMongoArrow and its test dependencies in editable mode::
 
   (pymongoarrow) $ pip install -v -e ".[test]"
 
@@ -65,14 +69,18 @@ If you built libbson using the ``build-libbson`` script then use the same ``LIBB
 
   (pymongoarrow) $ LIBBSON_INSTALL_DIR=$(pwd)/libbson pip install -v -e ".[test]"
 
-
 Test
 ----
 
 To run the test suite, you will need a MongoDB instance running on
 ``localhost`` using port ``27017``. To run the entire test suite, do::
 
-  (pymongoarrow) $ python -m pytest
+  (pymongoarrow) $ tox -e test
+
+or, if not using ``tox``:
+
+  (pymongoarrow) $ pytest
+
 
 Running Linters
 ---------------
@@ -84,9 +92,9 @@ that help follow a consistent code style within the codebase.
 
 To set up ``pre-commit`` locally, run::
 
-    pip install pre-commit
-    pre-commit install
+    (pymongoarrow) $ pip install pre-commit
+    (pymongoarrow) $ pre-commi t install
 
 To run ``pre-commit`` manually, run::
 
-    pre-commit run --all-files
+    (pymongoarrow) $ tox -e lint

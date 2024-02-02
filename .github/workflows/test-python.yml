@@ -69,31 +69,22 @@ jobs:
           mongod --remove
           mongod --install --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
           net start MongoDB
+      - name: Install tox
+        run: |
+          python -m pip install tox
       - name: Install libbson
         run: |
-          pip install packaging  # needed for mongo-c-driver-1.24.4/build/calc_release_version.py
-          pip install setuptools  # needed for use of distutils
-          ./build-libbson.sh
-      - name: Install Python dependencies
-        run: |
-          python -m pip install -U pip
-      - name: Install pymongoarrow
-        run: |
-          # Install the library with no deps
-          python -m pip install -v -e "."
+          tox -e build-libbson
       - name: Ensure imports with no test deps
         run: |
-          python -c "from pymongoarrow.monkey import patch_all; patch_all()"
-      - name: Install the test dependencies
-        run: |
-          python -m pip install -v -e ".[test]"
+          echo "LIBBSON_INSTALL_DIR=$LIBBSON_INSTALL_DIR"
+          tox -e import-check
       - name: Run the tests
         run: |
-          PYTHONWARNINGS=error python -m pytest -s -vv
+          tox -e test
       - name: Check the manifest
         run: |
-          pip install check-manifest
-          check-manifest -v
+          tox -e manifest
 
   docs:
     runs-on: ubuntu-latest
@@ -105,17 +96,14 @@ jobs:
           python-version: 3.9
           cache: 'pip'
           cache-dependency-path: '**/pyproject.toml'
-      - name: Install lib
+      - name: Install tox
+        run: |
+          python -m pip install tox
+      - name: Build docs
         shell: bash -l {0}
         run: |
-          NO_EXT=1 pip install .[docs]
-      - name: Build docs with warnings
-        shell: bash -l {0}
-        run: |
-          pushd docs
-          make html SPHINXOPTS="-W"
+          NO_EXT=1 tox -e docs
       - name: Run linkcheck
         shell: bash -l {0}
         run: |
-          pushd docs
-          make linkcheck
+          NO_EXT=1 tox -e linkcheck
