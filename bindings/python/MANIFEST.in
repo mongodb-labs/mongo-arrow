@@ -2,6 +2,7 @@ include README.md
 include LICENSE
 include *.sh
 include pyproject.toml
+include tox.ini
 
 exclude THIRD-PARTY-NOTICES
 exclude addtags.py
