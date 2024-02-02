@@ -220,7 +220,6 @@ class ProfileReadArray(Read):
         ]
 
     # All of the following tests are being skipped because NumPy/Pandas do not work with nested arrays.
-    # todo - Polars DOES have a Struct type. Try implementing tests for it.
     def time_to_numpy(self):
         pass
 
