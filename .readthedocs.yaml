@@ -4,7 +4,8 @@ build:
   tools:
     python: "3.9"
   commands:
-    - NO_EXT=1 pip install ./bindings/python[docs]
+    - NO_EXT=1 pip install ./bindings/python
+    - pip install -r ./bindings/python/docs/docs-requirements.txt
     - mkdir --parents $READTHEDOCS_OUTPUT/html/
     - cd ./bindings/python/docs && make html
     - cp --recursive ./bindings/python/docs/build/html/* $READTHEDOCS_OUTPUT/html/

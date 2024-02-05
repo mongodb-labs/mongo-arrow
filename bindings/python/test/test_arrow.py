@@ -770,6 +770,23 @@ class ArrowApiTestMixin:
         schema, data = self._create_nested_data((large_list(int32()), list(range(3))))
         self.round_trip(data, Schema(schema))
 
+    def test_binary_types(self):
+        """Demonstrates that binary data is not yet supported. TODO [ARROW-214]
+
+        Will demonstrate roundtrip behavior of Arrow DataType binary and large_binary.
+        """
+        for btype in [pa.binary(), pa.large_binary()]:
+            with self.assertRaises(ValueError):
+                self.coll.drop()
+                aschema = pa.schema([("binary", btype)])
+                table_in = pa.Table.from_pydict({"binary": [b"1", b"one"]}, schema=aschema)
+                write(self.coll, table_in)
+                table_out_none = find_arrow_all(self.coll, {}, schema=None)
+                mschema = Schema.from_arrow(aschema)
+                table_out_schema = find_arrow_all(self.coll, {}, schema=mschema)
+                self.assertTrue(table_out_schema.schema == table_in.schema)
+                self.assertTrue(table_out_none.equals(table_out_schema))
+
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):
     def run_find(self, *args, **kwargs):

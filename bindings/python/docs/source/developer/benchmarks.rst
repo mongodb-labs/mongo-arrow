@@ -10,3 +10,7 @@ To run the benchmarks, you need the `asv <https://pypi.org/project/asv/>`_ packa
 which can then be invoked like so::
 
   $ asv run --strict --python=`which python`
+
+or you can run with tox as:
+
+  $ tox -e benchmarks

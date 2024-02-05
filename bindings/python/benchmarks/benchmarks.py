@@ -18,6 +18,7 @@ from abc import ABC
 
 import numpy as np
 import pandas as pd
+import polars as pl
 import pyarrow as pa
 import pymongo
 from bson import BSON, Binary, Decimal128
@@ -27,6 +28,7 @@ from pymongoarrow.api import (
     find_arrow_all,
     find_numpy_all,
     find_pandas_all,
+    find_polars_all,
     write,
 )
 from pymongoarrow.types import BinaryType, Decimal128Type
@@ -74,6 +76,9 @@ class Insert(ABC):
     def time_insert_numpy(self):
         write(db.benchmark, self.numpy_arrays)
 
+    def time_insert_polars(self):
+        write(db.benchmark, self.polars_table)
+
     def peakmem_insert_arrow(self):
         self.time_insert_arrow()
 
@@ -85,6 +90,9 @@ class Insert(ABC):
 
     def peakmem_insert_numpy(self):
         self.time_insert_numpy()
+
+    def peakmem_insert_polars(self):
+        self.time_insert_polars()
 
 
 class Read(ABC):
@@ -136,16 +144,25 @@ class Read(ABC):
         c = db.benchmark
         find_pandas_all(c, {}, schema=self.schema, projection={"_id": 0})
 
-    def time_to_arrow(self):
-        c = db.benchmark
-        table = find_arrow_all(c, {}, schema=self.schema, projection={"_id": 0})
-        self.exercise_table(table)
-
     def time_conventional_arrow(self):
         c = db.benchmark
         f = list(c.find({}, projection={"_id": 0}))
         table = pa.Table.from_pylist(f)
         self.exercise_table(table)
+
+    def time_to_arrow(self):
+        c = db.benchmark
+        table = find_arrow_all(c, {}, schema=self.schema, projection={"_id": 0})
+        self.exercise_table(table)
+
+    def time_conventional_polars(self):
+        collection = db.benchmark
+        cursor = collection.find(projection={"_id": 0})
+        _ = pl.DataFrame(list(cursor))
+
+    def time_to_polars(self):
+        c = db.benchmark
+        find_polars_all(c, {}, schema=self.schema, projection={"_id": 0})
 
     def peakmem_to_numpy(self):
         self.time_to_numpy()
@@ -161,6 +178,12 @@ class Read(ABC):
 
     def peakmem_conventional_arrow(self):
         self.time_conventional_arrow()
+
+    def peakmem_to_polars(self):
+        self.time_to_polars()
+
+    def peakmem_conventional_polars(self):
+        self.time_conventional_polars()
 
 
 class ProfileReadArray(Read):
@@ -364,6 +387,7 @@ class ProfileInsertSmall(Insert):
         self.arrow_table = find_arrow_all(db.benchmark, {}, schema=self.schema)
         self.pandas_table = find_pandas_all(db.benchmark, {}, schema=self.schema)
         self.numpy_arrays = find_numpy_all(db.benchmark, {}, schema=self.schema)
+        self.polars_table = find_polars_all(db.benchmark, {}, schema=self.schema)
 
 
 class ProfileInsertLarge(Insert):
@@ -383,3 +407,4 @@ class ProfileInsertLarge(Insert):
         self.arrow_table = find_arrow_all(db.benchmark, {}, schema=self.schema)
         self.pandas_table = find_pandas_all(db.benchmark, {}, schema=self.schema)
         self.numpy_arrays = find_numpy_all(db.benchmark, {}, schema=self.schema)
+        self.polars_table = find_polars_all(db.benchmark, {}, schema=self.schema)

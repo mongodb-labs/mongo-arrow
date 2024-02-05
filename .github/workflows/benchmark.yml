@@ -32,27 +32,26 @@ jobs:
         uses: supercharge/mongodb-github-action@1.9.0
         with:
           mongodb-version: 6.0
+      - name: Install tox
+        run: |
+          python -m pip install tox
       - name: Install libbson
         run: |
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson ./build-libbson.sh
-      - name: Install Python dependencies
-        run: |
-          python -m pip install -U pip
-          python -m pip install asv virtualenv
+          tox -e build-libbson
 
       - name: Run benchmarks
         run: |
           set -eux
           run_asv () {
-              if [ ! -e "asv.conf.json" ] ; then
-                  git checkout refs/bm/pr asv.conf.json
-                  git checkout refs/bm/pr benchmarks/__init__.py
-                  git checkout refs/bm/pr benchmarks/benchmarks.py
+              if [ ! -e "tox.ini" ] ; then
+                  git checkout refs/bm/pr tox.ini
               fi
               git show --no-patch --format="%H (%s)"
-              asv run -e --python=`which python` --set-commit-hash $(git rev-parse HEAD)
+              export LIBBSON_INSTALL_DIR=$(pwd)/libbson
+              tox -e benchmark -- --set-commit-hash $(git rev-parse HEAD)
           }
 
+          pip install asv
           asv machine --yes
           git fetch origin main:main
           git update-ref refs/bm/pr HEAD
@@ -60,14 +59,9 @@ jobs:
           # the current target that this PR will be merged into is HEAD^1.
           git update-ref refs/bm/merge-target $(git log -n 1 --pretty=format:"%H" main --)
           git checkout --force refs/bm/pr --
-          # Install the library
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -e ".[test]"
           run_asv
 
-
           git checkout --force refs/bm/merge-target --
-          # Install the library
-          LIBBSON_INSTALL_DIR=$(pwd)/libbson python -m pip install -e ".[test]"
           run_asv
 
       - name: Compare benchmarks

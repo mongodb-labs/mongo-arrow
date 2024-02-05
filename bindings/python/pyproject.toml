@@ -9,11 +9,11 @@ requires = [
 
 [project]
 name = "pymongoarrow"
-description = '"Tools for using NumPy, Pandas and PyArrow with MongoDB"'
+description = '"Tools for using NumPy, Pandas, Polars, and PyArrow with MongoDB"'
 license = {text = "Apache License, Version 2.0"}
 authors = [{name = "Prashant Mital"}]
 maintainers = [{name = "MongoDB"}, {name = "Inc."}]
-keywords = ["mongo", "mongodb", "pymongo", "arrow", "bson", "numpy", "pandas"]
+keywords = ["mongo", "mongodb", "pymongo", "arrow", "bson", "numpy", "pandas", "polars"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -38,7 +38,7 @@ dependencies = [
     "pyarrow >=15.0,<15.1",
     "pymongo >=4.4,<5",
     "pandas >=1.3.5,<3",
-    "packaging >=23.2,<24"
+    "packaging >=23.2,<24",
 ]
 dynamic = ["version"]
 
@@ -49,13 +49,7 @@ Source = "https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python"
 Tracker = "https://jira.mongodb.org/projects/ARROW/issues"
 
 [project.optional-dependencies]
-docs = [
-  "sphinx>=5.3,<8",
-  "sphinx_rtd_theme>=2,<3",
-  "sphinxcontrib-shellcheck>=1,<2",
-  "furo==2023.9.10",
-]
-test = ["pytz", "pytest"]
+test = ["pytz", "pytest", "polars"]
 
 [tool.setuptools]
 zip-safe = false
@@ -79,7 +73,7 @@ version = {attr = "pymongoarrow.version.__version__"}
 skip = "pp* *-manylinux_i686 *_ppc64le *_s390x *-musllinux*"
 before-build = "bash ./cibw_before_build.sh"
 build-frontend = "build"
-test-command = "python -c \"from pymongoarrow.lib import process_bson_stream\""
+test-command = "python -c \"from pymongoarrow.lib import libbson_version\""
 # Disable wheel repair, see https://jira.mongodb.org/browse/ARROW-122.
 repair-wheel-command = ""
 
@@ -89,6 +83,7 @@ LIBBSON_INSTALL_DIR = "./libbson"
 [tool.cibuildwheel.linux]
 archs = "x86_64 aarch64"
 manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
 repair-wheel-command = [
     "pip install \"auditwheel>=5,<6\"",
     "python addtags.py {wheel} {dest_dir}"

@@ -1,8 +1,8 @@
-Quick Start
-===========
+Comparing to PyMongo
+====================
 
-This tutorial is intended as a comparison between using just PyMongo, versus
-with **PyMongoArrow**. The reader is assumed to be familiar with basic
+This tutorial is intended as a comparison between using **PyMongoArrow**,
+versus just PyMongo. The reader is assumed to be familiar with basic
 `PyMongo <https://pymongo.readthedocs.io/en/stable/tutorial.html>`_ and
 `MongoDB <https://docs.mongodb.com>`_ concepts.
 
