@@ -60,6 +60,11 @@ cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? N
         raise InvalidBSON("Could not read BSON document stream")
     return doc
 
+
+# Placeholder numbers for the date types.
+cdef uint8_t ARROW_TYPE_DATE32 = 100
+cdef uint8_t ARROW_TYPE_DATE64 = 101
+
 _builder_type_map = {
     BSON_TYPE_INT32: Int32Builder,
     BSON_TYPE_INT64: Int64Builder,
@@ -73,6 +78,8 @@ _builder_type_map = {
     BSON_TYPE_ARRAY: ListBuilder,
     BSON_TYPE_BINARY: BinaryBuilder,
     BSON_TYPE_CODE: CodeBuilder,
+    ARROW_TYPE_DATE32: Date32Builder,
+    ARROW_TYPE_DATE64: Date64Builder,
 }
 
 _field_type_map = {
@@ -188,6 +195,8 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
     cdef Decimal128Builder dec128_builder
     cdef ListBuilder list_builder
     cdef DocumentBuilder doc_builder
+    cdef Date32Builder date32_builder
+    cdef Date64Builder date64_builder
 
     # Build up a map of the builders.
     for key, value in context.builder_map.items():
@@ -249,6 +258,10 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         bson_iter_binary (&doc_iter, &subtype,
                             &val_buf_len, &val_buf)
                         builder = BinaryBuilder(subtype)
+                    elif builder_type == Date32Builder:
+                        builder = Date32Builder()
+                    elif builder_type == Date64Builder:
+                        builder = Date64Builder()
                     else:
                         builder = builder_type()
                     if arr_value_builder is None:
@@ -346,6 +359,18 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         double_builder.append_raw(bson_iter_as_double(&doc_iter))
                     else:
                         double_builder.append_null()
+                elif ftype == ARROW_TYPE_DATE32:
+                    date32_builder = builder
+                    if value_t == BSON_TYPE_DATE_TIME:
+                        date32_builder.append_raw(bson_iter_date_time(&doc_iter))
+                    else:
+                        date32_builder.append_null()
+                elif ftype == ARROW_TYPE_DATE64:
+                    date64_builder = builder
+                    if value_t == BSON_TYPE_DATE_TIME:
+                        date64_builder.append_raw(bson_iter_date_time(&doc_iter))
+                    else:
+                        date64_builder.append_null()
                 elif ftype == BSON_TYPE_DATE_TIME:
                     datetime_builder = builder
                     if value_t == BSON_TYPE_DATE_TIME:
@@ -624,6 +649,78 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CTimestampBuilder] unwrap(self):
+        return self.builder
+
+cdef class Date64Builder(_ArrayBuilderBase):
+    cdef:
+        shared_ptr[CDate64Builder] builder
+        DataType dtype
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CDate64Builder(pool))
+        self.type_marker = ARROW_TYPE_DATE64
+
+    cdef append_raw(self, int64_t value):
+        self.builder.get().Append(value)
+
+    cpdef append(self, value):
+        self.builder.get().Append(value)
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    @property
+    def unit(self):
+        return self.dtype
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CDate64Builder] unwrap(self):
+        return self.builder
+
+cdef class Date32Builder(_ArrayBuilderBase):
+    cdef:
+        shared_ptr[CDate32Builder] builder
+        DataType dtype
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CDate32Builder(pool))
+        self.type_marker = ARROW_TYPE_DATE32
+
+    cdef append_raw(self, int64_t value):
+        # Convert from milliseconds to days (1000*60*60*24)
+        cdef int32_t seconds_val = value // 86400000
+        self.builder.get().Append(seconds_val)
+
+    cpdef append(self, value):
+        self.builder.get().Append(value)
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    @property
+    def unit(self):
+        return self.dtype
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CDate32Builder] unwrap(self):
         return self.builder
 
 

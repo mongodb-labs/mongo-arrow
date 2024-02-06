@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import calendar
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from unittest import TestCase
 
 from bson import Binary, Code, Decimal128, ObjectId
@@ -22,6 +22,8 @@ from pymongoarrow.lib import (
     BinaryBuilder,
     BoolBuilder,
     CodeBuilder,
+    Date32Builder,
+    Date64Builder,
     DatetimeBuilder,
     Decimal128Builder,
     DocumentBuilder,
@@ -62,7 +64,7 @@ class TestInt64Builder(TestCase, IntBuildersTestMixin):
         self.data_type = int64()
 
 
-class TestDate64Builder(TestCase):
+class TestDatetimeBuilder(TestCase):
     def test_default_unit(self):
         # Check default unit
         builder = DatetimeBuilder()
@@ -281,3 +283,40 @@ class TestCodeBuilder(TestCase):
         self.assertEqual(arr.null_count, 1)
         self.assertEqual(len(arr), 5)
         self.assertEqual(arr.to_pylist(), codes + [None])
+
+
+class TestDate32Builder(TestCase):
+    def test_simple(self):
+        epoch = date(1970, 1, 1)
+        values = [date(2012, 1, 1), date(2012, 1, 2), date(2014, 4, 5)]
+        builder = Date32Builder()
+        builder.append(values[0].toordinal() - epoch.toordinal())
+        builder.append_values([v.toordinal() - epoch.toordinal() for v in values[1:]])
+        builder.append_null()
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 4)
+        self.assertEqual(arr.to_pylist(), values + [None])
+
+
+class TestDate64Builder(TestCase):
+    def test_simple(self):
+        def msec_since_epoch(d):
+            epoch = datetime(1970, 1, 1)
+            d = datetime.fromordinal(d.toordinal())
+            diff = d - epoch
+            return diff.total_seconds() * 1000
+
+        values = [date(2012, 1, 1), date(2012, 1, 2), date(2014, 4, 5)]
+        builder = Date64Builder()
+        builder.append(msec_since_epoch(values[0]))
+        builder.append_values([msec_since_epoch(v) for v in values[1:]])
+        builder.append_null()
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 1)
+        self.assertEqual(len(arr), 4)
+        self.assertEqual(arr.to_pylist(), values + [None])

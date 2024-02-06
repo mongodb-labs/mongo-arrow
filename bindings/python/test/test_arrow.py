@@ -15,7 +15,7 @@
 import tempfile
 import unittest
 import unittest.mock as mock
-from datetime import datetime
+from datetime import date, datetime
 from test import client_context
 from test.utils import AllowListEventListener, NullsTestMixin
 
@@ -28,6 +28,8 @@ from pyarrow import (
     Table,
     bool_,
     csv,
+    date32,
+    date64,
     decimal256,
     field,
     int32,
@@ -316,6 +318,21 @@ class ArrowApiTestMixin:
         with self.assertRaises(ValueError):
             self.round_trip(data, Schema(schema))
 
+    def test_date_types(self):
+        schema, data = self._create_data()
+        self.round_trip(data, Schema(schema))
+
+        schema = {"_id": int32(), "date32": date32(), "date64": date64()}
+        data = Table.from_pydict(
+            {
+                "_id": [i for i in range(2)],
+                "date32": [date(2012, 1, 1) for _ in range(2)],
+                "date64": [datetime(2012, 1, 1) for _ in range(2)],
+            },
+            ArrowSchema(schema),
+        )
+        self.round_trip(data, Schema(schema))
+
     @mock.patch.object(Collection, "insert_many", side_effect=Collection.insert_many, autospec=True)
     def test_write_batching(self, mock):
         schema = {
@@ -349,6 +366,8 @@ class ArrowApiTestMixin:
             "ObjectId": [ObjectId().binary for i in range(3)],
             "Decimal128": [Decimal128(str(i)).bid for i in range(3)],
             "Code": [str(i) for i in range(3)],
+            "date32": [date(2012, 1, 1) for i in range(3)],
+            "date64": [date(2012, 1, 1) for i in range(3)],
         }
 
         def inner(i):
@@ -363,6 +382,8 @@ class ArrowApiTestMixin:
                 Binary=Binary(bytes(i), 10),
                 ObjectId=ObjectId().binary,
                 Code=str(i),
+                date32=date(2012, 1, 1),
+                date64=date(2014, 1, 1),
             )
             if nested_elem:
                 inner_dict["list"] = [nested_elem]
