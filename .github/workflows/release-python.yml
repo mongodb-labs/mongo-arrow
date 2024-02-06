@@ -46,7 +46,7 @@ jobs:
 
     steps:
       - name: Checkout pymongoarrow
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -55,7 +55,7 @@ jobs:
           export PYTHON_VERSION=$(sed 's/^cp3/3./' <<< ${{ matrix.python }} )
           echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{env.PYTHON_VERSION}}
           cache: 'pip'
@@ -64,7 +64,7 @@ jobs:
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: all
 
@@ -97,7 +97,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
         run: python -m cibuildwheel --output-dir wheelhouse
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.python }}-${{ startsWith(matrix.buildplat[1], 'macosx') && 'macosx' || matrix.buildplat[1] }}
           path: ./bindings/python/wheelhouse/*.whl
@@ -107,11 +107,11 @@ jobs:
     name: Make SDist
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           # Build sdist on lowest supported Python
           python-version: '3.8'
@@ -136,7 +136,7 @@ jobs:
           cd ..
           python -c "from pymongoarrow.lib import process_bson_stream"
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: "sdist"
           path: ./bindings/python/dist/*.tar.gz
@@ -147,13 +147,13 @@ jobs:
     name: Download Wheels
     steps:
       - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
       - name: Flatten directory
         working-directory: .
         run: |
           find . -mindepth 2 -type f -exec mv {} . \;
           find . -type d -empty -delete
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: all-dist-${{ github.head_ref || github.ref_name }}
           path: "./*"
@@ -168,7 +168,7 @@ jobs:
       id-token: write
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: all-dist-${{ github.head_ref || github.ref_name }}
         path: dist/
