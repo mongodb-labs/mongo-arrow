@@ -59,8 +59,6 @@ Contributions to **PyMongoArrow** are encouraged. To contribute, fork the projec
 `GitHub <https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python>`_
 and send a pull request.
 
-See also :doc:`developer/index`.
-
 Changes
 -------
 See the :doc:`changelog` for a full list of changes to PyMongoArrow.
@@ -94,5 +92,4 @@ Indices and tables
    faq
    api/index
    changelog
-   developer/index
    schemas
