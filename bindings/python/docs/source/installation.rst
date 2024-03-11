@@ -50,7 +50,7 @@ To upgrade using pip::
   $ conda install --channel conda-forge pymongoarrow
 
 **From Source.** If the above options still do not allow you to install ``pymongoarrow`` on your
-system, you will have to install from source, see :doc:`developer/installation`.
+system, you will have to install from source, see the `Contributing Guide <https://github.com/mongodb-labs/mongo-arrow/blob/main/bindings/python/CONTRIBUTING.md>`_.
 
 
 Dependencies

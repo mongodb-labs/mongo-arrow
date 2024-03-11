@@ -69,8 +69,7 @@ Note: `pymongoarrow` is not supported or tested on big-endian systems
 
 ## Development Install
 
-See the instructions on [Read the
-Docs](https://mongo-arrow.readthedocs.io/en/latest).
+See the instructions in the [Contributing Guide][./CONTRIBUTING.md]
 
 ## Documentation
 
