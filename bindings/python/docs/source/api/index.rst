@@ -1,3 +1,5 @@
+:orphan:
+
 :mod:`pymongoarrow` -- Tools for working with MongoDB and PyArrow
 =================================================================
 
