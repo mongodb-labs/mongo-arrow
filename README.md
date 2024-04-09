@@ -24,7 +24,7 @@ Example
 ```py
 from pymongoarrow.api import Schema
 
-schema = Schema({'_id': int, 'amount': float, 'last_updated': datetime})
+schema = Schema({"_id": int, "amount": float, "last_updated": datetime})
 ```
 
 You can install PyMongoArrow on your local machine using Pip:
@@ -33,14 +33,14 @@ You can install PyMongoArrow on your local machine using Pip:
 You can export data from MongoDB to a pandas dataframe easily using something like:
 
 ```py
-df = production.invoices.find_pandas_all({'amount': {'$gt': 100.00}}, schema=invoices)
+df = production.invoices.find_pandas_all({"amount": {"$gt": 100.00}}, schema=invoices)
 ```
 
 Since PyMongoArrow can automatically infer the schema from the first batch of data, this can be
 further simplified to:
 
 ```py
-df = production.invoices.find_pandas_all({'amount': {'$gt': 100.00}})
+df = production.invoices.find_pandas_all({"amount": {"$gt": 100.00}})
 ```
 
 ## Final Thoughts
