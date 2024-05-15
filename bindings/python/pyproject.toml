@@ -101,12 +101,6 @@ faulthandler_timeout = 1500
 xfail_strict = true
 filterwarnings = [
   "error",
-  # https://github.com/dateutil/dateutil/issues/1314
-  "module:datetime.datetime.utc:DeprecationWarning",
-  # https://jira.mongodb.org/browse/ARROW-204
-  'ignore:Passing a BlockManager to DataFrame is deprecated and will raise in a future version. Use public APIs instead.',
-  # https://jira.mongodb.org/browse/ARROW-206
-  'ignore:DatetimeTZBlock is deprecated and will be removed in a future version. Use public APIs instead.'
 ]
 
 [tool.ruff]
