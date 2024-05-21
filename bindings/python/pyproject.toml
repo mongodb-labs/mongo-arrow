@@ -1,10 +1,9 @@
 [build-system]
 requires = [
-    "setuptools>=47.9",
-    "wheel>=0.37",
-    "cython>=0.29",
+    "setuptools>=61.0",
+    "cython>=3.0",
     # Must be kept in sync with "project.dependencies" below.
-    "pyarrow>=15.0,<15.1.0",
+    "pyarrow>=16.0,<16.1.0",
 ]
 
 [project]
@@ -35,7 +34,7 @@ readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
     # Must be kept in sync with "build_sytem.requires" above.
-    "pyarrow >=15.0,<15.1",
+    "pyarrow >=16.0,<16.1",
     "pymongo >=4.4,<5",
     "pandas >=1.3.5,<3",
     "packaging >=23.2,<24",
@@ -102,12 +101,6 @@ faulthandler_timeout = 1500
 xfail_strict = true
 filterwarnings = [
   "error",
-  # https://github.com/dateutil/dateutil/issues/1314
-  "module:datetime.datetime.utc:DeprecationWarning",
-  # https://jira.mongodb.org/browse/ARROW-204
-  'ignore:Passing a BlockManager to DataFrame is deprecated and will raise in a future version. Use public APIs instead.',
-  # https://jira.mongodb.org/browse/ARROW-206
-  'ignore:DatetimeTZBlock is deprecated and will be removed in a future version. Use public APIs instead.'
 ]
 
 [tool.ruff]
