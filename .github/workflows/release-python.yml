@@ -82,6 +82,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
         run: |
           python -m pip install build
+          bash ./cibw_before_build.sh
           python -m build --verbose
           python -m cibuildwheel --output-dir wheelhouse
 
@@ -93,6 +94,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
         run: |
           python -m pip install build
+          bash ./cibw_before_build.sh
           python -m build --verbose
           python -m cibuildwheel --output-dir wheelhouse
 
