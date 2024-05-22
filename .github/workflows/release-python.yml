@@ -82,6 +82,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
         run: |
           python -m pip install build
+          export LIBBSON_INSTALL_DIR="./libbson"
           bash ./cibw_before_build.sh
           python -m build --verbose
           python -m cibuildwheel --output-dir wheelhouse
@@ -94,6 +95,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "10.14"
         run: |
           python -m pip install build
+          export LIBBSON_INSTALL_DIR="./libbson"
           bash ./cibw_before_build.sh
           python -m build --verbose
           python -m cibuildwheel --output-dir wheelhouse
