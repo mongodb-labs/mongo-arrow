@@ -78,6 +78,7 @@ repair-wheel-command = ""
 
 [tool.cibuildwheel.environment]
 LIBBSON_INSTALL_DIR = "./libbson"
+PIP_VERBOSE = 1
 
 [tool.cibuildwheel.linux]
 archs = "x86_64 aarch64"
@@ -90,7 +91,6 @@ repair-wheel-command = [
 
 [tool.cibuildwheel.macos]
 archs = "x86_64 arm64"
-environment = "PIP_VERBOSE=1"
 
 [tool.pytest.ini_options]
 minversion = "7"
