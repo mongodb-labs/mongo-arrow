@@ -81,6 +81,7 @@ jobs:
           CIBW_BUILD: cp38-macosx_x86_64
           MACOSX_DEPLOYMENT_TARGET: "10.14"
         run: |
+          python -m pip install build
           python -m build --verbose
           python -m cibuildwheel --output-dir wheelhouse
 
@@ -91,6 +92,7 @@ jobs:
           CIBW_BUILD: cp39-macosx_*
           MACOSX_DEPLOYMENT_TARGET: "10.14"
         run: |
+          python -m pip install build
           python -m build --verbose
           python -m cibuildwheel --output-dir wheelhouse
 
