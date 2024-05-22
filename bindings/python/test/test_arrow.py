@@ -137,7 +137,7 @@ class ArrowApiTestMixin:
 
         with self.client.start_session() as session:
             self.assertIsNone(session.operation_time)
-            _ = session._server_session.last_use
+            _ = getattr(session._server_session, "last_use", None)
             expected = Table.from_pydict(
                 {"_id": [1, 2, 3, 4], "data": [10, 20, 30, None]},
                 ArrowSchema([("_id", int32()), ("data", int64())]),
@@ -786,6 +786,27 @@ class ArrowApiTestMixin:
                 table_out_schema = find_arrow_all(self.coll, {}, schema=mschema)
                 self.assertTrue(table_out_schema.schema == table_in.schema)
                 self.assertTrue(table_out_none.equals(table_out_schema))
+
+    def test_exclude_none(self):
+        schema = {"a": int32(), "b": int32()}
+        b_data = [i for i in range(10)] * 2
+        b_data[2] = None
+        data = Table.from_pydict(
+            {
+                "a": [i for i in range(10)] * 2,
+                "b": b_data,
+            },
+            ArrowSchema(schema),
+        )
+        self.coll.drop()
+        write(self.coll, data)
+        col_data = list(self.coll.find({}))
+        assert "b" in col_data[2]
+
+        self.coll.drop()
+        write(self.coll, data, exclude_none=True)
+        col_data = list(self.coll.find({}))
+        assert "b" not in col_data[2]
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):
