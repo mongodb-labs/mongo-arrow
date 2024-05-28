@@ -329,6 +329,18 @@ class TestExplicitPandasApi(PandasTestBase):
             out = pd.read_csv(f.name)
             self._assert_frames_equal(data, out)
 
+    def test_exclude_none(self):
+        df = pd.DataFrame(data={"a": [1, 2, 3, 4], "b": [20, 40, 60, None]})
+        self.coll.drop()
+        write(self.coll, df)
+        col_data = list(self.coll.find({}))
+        assert "b" in col_data[3]
+
+        self.coll.drop()
+        write(self.coll, df, exclude_none=True)
+        col_data = list(self.coll.find({}))
+        assert "b" not in col_data[3]
+
 
 class TestBSONTypes(PandasTestBase):
     @classmethod
