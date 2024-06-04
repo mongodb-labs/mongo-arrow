@@ -1,6 +1,8 @@
 
 # Changelog
 
+---
+
 # Changes in Version 1.4.0
 
 -   Support for PyArrow 16.0
@@ -8,8 +10,6 @@
 to [MongoDB Docs](https://www.mongodb.com/docs/languages/python/pymongo-arrow-driver/current/)
 -   Added a top-level Contributing guide
 -   Added an optional bool flag to the write function to skip writing null fields
-
----
 
 # Changes in Version 1.3.0
 
