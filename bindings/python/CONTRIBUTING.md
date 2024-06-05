@@ -230,7 +230,7 @@ To set up `pre-commit` locally, run:
 
 ``` bash
 (pymongoarrow) $ pip install pre-commit
-(pymongoarrow) $ pre-commi t install
+(pymongoarrow) $ pre-commit install
 ```
 
 To run `pre-commit` manually, run:

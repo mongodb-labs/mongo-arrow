@@ -24,7 +24,7 @@ new version number.
 2.  Check JIRA to ensure all the tickets in this version have been
     completed.
 
-3.  Add release notes to `doc/source/changelog.rst`. Generally just
+3.  Add release notes to `bindings/python/CHANGELOG.md`. Generally just
     summarize/clarify the git log, but you might add some more long form
     notes for big changes.
 
