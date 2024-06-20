@@ -305,20 +305,25 @@ def _arrow_to_polars(arrow_table):
         raise ValueError(msg)
 
     def _cast_away_extension_type(field):
-        match field.type:
-            case pa.ExtensionType():
-                return pa.field(field.name, field.type.storage_type)
-            case pa.StructType():
-                return pa.field(field.name,
-                                pa.struct([_cast_away_extension_type(nested_field) for nested_field in field.type]))
-            case pa.ListType():
-                raise NotImplementedError
-            case _:
-                return field
+        if isinstance(field.type, pa.ExtensionType):
+            return pa.field(field.name, field.type.storage_type)
 
-    schema_without_extensions = pa.schema([_cast_away_extension_type(field) for field in arrow_table.schema])
+        if isinstance(field.type, pa.StructType):
+            return pa.field(
+                field.name,
+                pa.struct([_cast_away_extension_type(nested_field) for nested_field in field.type]),
+            )
+
+        if isinstance(field.type, pa.ListType):
+            return pa.field(field.name, pa.list_(_cast_away_extension_type(field.type.value_field)))
+
+        return field
+
+    schema_without_extensions = pa.schema(
+        [_cast_away_extension_type(field) for field in arrow_table.schema]
+    )
     arrow_table_without_extensions = arrow_table.cast(schema_without_extensions)
-    
+
     return pl.from_arrow(arrow_table_without_extensions)
 
 
