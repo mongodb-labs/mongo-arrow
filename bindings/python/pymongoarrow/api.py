@@ -295,6 +295,24 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, **kwargs):
     )
 
 
+def _cast_away_extension_type(field):
+    if isinstance(field.type, pa.ExtensionType):
+        field_without_extension = pa.field(field.name, field.type.storage_type)
+    elif isinstance(field.type, pa.StructType):
+        field_without_extension = pa.field(
+            field.name,
+            pa.struct([_cast_away_extension_type(nested_field) for nested_field in field.type]),
+        )
+    elif isinstance(field.type, pa.ListType):
+        field_without_extension = pa.field(
+            field.name, pa.list_(_cast_away_extension_type(field.type.value_field))
+        )
+    else:
+        field_without_extension = field
+
+    return field_without_extension
+
+
 def _arrow_to_polars(arrow_table):
     """Helper function that converts an Arrow Table to a Polars DataFrame.
 
@@ -303,21 +321,6 @@ def _arrow_to_polars(arrow_table):
     if pl is None:
         msg = "polars is not installed. Try pip install polars."
         raise ValueError(msg)
-
-    def _cast_away_extension_type(field):
-        if isinstance(field.type, pa.ExtensionType):
-            return pa.field(field.name, field.type.storage_type)
-
-        if isinstance(field.type, pa.StructType):
-            return pa.field(
-                field.name,
-                pa.struct([_cast_away_extension_type(nested_field) for nested_field in field.type]),
-            )
-
-        if isinstance(field.type, pa.ListType):
-            return pa.field(field.name, pa.list_(_cast_away_extension_type(field.type.value_field)))
-
-        return field
 
     schema_without_extensions = pa.schema(
         [_cast_away_extension_type(field) for field in arrow_table.schema]
