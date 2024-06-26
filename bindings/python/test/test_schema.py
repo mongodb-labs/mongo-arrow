@@ -94,3 +94,13 @@ class TestSchema(TestCase):
             }
         )
         self.assertEqual(schema._get_projection(), {"_id": True, "list": {"a": True, "b": True}})
+
+    def test_py_list_projection(self):
+        schema = Schema(
+            {
+                "_id": ObjectId, 
+                "list": [(struct([field("a", int64()), field("b", float64())]))]
+            }
+        )
+
+        self.assertEqual(schema._get_projection(), {"_id": True, "list": {"a": True, "b": True}})
