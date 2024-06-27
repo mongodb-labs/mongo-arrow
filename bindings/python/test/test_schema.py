@@ -106,12 +106,22 @@ class TestSchema(TestCase):
 
         self.assertEqual(schema._get_projection(), {"_id": True, "list": {"a": True, "b": True}})
 
-    def test_py_list_without_struct_raises(self):
+    def test_py_list_with_multiple_fields_raises(self):
         
-        with pytest.raises(ValueError, match="Please provide a struct in case of multiple types in a list"):
+        with pytest.raises(ValueError, match="Please provide a one datatype or struct in case of multiple datatypes in a list"):
             _ = Schema(
                 {
                     "_id": ObjectId, 
                     "list": [([field("a", int64()), field("b", float64())])]
+                }
+            )
+            
+    def test_py_empty_list_raises(self):
+        
+        with pytest.raises(ValueError, match="Please provide a one datatype or struct in case of multiple datatypes in a list"):
+            _ = Schema(
+                {
+                    "_id": ObjectId, 
+                    "list": []
                 }
             )

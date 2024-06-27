@@ -288,8 +288,8 @@ def _normalize_typeid(typeid, field_name):
             fields.append((sub_field_name, _normalize_typeid(sub_typeid, sub_field_name)))
         return struct(fields)
     if isinstance(typeid, list):
-        if len(typeid) > 1:
-            msg = "Please provide a struct in case of multiple types in a list"
+        if len(typeid) == 0 or len(typeid) > 1:
+            msg = "Please provide a one datatype or struct in case of multiple datatypes in a list"
             raise ValueError(msg)
         return list_(_normalize_typeid(typeid[0], "0"))
     if _is_typeid_supported(typeid):
