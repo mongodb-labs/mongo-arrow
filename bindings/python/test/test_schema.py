@@ -13,6 +13,7 @@
 # limitations under the License.
 from datetime import datetime
 from unittest import TestCase
+import pytest
 
 from bson import Binary, Code, Decimal128, Int64, ObjectId
 from pyarrow import Table, field, float64, int64, list_, struct, timestamp
@@ -104,3 +105,13 @@ class TestSchema(TestCase):
         )
 
         self.assertEqual(schema._get_projection(), {"_id": True, "list": {"a": True, "b": True}})
+
+    def test_py_list_without_struct_raises(self):
+        
+        with pytest.raises(ValueError, match="Please provide a struct in case of multiple types in a list"):
+            _ = Schema(
+                {
+                    "_id": ObjectId, 
+                    "list": [([field("a", int64()), field("b", float64())])]
+                }
+            )
