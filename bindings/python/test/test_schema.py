@@ -108,7 +108,7 @@ class TestSchema(TestCase):
 
     def test_py_list_with_multiple_fields_raises(self):
         
-        with pytest.raises(ValueError, match="Please provide a one datatype or struct in case of multiple datatypes in a list"):
+        with pytest.raises(ValueError, match="list field in schema must contain exactly one element, not 2"):
             _ = Schema(
                 {
                     "_id": ObjectId, 
@@ -118,7 +118,7 @@ class TestSchema(TestCase):
             
     def test_py_empty_list_raises(self):
         
-        with pytest.raises(ValueError, match="Please provide a one datatype or struct in case of multiple datatypes in a list"):
+        with pytest.raises(ValueError, match="list field in schema must contain exactly one element, not 0"):
             _ = Schema(
                 {
                     "_id": ObjectId, 
