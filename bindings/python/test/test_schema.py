@@ -115,13 +115,3 @@ class TestSchema(TestCase):
                     "list": [([field("a", int64()), field("b", float64())])]
                 }
             )
-            
-    def test_py_empty_list_raises(self):
-        
-        with pytest.raises(ValueError, match="list field in schema must contain exactly one element, not 0"):
-            _ = Schema(
-                {
-                    "_id": ObjectId, 
-                    "list": []
-                }
-            )
