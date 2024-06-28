@@ -14,6 +14,7 @@
 from datetime import datetime
 from unittest import TestCase
 
+import pytest
 from bson import Binary, Code, Decimal128, Int64, ObjectId
 from pyarrow import Table, field, float64, int64, list_, struct, timestamp
 from pyarrow import schema as ArrowSchema
@@ -94,3 +95,22 @@ class TestSchema(TestCase):
             }
         )
         self.assertEqual(schema._get_projection(), {"_id": True, "list": {"a": True, "b": True}})
+
+    def test_py_list_projection(self):
+        schema = Schema(
+            {"_id": ObjectId, "list": [(struct([field("a", int64()), field("b", float64())]))]}
+        )
+
+        self.assertEqual(schema._get_projection(), {"_id": True, "list": {"a": True, "b": True}})
+
+    def test_py_list_with_multiple_fields_raises(self):
+        with pytest.raises(
+            ValueError, match="list field in schema must contain exactly one element, not 2"
+        ):
+            _ = Schema({"_id": ObjectId, "list": [([field("a", int64()), field("b", float64())])]})
+
+    def test_py_empty_list_raises(self):
+        with pytest.raises(
+            ValueError, match="list field in schema must contain exactly one element, not 0"
+        ):
+            _ = Schema({"_id": ObjectId, "list": []})

@@ -288,7 +288,10 @@ def _normalize_typeid(typeid, field_name):
             fields.append((sub_field_name, _normalize_typeid(sub_typeid, sub_field_name)))
         return struct(fields)
     if isinstance(typeid, list):
-        return list_(_normalize_typeid(type(typeid[0]), "0"))
+        if len(typeid) != 1:
+            msg = f"list field in schema must contain exactly one element, not {len(typeid)}"
+            raise ValueError(msg)
+        return list_(_normalize_typeid(typeid[0], "0"))
     if _is_typeid_supported(typeid):
         normalizer = _TYPE_NORMALIZER_FACTORY[typeid]
         return normalizer(typeid)
