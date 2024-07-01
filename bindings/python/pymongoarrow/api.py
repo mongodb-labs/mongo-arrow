@@ -295,7 +295,7 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, **kwargs):
     )
 
 
-def _cast_away_extension_type(field):
+def _cast_away_extension_type(field: pa.field) -> pa.field:
     if isinstance(field.type, pa.ExtensionType):
         field_without_extension = pa.field(field.name, field.type.storage_type)
     elif isinstance(field.type, pa.StructType):
@@ -313,7 +313,7 @@ def _cast_away_extension_type(field):
     return field_without_extension
 
 
-def _arrow_to_polars(arrow_table):
+def _arrow_to_polars(arrow_table: pa.Table) -> pl.DataFrame:
     """Helper function that converts an Arrow Table to a Polars DataFrame.
 
     Note: Polars lacks ExtensionTypes. We cast them  to their base arrow classes.
