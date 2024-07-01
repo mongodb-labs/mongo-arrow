@@ -313,7 +313,7 @@ def _cast_away_extension_type(field: pa.field) -> pa.field:
     return field_without_extension
 
 
-def _arrow_to_polars(arrow_table: pa.Table) -> pl.DataFrame:
+def _arrow_to_polars(arrow_table: pa.Table):
     """Helper function that converts an Arrow Table to a Polars DataFrame.
 
     Note: Polars lacks ExtensionTypes. We cast them  to their base arrow classes.
