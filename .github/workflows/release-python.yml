@@ -39,9 +39,9 @@ jobs:
           - buildplat: [macos-14, macosx_*]
             python: "cp39"
         include:
-          - buildplat: [macos-11, macosx_*]
+          - buildplat: [macos-12, macosx_*]
             python: "cp38"
-          - buildplat: [macos-11, macosx_*]
+          - buildplat: [macos-12, macosx_*]
             python: "cp39"
 
     steps:
