@@ -3,6 +3,11 @@
 
 ---
 
+# Changes in Version 1.5.0
+
+- Support for PyArrow 17.0
+- Support for nested ObjectIDs in polars conversion
+
 # Changes in Version 1.4.0
 
 -   Support for PyArrow 16.0
