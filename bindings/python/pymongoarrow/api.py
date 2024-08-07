@@ -295,28 +295,25 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, **kwargs):
     )
 
 
-def _cast_away_extension_types_on_array(array: pa.Array) -> pa.Array:
-    """Return an Array where ExtensionTypes have been cast to their base pyarrow types"""
-    if isinstance(array.type, pa.ExtensionType):
-        return array.cast(array.type.storage_type)
-    # elif pa.types.is_struct(field.type):
-    #     ...
-    # elif pa.types.is_list(field.type):
-    #     ...
-    return array
+def _cast_away_extension_type(field: pa.field) -> pa.field:
+    if isinstance(field.type, pa.ExtensionType):
+        field_without_extension = pa.field(field.name, field.type.storage_type)
+    elif isinstance(field.type, pa.StructType):
+        field_without_extension = pa.field(
+            field.name,
+            pa.struct([_cast_away_extension_type(nested_field) for nested_field in field.type]),
+        )
+    elif isinstance(field.type, pa.ListType):
+        field_without_extension = pa.field(
+            field.name, pa.list_(_cast_away_extension_type(field.type.value_field))
+        )
+    else:
+        field_without_extension = field
+
+    return field_without_extension
 
 
-def _cast_away_extension_types_on_table(table: pa.Table) -> pa.Table:
-    """Given arrow_table that may ExtensionTypes, cast these to the base pyarrow types"""
-    # Convert all fields in the Arrow table
-    converted_fields = [
-        _cast_away_extension_types_on_array(table.column(i)) for i in range(table.num_columns)
-    ]
-    # Reconstruct the Arrow table
-    return pa.Table.from_arrays(converted_fields, names=table.column_names)
-
-
-def _arrow_to_polars(arrow_table):
+def _arrow_to_polars(arrow_table: pa.Table):
     """Helper function that converts an Arrow Table to a Polars DataFrame.
 
     Note: Polars lacks ExtensionTypes. We cast them  to their base arrow classes.
@@ -324,7 +321,12 @@ def _arrow_to_polars(arrow_table):
     if pl is None:
         msg = "polars is not installed. Try pip install polars."
         raise ValueError(msg)
-    arrow_table_without_extensions = _cast_away_extension_types_on_table(arrow_table)
+
+    schema_without_extensions = pa.schema(
+        [_cast_away_extension_type(field) for field in arrow_table.schema]
+    )
+    arrow_table_without_extensions = arrow_table.cast(schema_without_extensions)
+
     return pl.from_arrow(arrow_table_without_extensions)
 
 

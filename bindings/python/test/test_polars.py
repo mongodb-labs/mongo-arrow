@@ -228,6 +228,8 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 "str": [str(i) for i in range(2)],
                 "int": [i for i in range(2)],
                 "bool": [True, False],
+                "struct": [{"objId": bson.ObjectId().binary, "str1": str(i)} for i in range(2)],
+                "list": [[str(i), str(i + 1)] for i in range(2)],
                 "Binary": [b"1", b"23"],
                 "ObjectId": [bson.ObjectId().binary, bson.ObjectId().binary],
                 "Decimal128": [bson.Decimal128(str(i)).bid for i in range(2)],
@@ -241,9 +243,9 @@ class TestExplicitPolarsApi(PolarsTestBase):
         self.assertEqual(len(arrow_table_in), res.raw_result["insertedCount"])
         df_out = find_polars_all(self.coll, query={}, schema=Schema(arrow_schema))
 
-        # Sanity check: compare with cast_away_extension_types_on_table
-        arrow_cast = api._cast_away_extension_types_on_table(arrow_table_in)
-        assert_frame_equal(df_out, pl.from_arrow(arrow_cast))
+        # Sanity check: compare with _arrow_to_polars
+        df_actual_output = api._arrow_to_polars(arrow_table_in)
+        assert_frame_equal(df_out, df_actual_output)
 
     def test_exceptions_for_unsupported_polar_types(self):
         """Confirm exceptions thrown are expected.
