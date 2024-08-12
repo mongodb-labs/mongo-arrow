@@ -14,9 +14,11 @@
 from unittest import TestCase
 
 import pyarrow as pa
+import pytest
 from bson import Decimal128, Int64, InvalidBSON, encode
 
 from pymongoarrow.context import PyMongoArrowContext
+from pymongoarrow.errors import PyMongoArrowError
 from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import ObjectId, ObjectIdType, int64, string
@@ -259,3 +261,29 @@ class TestSubdocumentType(TestBsonToArrowConversionBase):
             ]
         }
         self._run_test(docs, as_dict)
+
+
+class TestInValidBsonToArrowConversion(TestBsonToArrowConversionBase):
+
+    def setUp(self):
+        super().setUp()
+        self.context.raise_on_type_error = True
+
+    def test_with_missmatch_data_simple(self):
+        ids = [ObjectId() for i in range(4)]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "ä"},
+            {"_id": ids[1], "data": 20, "title": "b"},
+            {"_id": ids[2], "data": "30", "title": "č"},
+            {"_id": ids[3], "data": 40, "title": "ê"},
+        ]
+        as_dict = {
+            "_id": ids,
+            "data": [10, 20, 30, 40],
+            "title": ["ä", "b", "č", "ê"],
+        }
+
+        payload = type(self)._generate_payload(docs)
+
+        with pytest.raises(PyMongoArrowError, match="Type mismatch! b'data' is not an int64"):
+            process_bson_stream(payload, self.context)
