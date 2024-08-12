@@ -16,6 +16,9 @@ import os
 import traceback
 import warnings
 
+# We must import pyarrow before attempting to load the Cython module.
+import pyarrow as pa  # noqa: F401
+
 from pymongoarrow.version import _MIN_LIBBSON_VERSION, __version__  # noqa: F401
 
 try:
@@ -26,10 +29,6 @@ except ImportError:
 
 
 try:
-    # Not needed for building the package.
-    # We must import pyarrow before attempting to load the Cython module.
-    import pyarrow as pa  # noqa: F401
-
     from pymongoarrow.lib import libbson_version
 except ImportError:
     if os.environ.get("NO_EXT") is None:
