@@ -463,8 +463,7 @@ cdef class StringBuilder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CStringBuilder] unwrap(self):
@@ -479,8 +478,7 @@ cdef class CodeBuilder(StringBuilder):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out).cast(CodeType())
 
 
@@ -508,8 +506,7 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out).cast(ObjectIdType())
 
     cdef shared_ptr[CFixedSizeBinaryBuilder] unwrap(self):
@@ -539,8 +536,7 @@ cdef class Int32Builder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CInt32Builder] unwrap(self):
@@ -570,8 +566,7 @@ cdef class Int64Builder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CInt64Builder] unwrap(self):
@@ -601,8 +596,7 @@ cdef class DoubleBuilder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CDoubleBuilder] unwrap(self):
@@ -644,8 +638,7 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CTimestampBuilder] unwrap(self):
@@ -679,8 +672,7 @@ cdef class Date64Builder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CDate64Builder] unwrap(self):
@@ -716,8 +708,7 @@ cdef class Date32Builder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CDate32Builder] unwrap(self):
@@ -747,8 +738,7 @@ cdef class BoolBuilder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CBooleanBuilder] unwrap(self):
@@ -779,8 +769,7 @@ cdef class Decimal128Builder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out).cast(Decimal128Type_())
 
     cdef shared_ptr[CFixedSizeBinaryBuilder] unwrap(self):
@@ -880,8 +869,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CStructBuilder] unwrap(self):
@@ -934,8 +922,7 @@ cdef class ListBuilder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
     cdef shared_ptr[CListBuilder] unwrap(self):
@@ -970,8 +957,7 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
 
     cpdef finish(self):
         cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
+        self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out).cast(BinaryType(self._subtype))
 
     cdef shared_ptr[CBinaryBuilder] unwrap(self):
