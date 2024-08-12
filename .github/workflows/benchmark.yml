@@ -2,6 +2,7 @@ name: Python Benchmark
 
 on:
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: benchmark-${{ github.ref }}
