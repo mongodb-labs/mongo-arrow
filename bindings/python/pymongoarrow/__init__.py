@@ -16,13 +16,20 @@ import os
 import traceback
 import warnings
 
-# We must import pyarrow before attempting to load the Cython module.
-import pyarrow as pa  # noqa: F401
-from packaging.version import parse as _parse_version
-
 from pymongoarrow.version import _MIN_LIBBSON_VERSION, __version__  # noqa: F401
 
 try:
+    # Not needed for building the package
+    from packaging.version import parse as _parse_version
+except ImportError:
+    _parse_version = None
+
+
+try:
+    # Not needed for building the package.
+    # We must import pyarrow before attempting to load the Cython module.
+    import pyarrow as pa  # noqa: F401
+
     from pymongoarrow.lib import libbson_version
 except ImportError:
     if os.environ.get("NO_EXT") is None:
@@ -34,7 +41,7 @@ except ImportError:
         )
     libbson_version = None
 
-if libbson_version is not None:  # noqa: SIM102
+if libbson_version is not None and _parse_version is not None:  # noqa: SIM102
     if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
         msg = (
             f"Expected libbson version {_MIN_LIBBSON_VERSION} or greater, "
