@@ -264,7 +264,6 @@ class TestSubdocumentType(TestBsonToArrowConversionBase):
 
 
 class TestInValidBsonToArrowConversion(TestBsonToArrowConversionBase):
-
     def setUp(self):
         super().setUp()
         self.context.raise_on_type_error = True
@@ -277,11 +276,6 @@ class TestInValidBsonToArrowConversion(TestBsonToArrowConversionBase):
             {"_id": ids[2], "data": "30", "title": "č"},
             {"_id": ids[3], "data": 40, "title": "ê"},
         ]
-        as_dict = {
-            "_id": ids,
-            "data": [10, 20, 30, 40],
-            "title": ["ä", "b", "č", "ê"],
-        }
 
         payload = type(self)._generate_payload(docs)
 
