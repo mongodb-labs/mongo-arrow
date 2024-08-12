@@ -19,7 +19,7 @@ import warnings
 from pymongoarrow.version import _MIN_LIBBSON_VERSION, __version__  # noqa: F401
 
 try:
-    # Not needed for building the package
+    # Not needed for building the package.
     from packaging.version import parse as _parse_version
 except ImportError:
     _parse_version = None
