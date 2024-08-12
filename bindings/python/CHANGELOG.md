@@ -3,6 +3,10 @@
 
 ---
 
+# Changes in Version 1.5.1
+
+- Remove upper bound version pin on `packaging`.
+
 # Changes in Version 1.5.0
 
 - Support for PyArrow 17.0

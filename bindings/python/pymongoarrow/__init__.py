@@ -18,17 +18,9 @@ import warnings
 
 # We must import pyarrow before attempting to load the Cython module.
 import pyarrow as pa  # noqa: F401
+from packaging.version import parse as _parse_version
 
 from pymongoarrow.version import _MIN_LIBBSON_VERSION, __version__  # noqa: F401
-
-try:
-    from packaging.version import parse as _parse_version
-except ImportError:
-    from distutils.version import LooseVersion as _LooseVersion
-
-    def _parse_version(version):
-        return _LooseVersion(version)
-
 
 try:
     from pymongoarrow.lib import libbson_version
