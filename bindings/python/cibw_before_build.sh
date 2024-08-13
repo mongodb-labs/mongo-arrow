@@ -23,7 +23,7 @@ then
 fi
 
 # Install tox, needed for the build command.
-pip install tox
+pip install tox==4.17.1
 
 # Build libbson with the appropriate arch.
 CMAKE_BUILD_TYPE=Release tox -e build-libbson
