@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import unittest
+
+from pymongoarrow.context import PyMongoArrowContext
 from test import client_context
 
 from pymongoarrow.api import find_arrow_all
@@ -41,5 +43,20 @@ class TestPyMongoArrow(unittest.TestCase):
         cursor = self.client.test.test.find({})
         total = len(list(cursor))
         self.assertLess(total, 1000)
+        table = find_arrow_all(self.client.test.test, {}, schema=schema)
+        self.assertEqual(table.shape, (total, 1))
+
+    def test_capped_collection_with_custom_context(self):
+        self.client.test.drop_collection("test")
+        self.client.test.create_collection("test", capped=True, size=5000)
+        schema = Schema({"data": bool}, raise_on_type_error=True)
+        data = [{"data": False} for _ in range(1000)]
+        self.client.test.test.insert_many(data)
+
+        # Data should have been capped.
+        cursor = self.client.test.test.find({})
+        total = len(list(cursor))
+        self.assertLess(total, 1000)
+
         table = find_arrow_all(self.client.test.test, {}, schema=schema)
         self.assertEqual(table.shape, (total, 1))

@@ -57,7 +57,7 @@ except ImportError:
 class PyMongoArrowContext:
     """A context for converting BSON-formatted data to an Arrow Table."""
 
-    def __init__(self, schema, builder_map, codec_options=None, raise_on_type_error=False):
+    def __init__(self, schema, builder_map, codec_options=None):
         """Initialize the context.
 
         :Parameters:
@@ -72,7 +72,7 @@ class PyMongoArrowContext:
         else:
             self.tzinfo = None
 
-        self.raise_on_type_error = raise_on_type_error
+        self.raise_on_type_error = schema.raise_on_type_error if schema is not None else False
 
     @classmethod
     def from_schema(cls, schema, codec_options=DEFAULT_CODEC_OPTIONS):

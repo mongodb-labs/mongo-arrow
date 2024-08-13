@@ -38,7 +38,7 @@ class Schema:
     corresponding type-identifiers, see :ref:`type support`.
     """
 
-    def __init__(self, schema):
+    def __init__(self, schema, raise_on_type_error=False):
         """Create a :class:`~pymongoarrow.schema.Schema` instance from a
         mapping or an iterable.
 
@@ -51,6 +51,7 @@ class Schema:
             msg = "schema must be a mapping or sequence"
             raise ValueError(msg)
         self.typemap = normed
+        self.raise_on_type_error = raise_on_type_error
 
     def __iter__(self):
         yield from self.typemap
