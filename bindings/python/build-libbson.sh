@@ -17,6 +17,10 @@ WORKDIR="mongo-c-driver-${LIBBSON_VERSION}"
 if [ ! -d "$WORKDIR" ]
 then
   git clone --depth 1 -b "$LIBBSON_VERSION" https://github.com/mongodb/mongo-c-driver.git "$WORKDIR"
+  cd "$WORKDIR"
+  git fetch --depth 1 origin 84ac3974f7a3d0b7d985ef72cc13ac1c228a1418
+  git checkout 84ac3974f7a3d0b7d985ef72cc13ac1c228a1418
+  cd ..
 fi
 
 echo "Installing libbson..."
