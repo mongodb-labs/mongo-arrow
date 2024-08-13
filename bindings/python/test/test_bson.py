@@ -265,7 +265,9 @@ class TestSubdocumentType(TestBsonToArrowConversionBase):
 
 class TestInValidBsonToArrowConversion(TestBsonToArrowConversionBase):
     def setUp(self):
-        self.schema = Schema({"_id": ObjectId, "data": int64(), "title": string()}, raise_on_type_error=True)
+        self.schema = Schema(
+            {"_id": ObjectId, "data": int64(), "title": string()}, raise_on_type_error=True
+        )
         self.context = PyMongoArrowContext.from_schema(self.schema)
 
     def test_with_missmatch_data_simple(self):

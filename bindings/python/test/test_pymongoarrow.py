@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import unittest
-
-from pymongoarrow.context import PyMongoArrowContext
 from test import client_context
 
 from pymongoarrow.api import find_arrow_all
