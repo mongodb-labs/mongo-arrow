@@ -38,12 +38,14 @@ class Schema:
     corresponding type-identifiers, see :ref:`type support`.
     """
 
-    def __init__(self, schema, raise_on_type_error=False):
+    def __init__(self, schema, raise_on_type_null=False, raise_on_type_error=False):
         """Create a :class:`~pymongoarrow.schema.Schema` instance from a
         mapping or an iterable.
 
         :Parameters:
           - `schema`: A mapping.
+          - `raise_on_type_null`: If True, raise an error if a field is null.
+          - `raise_on_type_error`: If True, raise an error if a field is not of the expected type.
         """
         if isinstance(schema, abc.Mapping):
             normed = type(self)._normalize_mapping(schema)
@@ -52,6 +54,7 @@ class Schema:
             raise ValueError(msg)
         self.typemap = normed
         self.raise_on_type_error = raise_on_type_error
+        self.raise_on_type_null = raise_on_type_null
 
     def __iter__(self):
         yield from self.typemap

@@ -287,9 +287,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         else:
                             if context.raise_on_type_error:
                                 raise PyMongoArrowError(f"Type mismatch! {key} is not an int32")
-                            else:
-                                # Use append (not append_raw) to surface overflow errors.
-                                int32_builder.append(val64)
+                            int32_builder.append(val64)
 
                     elif value_t == BSON_TYPE_DOUBLE:
                         # Treat nan as null.
@@ -297,16 +295,18 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         if isnan(val):
                             if context.raise_on_type_error:
                                 raise PyMongoArrowError(f"Type mismatch! {key} is not an int32")
-                            else:
-                                int32_builder.append_null()
+                            int32_builder.append_null()
                         else:
                             # Use append (not append_raw) to surface overflow errors.
                             int32_builder.append(bson_iter_as_int64(&doc_iter))
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        int32_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not an int32")
-                        else:
-                            int32_builder.append_null()
+                        int32_builder.append_null()
                 elif ftype == BSON_TYPE_INT64:
                     int64_builder = builder
                     if (value_t == BSON_TYPE_INT64 or
@@ -319,44 +319,55 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         if isnan(val):
                             if context.raise_on_type_error:
                                 raise PyMongoArrowError(f"Type mismatch! {key} is not an int64")
-                            else:
-                                int64_builder.append_null()
+                            int64_builder.append_null()
                         else:
                             int64_builder.append_raw(bson_iter_as_int64(&doc_iter))
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        int64_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not an int64")
-                        else:
-                            int64_builder.append_null()
+                        int64_builder.append_null()
                 elif ftype == BSON_TYPE_OID:
                     objectid_builder = builder
                     if value_t == BSON_TYPE_OID:
                         objectid_builder.append_raw(bson_iter_oid(&doc_iter))
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        objectid_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not an oid")
-                        else:
-                            objectid_builder.append_null()
+                        objectid_builder.append_null()
                 elif ftype == BSON_TYPE_UTF8:
                     string_builder = builder
                     if value_t == BSON_TYPE_UTF8:
                         bson_str = bson_iter_utf8(&doc_iter, &str_len)
                         string_builder.append_raw(bson_str, str_len)
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        string_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not an UTF8")
-                        else:
-                            string_builder.append_null()
+                        string_builder.append_null()
                 elif ftype == BSON_TYPE_CODE:
                     code_builder = builder
                     if value_t == BSON_TYPE_CODE:
                         bson_str = bson_iter_code(&doc_iter, &str_len)
                         code_builder.append_raw(bson_str, str_len)
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        code_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not an code")
-                        else:
-                            code_builder.append_null()
+                        code_builder.append_null()
                 elif ftype == BSON_TYPE_DECIMAL128:
                     dec128_builder = builder
                     if value_t == BSON_TYPE_DECIMAL128:
@@ -373,14 +384,16 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         else:
                             if context.raise_on_type_error:
                                 raise PyMongoArrowError(f"Type mismatch! {key} is not an bigEndian not supported")
-                            else:
-                                # We do not support big-endian systems.
-                                dec128_builder.append_null()
+                            # We do not support big-endian systems.
+                            dec128_builder.append_null()
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        dec128_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not an bigEndian")
-                        else:
-                            dec128_builder.append_null()
+                        dec128_builder.append_null()
                 elif ftype == BSON_TYPE_DOUBLE:
                     double_builder = builder
                     if (value_t == BSON_TYPE_DOUBLE or
@@ -388,47 +401,62 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                             value_t == BSON_TYPE_INT32 or
                             value_t == BSON_TYPE_INT64):
                         double_builder.append_raw(bson_iter_as_double(&doc_iter))
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        double_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not an double")
-                        else:
-                            double_builder.append_null()
+                        double_builder.append_null()
                 elif ftype == ARROW_TYPE_DATE32:
                     date32_builder = builder
                     if value_t == BSON_TYPE_DATE_TIME:
                         date32_builder.append_raw(bson_iter_date_time(&doc_iter))
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        date32_builder.append_null()    
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not a data32")
-                        else:
-                            date32_builder.append_null()
+                        date32_builder.append_null()
                 elif ftype == ARROW_TYPE_DATE64:
                     date64_builder = builder
                     if value_t == BSON_TYPE_DATE_TIME:
                         date64_builder.append_raw(bson_iter_date_time(&doc_iter))
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        date64_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not a date64")
-                        else:
-                            date64_builder.append_null()
+                        date64_builder.append_null()
                 elif ftype == BSON_TYPE_DATE_TIME:
                     datetime_builder = builder
                     if value_t == BSON_TYPE_DATE_TIME:
                         datetime_builder.append_raw(bson_iter_date_time(&doc_iter))
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        datetime_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not a datetime")
-                        else:
-                            datetime_builder.append_null()
+                        datetime_builder.append_null()
                 elif ftype == BSON_TYPE_BOOL:
                     bool_builder = builder
                     if value_t == BSON_TYPE_BOOL:
                         bool_builder.append_raw(bson_iter_bool(&doc_iter))
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        bool_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not a bool")
-                        else:
-                            bool_builder.append_null()
+                        bool_builder.append_null()
                 elif ftype == BSON_TYPE_DOCUMENT:
                     doc_builder = builder
                     if value_t == BSON_TYPE_DOCUMENT:
@@ -436,11 +464,14 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         if val_buf_len <= 0:
                             raise ValueError("Subdocument is invalid")
                         doc_builder.append_raw(val_buf, val_buf_len)
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        doc_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not a document")
-                        else:
-                            doc_builder.append_null()
+                        doc_builder.append_null()
                 elif ftype == BSON_TYPE_ARRAY:
                     list_builder = builder
                     if value_t == BSON_TYPE_ARRAY:
@@ -448,11 +479,14 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         if val_buf_len <= 0:
                             raise ValueError("Subarray is invalid")
                         list_builder.append_raw(val_buf, val_buf_len)
+                    elif value_t == BSON_TYPE_NULL:
+                        if context.raise_on_type_null:
+                            raise PyMongoArrowError(f"Null value for {key}!")
+                        list_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not an array")
-                        else:
-                            list_builder.append_null()
+                        list_builder.append_null()
                 elif ftype == BSON_TYPE_BINARY:
                     binary_builder = builder
                     if value_t == BSON_TYPE_BINARY:
@@ -461,8 +495,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                         if subtype != binary_builder._subtype:
                             if context.raise_on_type_error:
                                 raise PyMongoArrowError(f"Type mismatch! {key} binary subtype does not match")
-                            else:
-                                binary_builder.append_null()
+                            binary_builder.append_null()
                         else:
                             binary_builder.append_raw(<char*>val_buf, val_buf_len)
                 else:

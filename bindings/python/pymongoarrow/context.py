@@ -73,6 +73,7 @@ class PyMongoArrowContext:
             self.tzinfo = None
 
         self.raise_on_type_error = schema.raise_on_type_error if schema is not None else False
+        self.raise_on_type_null = schema.raise_on_type_null if schema is not None else False
 
     @classmethod
     def from_schema(cls, schema, codec_options=DEFAULT_CODEC_OPTIONS):
