@@ -263,7 +263,149 @@ class TestSubdocumentType(TestBsonToArrowConversionBase):
         self._run_test(docs, as_dict)
 
 
-class TestInValidBsonToArrowConversion(TestBsonToArrowConversionBase):
+class TestTypeErrorBsonToArrowConversion(TestBsonToArrowConversionBase):
+    def setUp(self):
+        self.schema = Schema(
+            {"_id": ObjectId, "data": int64(), "title": string()}, raise_on_type_error=True
+        )
+        self.context = PyMongoArrowContext.from_schema(self.schema)
+
+    def test_simple(self):
+        ids = [ObjectId() for i in range(4)]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "ä"},
+            {"_id": ids[1], "data": 20, "title": "b"},
+            {"_id": ids[2], "data": 30, "title": "č"},
+            {"_id": ids[3], "data": 40, "title": "ê"},
+        ]
+        as_dict = {
+            "_id": ids,
+            "data": [10, 20, 30, 40],
+            "title": ["ä", "b", "č", "ê"],
+        }
+
+        self._run_test(docs, as_dict)
+
+    def test_with_missing_data(self):
+        ids = [ObjectId() for i in range(4)]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "a"},
+            {"_id": ids[1], "data": 20},
+            {"_id": ids[2]}, 
+            {"_id": ids[3], "data": 40},
+            {"foo": 1},
+            {},
+        ]
+        as_dict = {
+            "_id": ids + [None, None],
+            "data": [10, 20, None, 40, None, None],
+            "title": ["a", None, None, None, None, None],
+        }
+
+        self._run_test(docs, as_dict)
+
+    def test_with_missmatch_data_and_rising(self):
+        ids = [ObjectId() for i in range(4)]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "ä"},
+            {"_id": ids[1], "data": 20, "title": "b"},
+            {"_id": ids[2], "data": "30", "title": "č"},
+            {"_id": ids[3], "data": 40, "title": "ê"},
+        ]
+
+        payload = type(self)._generate_payload(docs)
+
+        with pytest.raises(PyMongoArrowError, match="Type mismatch! b'data' is not an int64"):
+            process_bson_stream(payload, self.context)
+
+    def test_with_null_data(self):
+        ids = [ObjectId() for i in range(4)]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "ä"},
+            {"_id": ids[1], "data": 20, "title": "b"},
+            {"_id": ids[2], "data": None, "title": "č"},
+            {"_id": ids[3], "data": 40, "title": "ê"},
+        ]
+        as_dict = {
+            "_id": ids,
+            "data": [10, 20, None, 40],
+            "title": ["ä", "b", "č", "ê"],
+        }
+
+        self._run_test(docs, as_dict)
+
+class TestTypeNullBsonToArrowConversion(TestBsonToArrowConversionBase):
+    def setUp(self):
+        self.schema = Schema(
+            {"_id": ObjectId, "data": int64(), "title": string()}, raise_on_type_null=True
+        )
+        self.context = PyMongoArrowContext.from_schema(self.schema)
+
+    def test_simple(self):
+        ids = [ObjectId() for i in range(4)]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "ä"},
+            {"_id": ids[1], "data": 20, "title": "b"},
+            {"_id": ids[2], "data": 30, "title": "č"},
+            {"_id": ids[3], "data": 40, "title": "ê"},
+        ]
+        as_dict = {
+            "_id": ids,
+            "data": [10, 20, 30, 40],
+            "title": ["ä", "b", "č", "ê"],
+        }
+
+        self._run_test(docs, as_dict)
+
+    def test_with_missing_data(self):
+        ids = [ObjectId() for i in range(4)]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "a"},
+            {"_id": ids[1], "data": 20},
+            {"_id": ids[2]}, 
+            {"_id": ids[3], "data": 40},
+            {"foo": 1},
+            {},
+        ]
+        as_dict = {
+            "_id": ids + [None, None],
+            "data": [10, 20, None, 40, None, None],
+            "title": ["a", None, None, None, None, None],
+        }
+
+        self._run_test(docs, as_dict)
+
+    def test_with_missmatch_data(self):
+        ids = [ObjectId() for i in range(4)]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "ä"},
+            {"_id": ids[1], "data": 20, "title": "b"},
+            {"_id": ids[2], "data": "30", "title": "č"},
+            {"_id": ids[3], "data": 40, "title": "ê"},
+        ]
+        as_dict = {
+            "_id": ids,
+            "data": [10, 20, None, 40],
+            "title": ["ä", "b", "č", "ê"],
+        }
+
+        self._run_test(docs, as_dict)
+
+    def test_with_null_data_and_rising(self):
+        ids = [ObjectId() for i in range(4)]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "ä"},
+            {"_id": ids[1], "data": 20, "title": "b"},
+            {"_id": ids[2], "data": None, "title": "č"},
+            {"_id": ids[3], "data": 40, "title": "ê"},
+        ]
+
+        payload = type(self)._generate_payload(docs)
+
+        with pytest.raises(PyMongoArrowError, match="Null value for b'data'!"):
+            process_bson_stream(payload, self.context)
+
+class TestTypeNullAndTypeErrorBsonToArrowConversion(TestBsonToArrowConversionBase):
     def setUp(self):
         self.schema = Schema(
             {"_id": ObjectId, "data": int64(), "title": string()}, raise_on_type_null=True, raise_on_type_error=True
@@ -286,21 +428,7 @@ class TestInValidBsonToArrowConversion(TestBsonToArrowConversionBase):
 
         self._run_test(docs, as_dict)
 
-    def test_with_missmatch_data_simple(self):
-        ids = [ObjectId() for i in range(4)]
-        docs = [
-            {"_id": ids[0], "data": 10, "title": "ä"},
-            {"_id": ids[1], "data": 20, "title": "b"},
-            {"_id": ids[2], "data": "30", "title": "č"},
-            {"_id": ids[3], "data": 40, "title": "ê"},
-        ]
-
-        payload = type(self)._generate_payload(docs)
-
-        with pytest.raises(PyMongoArrowError, match="Type mismatch! b'data' is not an int64"):
-            process_bson_stream(payload, self.context)
-
-    def test_with_missing_data_and_raising(self):
+    def test_with_missing_data(self):
         ids = [ObjectId() for i in range(4)]
         docs = [
             {"_id": ids[0], "data": 10, "title": "a"},
@@ -318,7 +446,21 @@ class TestInValidBsonToArrowConversion(TestBsonToArrowConversionBase):
 
         self._run_test(docs, as_dict)
 
-    def test_with_null_data_simple_and_rising(self):
+    def test_with_missmatch_data_and_rising(self):
+        ids = [ObjectId() for i in range(4)]
+        docs = [
+            {"_id": ids[0], "data": 10, "title": "ä"},
+            {"_id": ids[1], "data": 20, "title": "b"},
+            {"_id": ids[2], "data": "30", "title": "č"},
+            {"_id": ids[3], "data": 40, "title": "ê"},
+        ]
+
+        payload = type(self)._generate_payload(docs)
+
+        with pytest.raises(PyMongoArrowError, match="Type mismatch! b'data' is not an int64"):
+            process_bson_stream(payload, self.context)
+
+    def test_with_null_data_and_rising(self):
         ids = [ObjectId() for i in range(4)]
         docs = [
             {"_id": ids[0], "data": 10, "title": "ä"},
