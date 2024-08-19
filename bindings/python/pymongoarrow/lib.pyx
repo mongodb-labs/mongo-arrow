@@ -416,7 +416,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                     elif value_t == BSON_TYPE_NULL:
                         if context.raise_on_type_null:
                             raise PyMongoArrowError(f"Null value for {key}!")
-                        date32_builder.append_null()    
+                        date32_builder.append_null()
                     else:
                         if context.raise_on_type_error:
                             raise PyMongoArrowError(f"Type mismatch! {key} is not a data32")
