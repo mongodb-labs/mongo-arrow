@@ -30,7 +30,6 @@ from numpy import ndarray
 from pyarrow import Schema as ArrowSchema
 from pyarrow import Table, timestamp
 from pyarrow.types import is_date32, is_date64
-from pymongo.bulk import BulkWriteError
 from pymongo.common import MAX_WRITE_BATCH_SIZE
 
 from pymongoarrow.context import PyMongoArrowContext
@@ -495,7 +494,7 @@ def write(collection, tabular, *, exclude_none: bool = False):
             i += 1
         try:
             collection.insert_many(cur_batch)
-        except BulkWriteError as bwe:
+        except pymongo.errors.BulkWriteError as bwe:
             raise ArrowWriteError(_transform_bwe(dict(bwe.details), cur_offset)) from bwe
         except pymongo.errors.PyMongoError as pme:
             raise ArrowWriteError(
