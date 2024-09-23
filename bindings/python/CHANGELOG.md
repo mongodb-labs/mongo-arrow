@@ -3,6 +3,11 @@
 
 ---
 
+# Changes in Version 1.5.2
+
+- Fix support for PyMongo 4.9.
+- Fix building from source by pinning setuptools.
+
 # Changes in Version 1.5.1
 
 - Remove upper bound version pin on `packaging`.
