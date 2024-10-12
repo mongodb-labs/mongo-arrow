@@ -45,6 +45,9 @@ cdef extern from "arrow/builder.h" namespace "arrow" nogil:
         int32_t num_values()
         shared_ptr[CDataType] type()
 
+    cdef cppclass CNullBuilder" arrow::NullBuilder"(CArrayBuilder):
+        CNullBuilder(CMemoryPool* pool)
+
 
 cdef extern from "arrow/type_fwd.h" namespace "arrow" nogil:
     shared_ptr[CDataType] fixed_size_binary(int32_t byte_width)

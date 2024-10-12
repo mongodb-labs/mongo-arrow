@@ -30,6 +30,7 @@ try:
         Int32Builder,
         Int64Builder,
         ListBuilder,
+        NullBuilder,
         ObjectIdBuilder,
         StringBuilder,
     )
@@ -49,6 +50,7 @@ try:
         _BsonArrowTypes.code: CodeBuilder,
         _BsonArrowTypes.date32: Date32Builder,
         _BsonArrowTypes.date64: Date64Builder,
+        _BsonArrowTypes.null: NullBuilder,
     }
 except ImportError:
     pass

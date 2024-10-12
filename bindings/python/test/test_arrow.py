@@ -114,7 +114,7 @@ class ArrowApiTestMixin:
         self.assertEqual(find_cmd.command_name, "find")
         self.assertEqual(find_cmd.command["projection"], {"_id": True, "data": True})
 
-    def test_find_repeat_type(self):
+    def test_find_repeat_dtype(self):
         expected = Table.from_pydict(
             {"_id": [1, 2, 3, 4], "data": [10, 20, 30, None]},
             ArrowSchema([("_id", int32()), ("data", int32())]),
@@ -295,23 +295,26 @@ class ArrowApiTestMixin:
 
     def _create_data(self):
         schema = {k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items()}
+        schema["null"] = pa.null()
         schema["Binary"] = BinaryType(10)
         schema["ObjectId"] = ObjectIdType()
         schema["Decimal128"] = Decimal128Type()
         schema["Code"] = CodeType()
+        pydict = {
+            "Int64": [i for i in range(2)],
+            "float": [i for i in range(2)],
+            "datetime": [i for i in range(2)],
+            "str": [str(i) for i in range(2)],
+            "int": [i for i in range(2)],
+            "bool": [True, False],
+            "null": [None for _ in range(2)],
+            "Binary": [b"1", b"23"],
+            "ObjectId": [ObjectId().binary, ObjectId().binary],
+            "Decimal128": [Decimal128(str(i)).bid for i in range(2)],
+            "Code": [str(i) for i in range(2)],
+        }
         data = Table.from_pydict(
-            {
-                "Int64": [i for i in range(2)],
-                "float": [i for i in range(2)],
-                "datetime": [i for i in range(2)],
-                "str": [str(i) for i in range(2)],
-                "int": [i for i in range(2)],
-                "bool": [True, False],
-                "Binary": [b"1", b"23"],
-                "ObjectId": [ObjectId().binary, ObjectId().binary],
-                "Decimal128": [Decimal128(str(i)).bid for i in range(2)],
-                "Code": [str(i) for i in range(2)],
-            },
+            pydict,
             ArrowSchema(schema),
         )
         return schema, data
@@ -355,8 +358,10 @@ class ArrowApiTestMixin:
         self.round_trip(data, Schema(schema), coll=self.coll)
         self.assertEqual(mock.call_count, 2)
 
-    def _create_nested_data(self, nested_elem=None):
+    def _create_nested_data(self, nested_elem=None, use_none=False):
         schema = {k.__name__: v(0) for k, v in _TYPE_NORMALIZER_FACTORY.items()}
+        if use_none:
+            schema["null"] = pa.null()
         if nested_elem:
             schem_ent, nested_elem = nested_elem
             schema["list"] = list_(schem_ent)
@@ -379,10 +384,12 @@ class ArrowApiTestMixin:
             "date32": [date(2012, 1, 1) for i in range(3)],
             "date64": [date(2012, 1, 1) for i in range(3)],
         }
+        if use_none:
+            raw_data["null"] = [None for _ in range(3)]
 
         def inner(i):
             inner_dict = dict(
-                str=str(i),
+                str=None if use_none and i == 0 else str(i),
                 bool=bool(i),
                 float=i + 0.1,
                 Int64=i,
@@ -395,6 +402,8 @@ class ArrowApiTestMixin:
                 date32=date(2012, 1, 1),
                 date64=date(2014, 1, 1),
             )
+            if use_none:
+                inner_dict["null"] = None
             if nested_elem:
                 inner_dict["list"] = [nested_elem]
             return inner_dict
@@ -468,6 +477,17 @@ class ArrowApiTestMixin:
         self.assertEqual(len(data), res.raw_result["insertedCount"])
         for func in [find_arrow_all, aggregate_arrow_all]:
             out = func(self.coll, {} if func == find_arrow_all else []).drop(["_id"])
+            for name in out.column_names:
+                self.assertEqual(data[name], out[name].cast(data[name].type))
+
+    def test_schema_nested_null(self):
+        schema, data = self._create_nested_data(use_none=True)
+
+        self.coll.drop()
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        for func in [find_arrow_all, aggregate_arrow_all]:
+            out = func(self.coll, {} if func == find_arrow_all else [], schema=Schema(schema))
             for name in out.column_names:
                 self.assertEqual(data[name], out[name].cast(data[name].type))
 
