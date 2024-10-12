@@ -44,6 +44,9 @@ class TestDateTimeType(unittest.TestCase):
         for doc in self.coll.find({}, sort=[("_id", ASCENDING)]):
             self.expected_times.append(doc["data"])
 
+    def tearDown(self):
+        self.client.close()
+
     def test_context_creation_fails_with_unsupported_granularity(self):
         unsupported_granularities = ["s", "us", "ns"]
         for g in unsupported_granularities:

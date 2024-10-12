@@ -74,6 +74,7 @@ class ArrowApiTestMixin:
         cls.coll = cls.client.pymongoarrow_test.get_collection(
             "test", write_concern=WriteConcern(w="majority")
         )
+        cls.addClassCleanup(cls.client.close)
 
     def setUp(self):
         self.coll.drop()
@@ -112,6 +113,14 @@ class ArrowApiTestMixin:
         find_cmd = self.cmd_listener.results["started"][-1]
         self.assertEqual(find_cmd.command_name, "find")
         self.assertEqual(find_cmd.command["projection"], {"_id": True, "data": True})
+
+    def test_find_repeat_type(self):
+        expected = Table.from_pydict(
+            {"_id": [1, 2, 3, 4], "data": [10, 20, 30, None]},
+            ArrowSchema([("_id", int32()), ("data", int32())]),
+        )
+        table = self.run_find({}, schema=Schema({"_id": int32(), "data": int32()}))
+        self.assertEqual(table, expected)
 
     def test_find_with_projection(self):
         expected = Table.from_pydict(
@@ -266,18 +275,19 @@ class ArrowApiTestMixin:
             },
             ArrowSchema(schema),
         )
-
+        client = MongoClient(
+            host="somedomainthatdoesntexist.org",
+            port=123456789,
+            serverSelectionTimeoutMS=10,
+        )
         with self.assertRaises(ArrowWriteError) as exc:
             write(
-                MongoClient(
-                    host="somedomainthatdoesntexist.org",
-                    port=123456789,
-                    serverSelectionTimeoutMS=10,
-                ).pymongoarrow_test.get_collection(
+                client.pymongoarrow_test.get_collection(
                     "test", write_concern=WriteConcern(w="majority")
                 ),
                 data,
             )
+        client.close()
         self.assertEqual(
             exc.exception.details.keys(),
             {"nInserted", "writeConcernErrors", "writeErrors"},
@@ -840,6 +850,7 @@ class TestBSONTypes(unittest.TestCase):
         cls.client = client_context.get_client(
             event_listeners=[cls.getmore_listener, cls.cmd_listener]
         )
+        cls.addClassCleanup(cls.client.close)
 
     def test_find_decimal128(self):
         oids = list(ObjectId() for i in range(4))

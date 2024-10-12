@@ -42,6 +42,10 @@ class NumpyTestBase(unittest.TestCase):
         )
         cls.schema = {}
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.close()
+
     def assert_numpy_equal(self, actual, expected):
         self.assertIsInstance(actual, dict)
         for field in expected:
