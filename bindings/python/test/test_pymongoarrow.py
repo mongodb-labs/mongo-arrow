@@ -26,6 +26,10 @@ class TestPyMongoArrow(unittest.TestCase):
             raise unittest.SkipTest("cannot connect to MongoDB")
         cls.client = client_context.get_client()
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.close()
+
     def test_version(self):
         self.assertIsNotNone(__version__)
         self.assertIsInstance(__version__, str)

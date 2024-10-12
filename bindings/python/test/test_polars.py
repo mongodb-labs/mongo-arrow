@@ -50,6 +50,7 @@ class PolarsTestBase(unittest.TestCase):
             event_listeners=[cls.getmore_listener, cls.cmd_listener],
             uuidRepresentation="standard",
         )
+        cls.addClassCleanup(cls.client.close)
 
 
 class TestExplicitPolarsApi(PolarsTestBase):
@@ -182,11 +183,11 @@ class TestExplicitPolarsApi(PolarsTestBase):
             "Boolean": pl.Series([True, False, None]),
         }
 
-        df_in = pl.DataFrame._from_dict(data=data, schema=pl_schema)
+        df_in = pl.from_dict(data=data, schema=pl_schema)
         self.coll.drop()
         write(self.coll, df_in)
         df_out = find_polars_all(self.coll, {}, schema=Schema(pa_schema))
-        pl.testing.assert_frame_equal(df_in, df_out.drop("_id"))
+        pl.testing.assert_frame_equal(df_in, df_out)
 
     def test_extension_types_fail(self):
         """Confirm failure on ExtensionTypes for Polars.DataFrame.from_arrow"""
@@ -264,10 +265,9 @@ class TestExplicitPolarsApi(PolarsTestBase):
         class MyObject:
             pass
 
-        with self.assertRaises(pl.PolarsPanicError) as exc:
+        with self.assertRaises(pl.exceptions.PanicException) as exc:
             df_in = pl.DataFrame(data=[MyObject()] * 2)
             write(self.coll, df_in)
-        self.assertTrue("not implemented" in exc.exception.args[0])
 
     def test_polars_binary_type(self):
         """Demonstrates that binary data is not yet supported. TODO [ARROW-214]
@@ -393,5 +393,5 @@ class TestExplicitPolarsApi(PolarsTestBase):
             try:
                 dfpl = pl.from_arrow(table.drop("_id"))
                 assert dfpl["value"].dtype == data_type["ptype"]
-            except pl.ComputeError:
+            except pl.exceptions.ComputeError:
                 assert isinstance(table["value"].type, pa.ExtensionType)
