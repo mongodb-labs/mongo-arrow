@@ -13,10 +13,10 @@
 # limitations under the License.
 
 # Pandas Extension Types
+from __future__ import annotations
 
 import numbers
 import re
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -38,7 +38,7 @@ class PandasBSONDtype(ExtensionDtype):
     def name(self) -> str:
         return f"bson_{self.__class__.__name__}"
 
-    def __from_arrow__(self, array: Union[pa.Array, pa.ChunkedArray]) -> ExtensionArray:
+    def __from_arrow__(self, array: pa.Array | pa.ChunkedArray) -> ExtensionArray:
         chunks = [array] if isinstance(array, pa.Array) else array.chunks
 
         arr_type = self.construct_array_type()
@@ -204,7 +204,7 @@ class PandasBinary(PandasBSONDtype):
         return f"bson_{self.type.__name__}[{self.subtype}]"
 
     @classmethod
-    def construct_array_type(cls) -> type["PandasBinaryArray"]:
+    def construct_array_type(cls) -> type[PandasBinaryArray]:
         return PandasBinaryArray
 
     @classmethod
@@ -242,7 +242,7 @@ class PandasObjectId(PandasBSONDtype):
     type = ObjectId
 
     @classmethod
-    def construct_array_type(cls) -> type["PandasObjectIdArray"]:
+    def construct_array_type(cls) -> type[PandasObjectIdArray]:
         return PandasObjectIdArray
 
 
@@ -266,7 +266,7 @@ class PandasDecimal128(PandasBSONDtype):
     type = Decimal128
 
     @classmethod
-    def construct_array_type(cls) -> type["PandasDecimal128Array"]:
+    def construct_array_type(cls) -> type[PandasDecimal128Array]:
         return PandasDecimal128Array
 
 
@@ -290,7 +290,7 @@ class PandasCode(PandasBSONDtype):
     type = Code
 
     @classmethod
-    def construct_array_type(cls) -> type["PandasCodeArray"]:
+    def construct_array_type(cls) -> type[PandasCodeArray]:
         return PandasCodeArray
 
 
