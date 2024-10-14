@@ -13,7 +13,7 @@ be of interest or that has already been addressed.
 
 ## Supported Interpreters
 
-PyMongoArrow supports CPython 3.7+ and PyPy3.8+. Language features not
+PyMongoArrow supports CPython 3.9+ and PyPy3.9+. Language features not
 supported by all interpreters can not be used.
 
 ## Style Guide

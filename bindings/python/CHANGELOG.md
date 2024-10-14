@@ -3,6 +3,10 @@
 
 ---
 
+# Changes in Version 1.6.0
+
+- Drop support for Python 3.8.
+
 # Changes in Version 1.5.2
 
 - Fix support for PyMongo 4.9.

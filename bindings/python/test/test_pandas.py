@@ -47,6 +47,10 @@ class PandasTestBase(unittest.TestCase):
             event_listeners=[cls.getmore_listener, cls.cmd_listener]
         )
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.close()
+
 
 class TestExplicitPandasApi(PandasTestBase):
     @classmethod

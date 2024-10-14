@@ -42,6 +42,10 @@ class NumpyTestBase(unittest.TestCase):
         )
         cls.schema = {}
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.close()
+
     def assert_numpy_equal(self, actual, expected):
         self.assertIsInstance(actual, dict)
         for field in expected:
@@ -321,7 +325,7 @@ class TestNulls(NullsTestMixin, NumpyTestBase):
         out = {}
         for k, v in d.items():
             if any(isinstance(x, int) for x in v) and None in v:
-                out[k] = np.array(v, dtype=np.float_)
+                out[k] = np.array(v, dtype=np.float64)
             else:
                 out[k] = np.array(v, dtype=np.dtype(type(v[0])))  # Infer
         return out
