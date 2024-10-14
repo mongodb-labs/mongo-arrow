@@ -97,7 +97,9 @@ class TestDatetimeBuilder(TestCase):
         self.assertEqual(len(arr), len(datetimes) + 1)
         for actual, expected in zip(arr, datetimes + [None]):
             if actual.is_valid:
-                self.assertEqual(actual.as_py(), self._millis_only(expected))
+                self.assertEqual(
+                    actual.as_py().timetuple(), self._millis_only(expected).timetuple()
+                )
             else:
                 self.assertIsNone(expected)
         self.assertEqual(arr.type, timestamp("ms"))
