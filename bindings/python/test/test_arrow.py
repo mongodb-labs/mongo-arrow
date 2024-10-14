@@ -114,7 +114,7 @@ class ArrowApiTestMixin:
         self.assertEqual(find_cmd.command_name, "find")
         self.assertEqual(find_cmd.command["projection"], {"_id": True, "data": True})
 
-    def test_find_repeat_dtype(self):
+    def test_find_repeat_type(self):
         expected = Table.from_pydict(
             {"_id": [1, 2, 3, 4], "data": [10, 20, 30, None]},
             ArrowSchema([("_id", int32()), ("data", int32())]),
