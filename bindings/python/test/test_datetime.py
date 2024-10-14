@@ -36,8 +36,8 @@ class TestDateTimeType(unittest.TestCase):
         self.coll.drop()
         self.coll.insert_many(
             [
-                {"_id": 1, "data": datetime.now(timezone.UTC) + timedelta(milliseconds=10)},
-                {"_id": 2, "data": datetime.now(timezone.UTC) + timedelta(milliseconds=25)},
+                {"_id": 1, "data": datetime.now(timezone.utc) + timedelta(milliseconds=10)},
+                {"_id": 2, "data": datetime.now(timezone.utc) + timedelta(milliseconds=25)},
             ]
         )
         self.expected_times = []

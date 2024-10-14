@@ -86,7 +86,7 @@ class TestDatetimeBuilder(TestCase):
         self.maxDiff = None
 
         builder = DatetimeBuilder(dtype=timestamp("ms"))
-        datetimes = [datetime.now(timezone.UTC) + timedelta(days=k * 100) for k in range(5)]
+        datetimes = [datetime.now(timezone.utc) + timedelta(days=k * 100) for k in range(5)]
         builder.append(self._datetime_to_millis(datetimes[0]))
         builder.append_values([self._datetime_to_millis(k) for k in datetimes[1:]])
         builder.append_null()
