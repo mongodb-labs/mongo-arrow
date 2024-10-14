@@ -16,7 +16,7 @@
 
 import numbers
 import re
-from typing import Type, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -204,7 +204,7 @@ class PandasBinary(PandasBSONDtype):
         return f"bson_{self.type.__name__}[{self.subtype}]"
 
     @classmethod
-    def construct_array_type(cls) -> Type["PandasBinaryArray"]:
+    def construct_array_type(cls) -> type["PandasBinaryArray"]:
         return PandasBinaryArray
 
     @classmethod
@@ -242,7 +242,7 @@ class PandasObjectId(PandasBSONDtype):
     type = ObjectId
 
     @classmethod
-    def construct_array_type(cls) -> Type["PandasObjectIdArray"]:
+    def construct_array_type(cls) -> type["PandasObjectIdArray"]:
         return PandasObjectIdArray
 
 
@@ -266,7 +266,7 @@ class PandasDecimal128(PandasBSONDtype):
     type = Decimal128
 
     @classmethod
-    def construct_array_type(cls) -> Type["PandasDecimal128Array"]:
+    def construct_array_type(cls) -> type["PandasDecimal128Array"]:
         return PandasDecimal128Array
 
 
@@ -290,7 +290,7 @@ class PandasCode(PandasBSONDtype):
     type = Code
 
     @classmethod
-    def construct_array_type(cls) -> Type["PandasCodeArray"]:
+    def construct_array_type(cls) -> type["PandasCodeArray"]:
         return PandasCodeArray
 
 
