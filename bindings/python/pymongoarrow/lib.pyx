@@ -64,6 +64,7 @@ cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? N
 # Placeholder numbers for the date types.
 cdef uint8_t ARROW_TYPE_DATE32 = 100
 cdef uint8_t ARROW_TYPE_DATE64 = 101
+cdef uint8_t ARROW_TYPE_NULL = 102
 
 _builder_type_map = {
     BSON_TYPE_INT32: Int32Builder,
@@ -80,6 +81,7 @@ _builder_type_map = {
     BSON_TYPE_CODE: CodeBuilder,
     ARROW_TYPE_DATE32: Date32Builder,
     ARROW_TYPE_DATE64: Date64Builder,
+    ARROW_TYPE_NULL: NullBuilder
 }
 
 _field_type_map = {
@@ -177,6 +179,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
     cdef Py_ssize_t count = 0
     cdef uint8_t byte_order_status = 0
     cdef map[cstring, void *] builder_map
+    cdef map[cstring, void *] missing_builders
     cdef map[cstring, void*].iterator it
     cdef bson_subtype_t subtype
     cdef int32_t val32
@@ -197,6 +200,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
     cdef DocumentBuilder doc_builder
     cdef Date32Builder date32_builder
     cdef Date64Builder date64_builder
+    cdef NullBuilder null_builder
 
     # Build up a map of the builders.
     for key, value in context.builder_map.items():
@@ -219,10 +223,6 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                 builder = None
                 if arr_value_builder is not None:
                     builder = arr_value_builder
-                else:
-                    it = builder_map.find(key)
-                    if it != builder_map.end():
-                        builder = <_ArrayBuilderBase>builder_map[key]
 
                 if builder is None:
                     it = builder_map.find(key)
@@ -233,8 +233,15 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                     # Get the appropriate builder for the current field.
                     value_t = bson_iter_type(&doc_iter)
                     builder_type = _builder_type_map.get(value_t)
+
+                    # Keep the key in missing builders until we find it.
                     if builder_type is None:
+                        missing_builders[key] =  <void *>None
                         continue
+
+                    it = missing_builders.find(key)
+                    if it != builder_map.end():
+                        missing_builders.erase(key)
 
                     # Handle the parameterized builders.
                     if builder_type == DatetimeBuilder and context.tzinfo is not None:
@@ -410,6 +417,9 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                             binary_builder.append_null()
                         else:
                             binary_builder.append_raw(<char*>val_buf, val_buf_len)
+                elif ftype == ARROW_TYPE_NULL:
+                    null_builder = builder
+                    null_builder.append_null()
                 else:
                     raise PyMongoArrowError('unknown ftype {}'.format(ftype))
 
@@ -422,6 +432,17 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
                 if len(builder) != count:
                     builder.append_null()
                 preincrement(it)
+
+        # Any missing fields that are left must be null fields.
+        it = missing_builders.begin()
+        while it != missing_builders.end():
+            builder = NullBuilder()
+            context.builder_map[key] = builder
+            null_builder = builder
+            for _ in range(count):
+                null_builder.append_null()
+            preincrement(it)
+
     finally:
         bson_reader_destroy(stream_reader)
 
@@ -724,6 +745,37 @@ cdef class Date32Builder(_ArrayBuilderBase):
         return self.builder
 
 
+cdef class NullBuilder(_ArrayBuilderBase):
+    cdef:
+        shared_ptr[CNullBuilder] builder
+
+    def __cinit__(self, MemoryPool memory_pool=None):
+        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        self.builder.reset(new CNullBuilder(pool))
+        self.type_marker = ARROW_TYPE_NULL
+
+    cdef append_raw(self, void* value):
+        self.builder.get().AppendNull()
+
+    cpdef append(self, value):
+        self.builder.get().AppendNull()
+
+    cpdef append_null(self):
+        self.builder.get().AppendNull()
+
+    def __len__(self):
+        return self.builder.get().length()
+
+    cpdef finish(self):
+        cdef shared_ptr[CArray] out
+        with nogil:
+            self.builder.get().Finish(&out)
+        return pyarrow_wrap_array(out)
+
+    cdef shared_ptr[CNullBuilder] unwrap(self):
+        return self.builder
+
+
 cdef class BoolBuilder(_ArrayBuilderBase):
     cdef:
         shared_ptr[CBooleanBuilder] builder
@@ -817,6 +869,8 @@ cdef object get_field_builder(object field, object tzinfo):
         field_builder = ListBuilder(field_type, tzinfo)
     elif _atypes.is_large_list(field_type):
         field_builder = ListBuilder(field_type, tzinfo)
+    elif _atypes.is_null(field_type):
+        field_builder = NullBuilder()
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.objectid:
         field_builder = ObjectIdBuilder()
     elif getattr(field_type, '_type_marker') == _BsonArrowTypes.decimal128:

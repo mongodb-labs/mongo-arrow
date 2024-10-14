@@ -27,6 +27,7 @@ from pyarrow import (
     float64,
     int64,
     list_,
+    null,
     string,
     struct,
     timestamp,
@@ -55,6 +56,7 @@ class _BsonArrowTypes(enum.Enum):
     code = 12
     date32 = 13
     date64 = 14
+    null = 15
 
 
 # Custom Extension Types.
@@ -260,6 +262,7 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_int64: _BsonArrowTypes.int64,
     _atypes.is_float64: _BsonArrowTypes.double,
     _atypes.is_timestamp: _BsonArrowTypes.datetime,
+    _atypes.is_null: _BsonArrowTypes.null,
     _is_objectid: _BsonArrowTypes.objectid,
     _is_decimal128: _BsonArrowTypes.decimal128,
     _is_binary: _BsonArrowTypes.binary,
@@ -276,7 +279,7 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
 
 
 def _is_typeid_supported(typeid):
-    return typeid in _TYPE_NORMALIZER_FACTORY
+    return typeid in _TYPE_NORMALIZER_FACTORY or typeid is None
 
 
 def _normalize_typeid(typeid, field_name):
@@ -293,7 +296,10 @@ def _normalize_typeid(typeid, field_name):
             raise ValueError(msg)
         return list_(_normalize_typeid(typeid[0], "0"))
     if _is_typeid_supported(typeid):
-        normalizer = _TYPE_NORMALIZER_FACTORY[typeid]
+        if typeid is None:  # noqa: SIM108
+            normalizer = lambda _: null()  # noqa: E731
+        else:
+            normalizer = _TYPE_NORMALIZER_FACTORY[typeid]
         return normalizer(typeid)
     msg = f"Unsupported type identifier {typeid} for field {field_name}"
     raise ValueError(msg)
