@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import calendar
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from unittest import TestCase
 
 from bson import Binary, Code, Decimal128, ObjectId
@@ -86,7 +86,7 @@ class TestDatetimeBuilder(TestCase):
         self.maxDiff = None
 
         builder = DatetimeBuilder(dtype=timestamp("ms"))
-        datetimes = [datetime.now(UTC) + timedelta(days=k * 100) for k in range(5)]
+        datetimes = [datetime.now(timezone.UTC) + timedelta(days=k * 100) for k in range(5)]
         builder.append(self._datetime_to_millis(datetimes[0]))
         builder.append_values([self._datetime_to_millis(k) for k in datetimes[1:]])
         builder.append_null()

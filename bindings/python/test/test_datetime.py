@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import unittest
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from test import client_context
 
 import pytz
@@ -36,8 +36,8 @@ class TestDateTimeType(unittest.TestCase):
         self.coll.drop()
         self.coll.insert_many(
             [
-                {"_id": 1, "data": datetime.now(UTC) + timedelta(milliseconds=10)},
-                {"_id": 2, "data": datetime.now(UTC) + timedelta(milliseconds=25)},
+                {"_id": 1, "data": datetime.now(timezone.UTC) + timedelta(milliseconds=10)},
+                {"_id": 2, "data": datetime.now(timezone.UTC) + timedelta(milliseconds=25)},
             ]
         )
         self.expected_times = []
