@@ -45,7 +45,7 @@ dynamic = ["version"]
 Homepage = "https://www.mongodb.org"
 Documentation = "https://mongo-arrow.readthedocs.io"
 Source = "https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python"
-Tracker = "https://jira.mongodb.org/projects/ARROW/issues"
+Tracker = "https://jira.mongodb.org/projects/INTPYTHON/issues"
 
 [project.optional-dependencies]
 test = ["pytz", "pytest", "polars"]
@@ -73,7 +73,7 @@ skip = "pp* *-manylinux_i686 *_ppc64le *_s390x *-musllinux*"
 before-build = "bash ./cibw_before_build.sh"
 build-frontend = "build"
 test-command = "python -c \"from pymongoarrow.lib import libbson_version\""
-# Disable wheel repair, see https://jira.mongodb.org/browse/ARROW-122.
+# Disable wheel repair, see https://jira.mongodb.org/browse/INTPYTHON-122.
 repair-wheel-command = ""
 
 [tool.cibuildwheel.environment]
