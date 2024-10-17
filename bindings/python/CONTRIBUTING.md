@@ -6,8 +6,8 @@ before sending a pull request.
 
 ## Bugfixes and New Features
 
-Before starting to write code, look for existing [tickets in our JIRA project](https://jira.mongodb.org/browse/ARROW)
-or [create one](https://jira.mongodb.org/browse/ARROW) for your specific issue or
+Before starting to write code, look for existing [tickets in our JIRA project](https://jira.mongodb.org/browse/INTPYTHON)
+or [create one](https://jira.mongodb.org/browse/INTPYTHON) for your specific issue or
 feature request. That way you avoid working on something that might not
 be of interest or that has already been addressed.
 
