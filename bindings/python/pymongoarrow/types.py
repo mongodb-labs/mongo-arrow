@@ -310,7 +310,7 @@ def _get_internal_typemap(typemap):
     for fname, ftype in typemap.items():
         for checker, internal_id in _TYPE_CHECKER_TO_INTERNAL_TYPE.items():
             if checker(ftype):
-                internal_typemap[fname] = internal_id
+                internal_typemap[fname] = (internal_id, ftype)
                 break
 
         if fname not in internal_typemap:
