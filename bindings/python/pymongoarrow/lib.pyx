@@ -437,6 +437,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
         it = missing_builders.begin()
         while it != missing_builders.end():
             builder = NullBuilder()
+            key = dereference(it).first
             context.builder_map[key] = builder
             null_builder = builder
             for _ in range(count):
@@ -839,146 +840,50 @@ cdef class Decimal128Builder(_ArrayBuilderBase):
         return self.builder
 
 
-cdef object get_field_builder(object field, object tzinfo):
-    """"Find the appropriate field builder given a pyarrow field"""
-    cdef object field_builder
-    cdef DataType field_type
-    if isinstance(field, DataType):
-        field_type = field
-    else:
-        field_type = field.type
-    if _atypes.is_int32(field_type):
-        field_builder = Int32Builder()
-    elif _atypes.is_int64(field_type):
-        field_builder = Int64Builder()
-    elif _atypes.is_float64(field_type):
-        field_builder = DoubleBuilder()
-    elif _atypes.is_timestamp(field_type):
-        if tzinfo and field_type.tz is None:
-            field_type = timestamp(field_type.unit, tz=tzinfo)
-        field_builder = DatetimeBuilder(field_type)
-    elif _atypes.is_string(field_type):
-        field_builder = StringBuilder()
-    elif _atypes.is_large_string(field_type):
-        field_builder = StringBuilder()
-    elif _atypes.is_boolean(field_type):
-        field_builder = BoolBuilder()
-    elif _atypes.is_struct(field_type):
-        field_builder = DocumentBuilder(field_type, tzinfo)
-    elif _atypes.is_list(field_type):
-        field_builder = ListBuilder(field_type, tzinfo)
-    elif _atypes.is_large_list(field_type):
-        field_builder = ListBuilder(field_type, tzinfo)
-    elif _atypes.is_null(field_type):
-        field_builder = NullBuilder()
-    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.objectid:
-        field_builder = ObjectIdBuilder()
-    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.decimal128:
-        field_builder = Decimal128Builder()
-    elif getattr(field_type, '_type_marker') == _BsonArrowTypes.binary:
-        field_builder = BinaryBuilder(field_type.subtype)
-    else:
-        field_builder = StringBuilder()
-    return field_builder
-
-
-cdef class DocumentBuilder(_ArrayBuilderBase):
+cdef class DocumentBuilder:
+    """The document builder stores a map of field names that can be retrieved as a set."""
     cdef:
-        shared_ptr[CStructBuilder] builder
-        object dtype
-        object context
+        map[cstring, int32_t] field_map
 
-    def __cinit__(self, StructType dtype, tzinfo=None, MemoryPool memory_pool=None):
-        cdef StringBuilder field_builder
-        cdef vector[shared_ptr[CArrayBuilder]] c_field_builders
-        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+    cdef add_field_raw(self, char * field):
+        self.field_map[field] = 1
 
-        self.dtype = dtype
-        if not _atypes.is_struct(dtype):
-            raise ValueError("dtype must be a struct()")
+    cpdef add_field(self, field):
+        self.field_map[field] = 1
 
-        self.context = context = PyMongoArrowContext(None, {})
-        context.tzinfo = tzinfo
-        builder_map = context.builder_map
+    def finish(self):
+        it = self.field_map.begin()
+        names = set()
+        while it != self.field_map.end():
+            names.add(dereference(it).first)
+            preincrement(it)
+        return names
 
-        for field in dtype:
-            field_builder = <StringBuilder>get_field_builder(field, tzinfo)
-            builder_map[field.name.encode('utf-8')] = field_builder
-            c_field_builders.push_back(<shared_ptr[CArrayBuilder]>field_builder.builder)
 
-        self.builder.reset(new CStructBuilder(pyarrow_unwrap_data_type(dtype), pool, c_field_builders))
-        self.type_marker = BSON_TYPE_DOCUMENT
-
-    @property
-    def dtype(self):
-        return self.dtype
-
-    cdef append_raw(self, const uint8_t * buf, size_t length):
-        # Populate the child builders.
-        process_raw_bson_stream(buf, length, self.context, None)
-        # Append an element to the Struct. "All child-builders' Append method
-        # must be called independently to maintain data-structure consistency."
-        # Pass "true" for is_valid.
-        self.builder.get().Append(True)
-
-    cpdef append(self, value):
-        if not isinstance(value, bytes):
-            value = bson.encode(value)
-        self.append_raw(value, len(value))
-
-    cpdef append_null(self):
-        self.builder.get().AppendNull()
-
-    def __len__(self):
-        return self.builder.get().length()
-
-    cpdef finish(self):
-        cdef shared_ptr[CArray] out
-        with nogil:
-            self.builder.get().Finish(&out)
-        return pyarrow_wrap_array(out)
-
-    cdef shared_ptr[CStructBuilder] unwrap(self):
-        return self.builder
-
+# NEXT STEP: test the DocumentBuilder and ListBuilder
 
 cdef class ListBuilder(_ArrayBuilderBase):
+    """The list builder stores an int32 list of offsets and a counter with the current value.""""
     cdef:
-        shared_ptr[CListBuilder] builder
-        _ArrayBuilderBase child_builder
-        object dtype
-        object context
+        shared_ptr[CInt32Builder] builder
+        int32_t count
 
-    def __cinit__(self, DataType dtype, tzinfo=None, MemoryPool memory_pool=None, value_builder=None):
-        cdef StringBuilder field_builder
+    def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
-        cdef shared_ptr[CArrayBuilder] grandchild_builder
-        self.dtype = dtype
-        if not (_atypes.is_list(dtype) or _atypes.is_large_list(dtype)):
-            raise ValueError("dtype must be a list_() or large_list()")
-        self.context = context = PyMongoArrowContext(None, {})
-        self.context.tzinfo = tzinfo
-        field_builder = <StringBuilder>get_field_builder(self.dtype.value_type, tzinfo)
-        grandchild_builder = <shared_ptr[CArrayBuilder]>field_builder.builder
-        self.child_builder = field_builder
-        self.builder.reset(new CListBuilder(pool, grandchild_builder, pyarrow_unwrap_data_type(dtype)))
-        self.type_marker = BSON_TYPE_ARRAY
+        self.builder.reset(new CInt32Builder(pool))
+        self.count = 0
 
+    cdef append_offset_raw(self):
+        self.builder.get().Append(value)
 
-    @property
-    def dtype(self):
-        return self.dtype
+    cpdef append_offset(self):
+        self.builder.get().Append(value)
 
-    cdef append_raw(self, const uint8_t * buf, size_t length):
-        # Append an element to the array.
-        # arr_value_builder will be appended to by process_bson_stream.
-        self.builder.get().Append(True)
-        process_raw_bson_stream(buf, length, self.context, self.child_builder)
+    cdef append_raw(self, int32_t value):
+        self.count += 1
 
     cpdef append(self, value):
-        if not isinstance(value, bytes):
-            value = bson.encode(value)
-        self.append_raw(value, len(value))
+        self.count += 1
 
     cpdef append_null(self):
         self.builder.get().AppendNull()
@@ -987,12 +892,13 @@ cdef class ListBuilder(_ArrayBuilderBase):
         return self.builder.get().length()
 
     cpdef finish(self):
+        self.append_offset()
         cdef shared_ptr[CArray] out
         with nogil:
             self.builder.get().Finish(&out)
         return pyarrow_wrap_array(out)
 
-    cdef shared_ptr[CListBuilder] unwrap(self):
+    cdef shared_ptr[CInt32Builder] unwrap(self):
         return self.builder
 
 
