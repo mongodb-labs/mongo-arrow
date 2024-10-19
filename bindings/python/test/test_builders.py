@@ -16,7 +16,7 @@ from datetime import date, datetime, timedelta, timezone
 from unittest import TestCase
 
 from bson import Binary, Code, Decimal128, ObjectId
-from pyarrow import Array, bool_, field, int32, int64, list_, struct, timestamp
+from pyarrow import Array, bool_, int32, int64, timestamp
 
 from pymongoarrow.lib import (
     BinaryBuilder,
@@ -34,7 +34,6 @@ from pymongoarrow.lib import (
     ObjectIdBuilder,
     StringBuilder,
 )
-from pymongoarrow.types import ObjectIdType
 
 
 class IntBuildersTestMixin:
@@ -159,61 +158,26 @@ class TestStringBuilder(TestCase):
 
 class TestDocumentBuilder(TestCase):
     def test_simple(self):
-        dtype = struct([field("a", int32()), field("b", bool_())])
-        builder = DocumentBuilder(dtype)
-        builder.append({"a": 1, "b": True})
-        builder.append_values([{"a": 1, "b": False}, {"a": 2, "b": True}])
-        builder.append_null()
-        arr = builder.finish()
-
-        self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 4)
-        self.assertEqual(arr.type, dtype)
-
-    def test_nested(self):
-        sub_struct = struct([field("c", bool_()), field("d", ObjectIdType())])
-        dtype = struct([field("a", int32()), field("b", sub_struct)])
-        builder = DocumentBuilder(dtype)
-        builder.append({"a": 1, "b": {"c": True, "d": ObjectId()}})
-        builder.append_values(
-            [
-                {"a": 1, "b": {"c": False, "d": ObjectId()}},
-                {"a": 2, "b": {"c": True, "d": ObjectId()}},
-                {"a": 3, "b": None},  # Null
-                {"a": 4},  # Missing
-                {"a": 5, "b": {}},  # Empty
-                {"a": 6, "b": 1},  # Wrong type
-                {"a": 6, "b": {"c": 1, "d": 1}},  # Wrong field types
-            ]
-        )
-        builder.append_null()
-        arr = builder.finish()
-
-        self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 9)
+        builder = DocumentBuilder()
+        builder.add_field(b"a")
+        builder.add_field(b"b")
+        builder.add_field(b"a")
+        names = builder.finish()
+        assert names == set((b"a", b"b"))
 
 
 class TestListBuilder(TestCase):
     def test_simple(self):
-        dtype = list_(int32())
-        builder = ListBuilder(dtype)
-        builder.append({"1": 1, "2": 3})
-        builder.append_values(
-            [
-                {"1": 1, "2": 4},
-                {"1": 2},
-                {"1": None},  # Null
-                None,
-                {"a": 5, "b": 1},
-            ]
-        )
-        arr = builder.finish()
-
-        self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 6)
+        builder = ListBuilder()
+        builder.append_offset()
+        builder.append()
+        builder.append()
+        builder.append_offset()
+        builder.append()
+        builder.append()
+        builder.append()
+        offsets = builder.finish()
+        assert offsets.to_pylist() == [0, 2, 5]
 
 
 class TestBinaryBuilder(TestCase):

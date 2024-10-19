@@ -106,7 +106,7 @@ class PyMongoArrowContext:
             field = key.decode("utf-8")
             arr = value.finish()
             if isinstance(value, DocumentBuilder):
-                full_names = [f"{field}.{name}" for name in arr]
+                full_names = [f"{field}.{name.decode('utf-8')}" for name in arr]
                 arrs = [builder_map[c.encode("utf-8")] for c in full_names]
                 builder_map[field] = StructArray.from_arrays(arrs, names=arr)
                 to_remove.extend(full_names)

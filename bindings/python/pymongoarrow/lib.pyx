@@ -96,73 +96,94 @@ _field_type_map = {
 }
 
 
-cdef object extract_field_dtype(bson_iter_t * doc_iter, bson_iter_t * child_iter, bson_type_t value_t, object context):
-    """Get the appropriate data type for a specific field"""
-    cdef const uint8_t *val_buf = NULL
-    cdef uint32_t val_buf_len = 0
-    cdef bson_subtype_t subtype
-
-    if value_t in _field_type_map:
-        field_type = _field_type_map[value_t]
-    elif value_t == BSON_TYPE_ARRAY:
-        bson_iter_recurse(doc_iter, child_iter)
-        list_dtype = extract_array_dtype(child_iter, context)
-        field_type = list_(list_dtype)
-    elif value_t == BSON_TYPE_DOCUMENT:
-        bson_iter_recurse(doc_iter, child_iter)
-        field_type = extract_document_dtype(child_iter, context)
-    elif value_t == BSON_TYPE_DATE_TIME:
-        field_type = timestamp('ms', tz=context.tzinfo)
-    elif value_t == BSON_TYPE_BINARY:
-        bson_iter_binary (doc_iter, &subtype, &val_buf_len, &val_buf)
-        field_type = BinaryType(subtype)
-    elif value_t == BSON_TYPE_NULL:
-        field_type = None
-    else:
-        raise PyMongoArrowError('unknown value type {}'.format(value_t))
-    return field_type
-
-
-cdef object extract_document_dtype(bson_iter_t * doc_iter, object context):
-    """Get the appropriate data type for a sub document"""
-    cdef const char* key
-    cdef bson_type_t value_t
-    cdef bson_iter_t child_iter
-    fields = []
-    while bson_iter_next(doc_iter):
-        key = bson_iter_key(doc_iter)
-        value_t = bson_iter_type(doc_iter)
-        field_type = extract_field_dtype(doc_iter, &child_iter, value_t, context)
-        if field_type is not None:
-            fields.append(field(key.decode('utf-8'), field_type))
-    if fields:
-        return struct(fields)
-    return None
-
-
-cdef object extract_array_dtype(bson_iter_t * doc_iter, object context):
-    """Get the appropriate data type for a sub array"""
-    cdef const char* key
-    cdef bson_type_t value_t
-    cdef bson_iter_t child_iter
-    fields = []
-    while bson_iter_next(doc_iter):
-        value_t = bson_iter_type(doc_iter)
-        field_type = extract_field_dtype(doc_iter, &child_iter, value_t, context)
-        if field_type is not None:
-            return field_type
-    return None
-
-
 def process_bson_stream(bson_stream, context, arr_value_builder=None):
     """Process a bson byte stream using a PyMongoArrowContext"""
     cdef const uint8_t* docstream = <const uint8_t *>bson_stream
     cdef size_t length = <size_t>PyBytes_Size(bson_stream)
-    process_raw_bson_stream(bson_stream, length, context, arr_value_builder)
+    cdef map[cstring, void *] builder_map
+    cdef uint8_t ret
+
+    # Build up a map of the builders.
+    for key, value in context.builder_map.items():
+        builder_map[key] = <void *>value
+
+    try:
+        while True:
+            ret = parse_document(docstream, length, context, builder_map, "", 0)
+            if ret == 1:
+                break
+    finally:
+        bson_reader_destroy(stream_reader)
+
+    # Any missing fields that are left must be null fields.
+    # TODO: handle missing builders as NULL values in the builder map.
+    it = missing_builders.begin()
+    while it != missing_builders.end():
+        builder = NullBuilder()
+        key = dereference(it).first
+        context.builder_map[key] = builder
+        null_builder = builder
+        for _ in range(count):
+            null_builder.append_null()
+        preincrement(it)
 
 
-cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, object context, object arr_value_builder) except *:
+cdef void get_builder(cdef cstring key, object context, map[cstring, void *] builder_map) except *:
+    cdef map[cstring, void*].iterator it
+    cdef _ArrayBuilderBase builder = None
+
+    it = builder_map.find(key)
+    if it != builder_map.end():
+        builder = <_ArrayBuilderBase>builder_map[key]
+
+    if builder is None and context.schema is not None:
+        return
+
+    if builder is None:
+        # Get the appropriate builder for the current field.
+        value_t = bson_iter_type(&doc_iter)
+        builder_type = _builder_type_map.get(value_t)
+
+        # Mark the key as missing until we find it.
+        if builder_type is None:
+            builder_map[key] =  <void *>None
+            return
+
+    # Handle the parameterized builders.
+    if builder_type == DatetimeBuilder and context.tzinfo is not None:
+        arrow_type = timestamp('ms', tz=context.tzinfo)
+        builder = DatetimeBuilder(dtype=arrow_type)
+    elif builder_type == BinaryBuilder:
+        bson_iter_binary (&doc_iter, &subtype,
+            &val_buf_len, &val_buf)
+        builder = BinaryBuilder(subtype)
+    elif builder_type == Date32Builder:
+        builder = Date32Builder()
+    elif builder_type == Date64Builder:
+        builder = Date64Builder()
+    else:
+        builder = builder_type()
+
+    builder_map[key] = <void *>builder
+    context.builder_map[key] = builder
+
+    # TODO: derive count from the builder map
+    for _ in range(count):
+        builder.append_null()
+
+    return builder
+
+
+"""
+Questions:
+How to handle null document and list values? - test with arrow-165.py
+"""
+
+cdef void parse_document(const uint8_t * docstream, size_t length, object context, map[cstring, void *] builder_map, cstring base_key, uint8_t parent_type) except *:
     cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
+    cdef const bson_t * doc = NULL
+    cdef bson_iter_t doc_iter
+    cdef cstring key
     cdef uint32_t str_len
     cdef uint8_t dec128_buf[16]
     cdef const uint8_t *val_buf = NULL
@@ -174,7 +195,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
     cdef const bson_t * doc = NULL
     cdef bson_iter_t doc_iter
     cdef bson_iter_t child_iter
-    cdef const char* key
+    cdef cstring key
     cdef uint8_t ftype
     cdef Py_ssize_t count = 0
     cdef uint8_t byte_order_status = 0
@@ -186,6 +207,7 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
     cdef int64_t val64
 
     cdef _ArrayBuilderBase builder = None
+    cdef _ArrayBuilderBase parent_builder = None
     cdef Int32Builder int32_builder
     cdef DoubleBuilder double_builder
     cdef ObjectIdBuilder objectid_builder
@@ -196,256 +218,190 @@ cdef void process_raw_bson_stream(const uint8_t * docstream, size_t length, obje
     cdef BinaryBuilder binary_builder
     cdef DatetimeBuilder datetime_builder
     cdef Decimal128Builder dec128_builder
-    cdef ListBuilder list_builder
-    cdef DocumentBuilder doc_builder
     cdef Date32Builder date32_builder
     cdef Date64Builder date64_builder
     cdef NullBuilder null_builder
 
-    # Build up a map of the builders.
-    for key, value in context.builder_map.items():
-        builder_map[key] = <void *>value
+    doc = bson_reader_read_safe(stream_reader)
+    if doc == NULL:
+        return 1
 
-    # Initialize count to current length of builders.
-    if len(context.builder_map):
-        builder = next(iter(context.builder_map.values()))
-        count = len(builder)
+    if not bson_iter_init(&doc_iter, doc):
+        raise InvalidBSON("Could not read BSON document")
 
-    try:
-        while True:
-            doc = bson_reader_read_safe(stream_reader)
-            if doc == NULL:
-                break
-            if not bson_iter_init(&doc_iter, doc):
-                raise InvalidBSON("Could not read BSON document")
-            while bson_iter_next(&doc_iter):
-                key = bson_iter_key(&doc_iter)
-                builder = None
-                if arr_value_builder is not None:
-                    builder = arr_value_builder
+    # Container logic - TODO make this work with c
+    if base_key and base_key in builder_map:
+        parent_builder = builder_map[base_key]
+    if parent_type == BSON_TYPE_ARRAY:
+        parent_builder.append_offset()
 
-                if builder is None:
-                    it = builder_map.find(key)
-                    if it != builder_map.end():
-                        builder = <_ArrayBuilderBase>builder_map[key]
+    while bson_iter_next(&doc_iter):
+        # TODO: make this work with c types
+        key = bson_iter_key(&doc_iter)
 
-                if builder is None and context.schema is None:
-                    # Get the appropriate builder for the current field.
-                    value_t = bson_iter_type(&doc_iter)
-                    builder_type = _builder_type_map.get(value_t)
+        # Container item logic - TODO: make this work with c types.
+        if parent_type == BSON_TYPE_ARRAY:
+            full_key = base_key + '[]'
+            parent_builder.append()
 
-                    # Keep the key in missing builders until we find it.
-                    if builder_type is None:
-                        missing_builders[key] =  <void *>None
-                        continue
+        elif parent_type == BSON_TYPE_DOCUMENT:
+            full_key = f'{base_key}.{key}'
+            parent_builder.add_child(key)
 
-                    it = missing_builders.find(key)
-                    if it != builder_map.end():
-                        missing_builders.erase(key)
+        else:
+            full_key = key
 
-                    # Handle the parameterized builders.
-                    if builder_type == DatetimeBuilder and context.tzinfo is not None:
-                        arrow_type = timestamp('ms', tz=context.tzinfo)
-                        builder = DatetimeBuilder(dtype=arrow_type)
+        builder = get_builder(key, context, builder_map)
+        if builder is None:
+            continue
 
-                    elif builder_type == DocumentBuilder:
-                        bson_iter_recurse(&doc_iter, &child_iter)
-                        struct_dtype = extract_document_dtype(&child_iter, context)
-                        if struct_dtype is None:
-                            continue
-                        builder = DocumentBuilder(struct_dtype, context.tzinfo)
-                    elif builder_type == ListBuilder:
-                        bson_iter_recurse(&doc_iter, &child_iter)
-                        list_dtype = extract_array_dtype(&child_iter, context)
-                        if list_dtype is None:
-                            continue
-                        list_dtype = list_(list_dtype)
-                        builder = ListBuilder(list_dtype, context.tzinfo, value_builder=arr_value_builder)
-                    elif builder_type == BinaryBuilder:
-                        bson_iter_binary (&doc_iter, &subtype,
-                            &val_buf_len, &val_buf)
-                        builder = BinaryBuilder(subtype)
-                    elif builder_type == Date32Builder:
-                        builder = Date32Builder()
-                    elif builder_type == Date64Builder:
-                        builder = Date64Builder()
-                    else:
-                        builder = builder_type()
-                    if arr_value_builder is None:
-                        builder_map[key] = <void *>builder
-                        context.builder_map[key] = builder
-                    for _ in range(count):
-                        builder.append_null()
-
-                if builder is None:
-                    continue
-
-                ftype = builder.type_marker
-                value_t = bson_iter_type(&doc_iter)
-                if ftype == BSON_TYPE_INT32:
-                    int32_builder = builder
-                    if (value_t == BSON_TYPE_INT32 or value_t == BSON_TYPE_BOOL):
-                        int32_builder.append_raw(bson_iter_as_int64(&doc_iter))
-                    elif value_t == BSON_TYPE_INT64:
-                        val64 = bson_iter_as_int64(&doc_iter)
-                        val32 = <int32_t> val64
-                        if val64 == val32:
-                            int32_builder.append_raw(val32)
-                        else:
-                            # Use append (not append_raw) to surface overflow errors.
-                            int32_builder.append(val64)
-                    elif value_t == BSON_TYPE_DOUBLE:
-                        # Treat nan as null.
-                        val = bson_iter_as_double(&doc_iter)
-                        if isnan(val):
-                            int32_builder.append_null()
-                        else:
-                            # Use append (not append_raw) to surface overflow errors.
-                            int32_builder.append(bson_iter_as_int64(&doc_iter))
-                    else:
-                        int32_builder.append_null()
-                elif ftype == BSON_TYPE_INT64:
-                    int64_builder = builder
-                    if (value_t == BSON_TYPE_INT64 or
-                            value_t == BSON_TYPE_BOOL or
-                            value_t == BSON_TYPE_INT32):
-                        int64_builder.append_raw(bson_iter_as_int64(&doc_iter))
-                    elif value_t == BSON_TYPE_DOUBLE:
-                        # Treat nan as null.
-                        val = bson_iter_as_double(&doc_iter)
-                        if isnan(val):
-                            int64_builder.append_null()
-                        else:
-                            int64_builder.append_raw(bson_iter_as_int64(&doc_iter))
-                    else:
-                        int64_builder.append_null()
-                elif ftype == BSON_TYPE_OID:
-                    objectid_builder = builder
-                    if value_t == BSON_TYPE_OID:
-                        objectid_builder.append_raw(bson_iter_oid(&doc_iter))
-                    else:
-                        objectid_builder.append_null()
-                elif ftype == BSON_TYPE_UTF8:
-                    string_builder = builder
-                    if value_t == BSON_TYPE_UTF8:
-                        bson_str = bson_iter_utf8(&doc_iter, &str_len)
-                        string_builder.append_raw(bson_str, str_len)
-                    else:
-                        string_builder.append_null()
-                elif ftype == BSON_TYPE_CODE:
-                    code_builder = builder
-                    if value_t == BSON_TYPE_CODE:
-                        bson_str = bson_iter_code(&doc_iter, &str_len)
-                        code_builder.append_raw(bson_str, str_len)
-                    else:
-                        code_builder.append_null()
-                elif ftype == BSON_TYPE_DECIMAL128:
-                    dec128_builder = builder
-                    if value_t == BSON_TYPE_DECIMAL128:
-                        bson_iter_decimal128(&doc_iter, &dec128)
-                        if byte_order_status == 0:
-                            if sys.byteorder == 'little':
-                                byte_order_status = 1
-                            else:
-                                byte_order_status = 2
-                        if byte_order_status == 1:
-                            memcpy(dec128_buf, &dec128.low, 8);
-                            memcpy(dec128_buf + 8, &dec128.high, 8)
-                            dec128_builder.append_raw(dec128_buf)
-                        else:
-                            # We do not support big-endian systems.
-                            dec128_builder.append_null()
-                    else:
-                        dec128_builder.append_null()
-                elif ftype == BSON_TYPE_DOUBLE:
-                    double_builder = builder
-                    if (value_t == BSON_TYPE_DOUBLE or
-                            value_t == BSON_TYPE_BOOL or
-                            value_t == BSON_TYPE_INT32 or
-                            value_t == BSON_TYPE_INT64):
-                        double_builder.append_raw(bson_iter_as_double(&doc_iter))
-                    else:
-                        double_builder.append_null()
-                elif ftype == ARROW_TYPE_DATE32:
-                    date32_builder = builder
-                    if value_t == BSON_TYPE_DATE_TIME:
-                        date32_builder.append_raw(bson_iter_date_time(&doc_iter))
-                    else:
-                        date32_builder.append_null()
-                elif ftype == ARROW_TYPE_DATE64:
-                    date64_builder = builder
-                    if value_t == BSON_TYPE_DATE_TIME:
-                        date64_builder.append_raw(bson_iter_date_time(&doc_iter))
-                    else:
-                        date64_builder.append_null()
-                elif ftype == BSON_TYPE_DATE_TIME:
-                    datetime_builder = builder
-                    if value_t == BSON_TYPE_DATE_TIME:
-                        datetime_builder.append_raw(bson_iter_date_time(&doc_iter))
-                    else:
-                        datetime_builder.append_null()
-                elif ftype == BSON_TYPE_BOOL:
-                    bool_builder = builder
-                    if value_t == BSON_TYPE_BOOL:
-                        bool_builder.append_raw(bson_iter_bool(&doc_iter))
-                    else:
-                        bool_builder.append_null()
-                elif ftype == BSON_TYPE_DOCUMENT:
-                    doc_builder = builder
-                    if value_t == BSON_TYPE_DOCUMENT:
-                        bson_iter_document(&doc_iter, &val_buf_len, &val_buf)
-                        if val_buf_len <= 0:
-                            raise ValueError("Subdocument is invalid")
-                        doc_builder.append_raw(val_buf, val_buf_len)
-                    else:
-                        doc_builder.append_null()
-                elif ftype == BSON_TYPE_ARRAY:
-                    list_builder = builder
-                    if value_t == BSON_TYPE_ARRAY:
-                        bson_iter_array(&doc_iter, &val_buf_len, &val_buf)
-                        if val_buf_len <= 0:
-                            raise ValueError("Subarray is invalid")
-                        list_builder.append_raw(val_buf, val_buf_len)
-                    else:
-                        list_builder.append_null()
-                elif ftype == BSON_TYPE_BINARY:
-                    binary_builder = builder
-                    if value_t == BSON_TYPE_BINARY:
-                        bson_iter_binary (&doc_iter, &subtype,
-                            &val_buf_len, &val_buf)
-                        if subtype != binary_builder._subtype:
-                            binary_builder.append_null()
-                        else:
-                            binary_builder.append_raw(<char*>val_buf, val_buf_len)
-                elif ftype == ARROW_TYPE_NULL:
-                    null_builder = builder
-                    null_builder.append_null()
+        ftype = builder.type_marker
+        value_t = bson_iter_type(&doc_iter)
+        if ftype == BSON_TYPE_INT32:
+            int32_builder = builder
+            if (value_t == BSON_TYPE_INT32 or value_t == BSON_TYPE_BOOL):
+                int32_builder.append_raw(bson_iter_as_int64(&doc_iter))
+            elif value_t == BSON_TYPE_INT64:
+                val64 = bson_iter_as_int64(&doc_iter)
+                val32 = <int32_t> val64
+                if val64 == val32:
+                    int32_builder.append_raw(val32)
                 else:
-                    raise PyMongoArrowError('unknown ftype {}'.format(ftype))
-
-            # Append nulls as needed to builders to account for any missing
-            # field(s).
-            count += 1
-            it = builder_map.begin()
-            while it != builder_map.end():
-                builder = <_ArrayBuilderBase>(dereference(it).second)
-                if len(builder) != count:
-                    builder.append_null()
-                preincrement(it)
-
-        # Any missing fields that are left must be null fields.
-        it = missing_builders.begin()
-        while it != missing_builders.end():
-            builder = NullBuilder()
-            key = dereference(it).first
-            context.builder_map[key] = builder
+                    # Use append (not append_raw) to surface overflow errors.
+                    int32_builder.append(val64)
+            elif value_t == BSON_TYPE_DOUBLE:
+                # Treat nan as null.
+                val = bson_iter_as_double(&doc_iter)
+                if isnan(val):
+                    int32_builder.append_null()
+                else:
+                    # Use append (not append_raw) to surface overflow errors.
+                    int32_builder.append(bson_iter_as_int64(&doc_iter))
+            else:
+                int32_builder.append_null()
+        elif ftype == BSON_TYPE_INT64:
+            int64_builder = builder
+            if (value_t == BSON_TYPE_INT64 or
+                    value_t == BSON_TYPE_BOOL or
+                    value_t == BSON_TYPE_INT32):
+                int64_builder.append_raw(bson_iter_as_int64(&doc_iter))
+            elif value_t == BSON_TYPE_DOUBLE:
+                # Treat nan as null.
+                val = bson_iter_as_double(&doc_iter)
+                if isnan(val):
+                    int64_builder.append_null()
+                else:
+                    int64_builder.append_raw(bson_iter_as_int64(&doc_iter))
+            else:
+                int64_builder.append_null()
+        elif ftype == BSON_TYPE_OID:
+            objectid_builder = builder
+            if value_t == BSON_TYPE_OID:
+                objectid_builder.append_raw(bson_iter_oid(&doc_iter))
+            else:
+                objectid_builder.append_null()
+        elif ftype == BSON_TYPE_UTF8:
+            string_builder = builder
+            if value_t == BSON_TYPE_UTF8:
+                bson_str = bson_iter_utf8(&doc_iter, &str_len)
+                string_builder.append_raw(bson_str, str_len)
+            else:
+                string_builder.append_null()
+        elif ftype == BSON_TYPE_CODE:
+            code_builder = builder
+            if value_t == BSON_TYPE_CODE:
+                bson_str = bson_iter_code(&doc_iter, &str_len)
+                code_builder.append_raw(bson_str, str_len)
+            else:
+                code_builder.append_null()
+        elif ftype == BSON_TYPE_DECIMAL128:
+            dec128_builder = builder
+            if value_t == BSON_TYPE_DECIMAL128:
+                bson_iter_decimal128(&doc_iter, &dec128)
+                if byte_order_status == 0:
+                    if sys.byteorder == 'little':
+                        byte_order_status = 1
+                    else:
+                        byte_order_status = 2
+                if byte_order_status == 1:
+                    memcpy(dec128_buf, &dec128.low, 8);
+                    memcpy(dec128_buf + 8, &dec128.high, 8)
+                    dec128_builder.append_raw(dec128_buf)
+                else:
+                    # We do not support big-endian systems.
+                    dec128_builder.append_null()
+            else:
+                dec128_builder.append_null()
+        elif ftype == BSON_TYPE_DOUBLE:
+            double_builder = builder
+            if (value_t == BSON_TYPE_DOUBLE or
+                    value_t == BSON_TYPE_BOOL or
+                    value_t == BSON_TYPE_INT32 or
+                    value_t == BSON_TYPE_INT64):
+                double_builder.append_raw(bson_iter_as_double(&doc_iter))
+            else:
+                double_builder.append_null()
+        elif ftype == ARROW_TYPE_DATE32:
+            date32_builder = builder
+            if value_t == BSON_TYPE_DATE_TIME:
+                date32_builder.append_raw(bson_iter_date_time(&doc_iter))
+            else:
+                date32_builder.append_null()
+        elif ftype == ARROW_TYPE_DATE64:
+            date64_builder = builder
+            if value_t == BSON_TYPE_DATE_TIME:
+                date64_builder.append_raw(bson_iter_date_time(&doc_iter))
+            else:
+                date64_builder.append_null()
+        elif ftype == BSON_TYPE_DATE_TIME:
+            datetime_builder = builder
+            if value_t == BSON_TYPE_DATE_TIME:
+                datetime_builder.append_raw(bson_iter_date_time(&doc_iter))
+            else:
+                datetime_builder.append_null()
+        elif ftype == BSON_TYPE_BOOL:
+            bool_builder = builder
+            if value_t == BSON_TYPE_BOOL:
+                bool_builder.append_raw(bson_iter_bool(&doc_iter))
+            else:
+                bool_builder.append_null()
+        elif ftype == BSON_TYPE_DOCUMENT:
+            doc_builder = builder
+            if value_t == BSON_TYPE_DOCUMENT:
+                bson_iter_document(&doc_iter, &val_buf_len, &val_buf)
+                if val_buf_len <= 0:
+                    raise ValueError("Subdocument is invalid")
+                # TODO: make this work with c types
+                subkey = key + "."
+                parse_document(val_buf, val_buf_len, context, builder_map, subkey, BSON_TYPE_DOCUMENT)
+            else:
+                doc_builder.append_null()
+        elif ftype == BSON_TYPE_ARRAY:
+            list_builder = builder
+            if value_t == BSON_TYPE_ARRAY:
+                bson_iter_array(&doc_iter, &val_buf_len, &val_buf)
+                if val_buf_len <= 0:
+                    raise ValueError("Subarray is invalid")
+                # TODO: make this work with c types
+                subkey = key + "[]"
+                parse_document(val_buf, val_buf_len, context, builder_map, subkey, BSON_TYPE_ARRAY)
+            else:
+                list_builder.append_null()
+        elif ftype == BSON_TYPE_BINARY:
+            binary_builder = builder
+            if value_t == BSON_TYPE_BINARY:
+                bson_iter_binary (&doc_iter, &subtype,
+                    &val_buf_len, &val_buf)
+                if subtype != binary_builder._subtype:
+                    binary_builder.append_null()
+                else:
+                    binary_builder.append_raw(<char*>val_buf, val_buf_len)
+        elif ftype == ARROW_TYPE_NULL:
             null_builder = builder
-            for _ in range(count):
-                null_builder.append_null()
-            preincrement(it)
-
-    finally:
-        bson_reader_destroy(stream_reader)
+            null_builder.append_null()
+        else:
+            raise PyMongoArrowError('unknown ftype {}'.format(ftype))
+    return 0
 
 
 # Builders
@@ -840,10 +796,13 @@ cdef class Decimal128Builder(_ArrayBuilderBase):
         return self.builder
 
 
-cdef class DocumentBuilder:
+cdef class DocumentBuilder(_ArrayBuilderBase):
     """The document builder stores a map of field names that can be retrieved as a set."""
     cdef:
         map[cstring, int32_t] field_map
+
+    def __cinit__(self):
+        self.type_marker = BSON_TYPE_DOCUMENT
 
     cdef add_field_raw(self, char * field):
         self.field_map[field] = 1
@@ -860,10 +819,8 @@ cdef class DocumentBuilder:
         return names
 
 
-# NEXT STEP: test the DocumentBuilder and ListBuilder
-
 cdef class ListBuilder(_ArrayBuilderBase):
-    """The list builder stores an int32 list of offsets and a counter with the current value.""""
+    """The list builder stores an int32 list of offsets and a counter with the current value."""
     cdef:
         shared_ptr[CInt32Builder] builder
         int32_t count
@@ -872,17 +829,18 @@ cdef class ListBuilder(_ArrayBuilderBase):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CInt32Builder(pool))
         self.count = 0
+        self.type_marker = BSON_TYPE_ARRAY
 
     cdef append_offset_raw(self):
-        self.builder.get().Append(value)
+        self.builder.get().Append(self.count)
 
     cpdef append_offset(self):
-        self.builder.get().Append(value)
+        self.builder.get().Append(self.count)
 
-    cdef append_raw(self, int32_t value):
+    cdef append_raw(self):
         self.count += 1
 
-    cpdef append(self, value):
+    cpdef append(self):
         self.count += 1
 
     cpdef append_null(self):
