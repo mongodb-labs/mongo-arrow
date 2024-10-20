@@ -21,6 +21,7 @@ try:
     from pymongoarrow.lib import (
         BinaryBuilder,
         BoolBuilder,
+        BuilderManager,
         CodeBuilder,
         Date32Builder,
         Date64Builder,
@@ -75,6 +76,7 @@ class PyMongoArrowContext:
             self.tzinfo = codec_options.tzinfo
         else:
             self.tzinfo = None
+        self.manager = BuilderManager(builder_map, self.schema is not None, self.tzinfo)
 
     @classmethod
     def from_schema(cls, schema, codec_options=DEFAULT_CODEC_OPTIONS):
@@ -94,6 +96,9 @@ class PyMongoArrowContext:
         str_type_map = _get_internal_typemap(schema.typemap)
         _parse_types(str_type_map, builder_map, tzinfo)
         return cls(schema, builder_map)
+
+    def process_bson_stream(self, stream):
+        self.manager.process_bson_stream(stream, len(stream))
 
     def finish(self):
         return self._finish(self.builder_map, self.schema)

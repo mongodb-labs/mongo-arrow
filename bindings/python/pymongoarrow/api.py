@@ -38,11 +38,6 @@ from pymongoarrow.result import ArrowWriteResult
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import _validate_schema, get_numpy_type
 
-try:  # noqa: SIM105
-    from pymongoarrow.lib import process_bson_stream
-except ImportError:
-    pass
-
 __all__ = [
     "aggregate_arrow_all",
     "find_arrow_all",
@@ -108,7 +103,7 @@ def find_arrow_all(collection, query, *, schema=None, **kwargs):
 
     raw_batch_cursor = collection.find_raw_batches(query, **kwargs)
     for batch in raw_batch_cursor:
-        process_bson_stream(batch, context)
+        context.process_bson_stream(batch)
 
     return context.finish()
 
@@ -152,7 +147,7 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, **kwargs):
 
     raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
     for batch in raw_batch_cursor:
-        process_bson_stream(batch, context)
+        context.process_bson_stream(batch)
 
     return context.finish()
 
