@@ -14,6 +14,7 @@
 import enum
 from datetime import datetime
 
+import bson
 import numpy as np
 import pyarrow as pa
 import pyarrow.types as _atypes
@@ -42,21 +43,22 @@ from pymongoarrow.pandas_types import (
 
 
 class _BsonArrowTypes(enum.Enum):
-    datetime = 1
-    double = 2
-    int32 = 3
-    int64 = 4
-    objectid = 5
-    string = 6
-    bool = 7
-    decimal128 = 8
-    document = 9
-    array = 10
-    binary = 11
-    code = 12
-    date32 = 13
-    date64 = 14
-    null = 15
+    datetime = ord(bson.BSONDAT)
+    double = ord(bson.BSONNUM)
+    int32 = ord(bson.BSONINT)
+    int64 = ord(bson.BSONLON)
+    objectid = ord(bson.BSONOID)
+    string = ord(bson.BSONSTR)
+    bool = ord(bson.BSONBOO)
+    decimal128 = ord(bson.BSONDEC)
+    document = ord(bson.BSONOBJ)
+    array = ord(bson.BSONARR)
+    binary = ord(bson.BSONBIN)
+    code = ord(bson.BSONCOD)
+    # Keep in sync with constants in lib.pyx
+    date32 = 100
+    date64 = 101
+    null = 102
 
 
 # Custom Extension Types.

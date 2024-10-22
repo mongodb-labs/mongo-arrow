@@ -33,11 +33,13 @@ from libcpp cimport bool as cbool
 from libc.math cimport isnan
 from libcpp.string cimport string as cstring
 from libc.string cimport memcpy
+from libcpp cimport nullptr
 from pyarrow.lib cimport *
 from pymongoarrow.libarrow cimport *
 from pymongoarrow.libbson cimport *
 
 # Placeholder numbers for the date types.
+# Keep in sync with _BsonArrowTypes in types.py.
 cdef uint8_t ARROW_TYPE_DATE32 = 100
 cdef uint8_t ARROW_TYPE_DATE64 = 101
 cdef uint8_t ARROW_TYPE_NULL = 102
@@ -61,11 +63,24 @@ cdef class BuilderManager:
         bint has_schema
         object tzinfo
 
-    def __cinit__(self, dict builder_map, bint has_schema, object tzinfo):
+    def __cinit__(self, dict schema_map, bint has_schema, object tzinfo):
         self.has_schema = has_schema
         self.tzinfo = tzinfo
         self.count = 0
-        self.builder_map = builder_map
+        self.builder_map = builder_map = {}
+        # Unpack the schema map.
+        for fname, (ftype, arrow_type) in schema_map.items():
+            encoded_fname = fname.encode("utf-8")
+            # special-case initializing builders for parameterized types
+            if ftype == BSON_TYPE_DATE_TIME:
+                if tzinfo is not None and arrow_type.tz is None:
+                    arrow_type = timestamp(arrow_type.unit, tz=tzinfo)  # noqa: PLW2901
+                builder_map[encoded_fname] = DatetimeBuilder(dtype=arrow_type)
+            elif ftype == BSON_TYPE_BINARY:
+                subtype = arrow_type.subtype
+                builder_map[encoded_fname] = BinaryBuilder(subtype)
+            else:
+                self.get_builder(encoded_fname, ftype, <bson_iter_t *>nullptr)
 
     cdef _ArrayBuilderBase get_builder(self, cstring key, bson_type_t value_t, bson_iter_t * doc_iter):
         cdef _ArrayBuilderBase builder = None
@@ -75,7 +90,7 @@ cdef class BuilderManager:
 
         # Mark a null key as missing until we find it.
         if value_t == BSON_TYPE_NULL:
-            self.builder_map[full_key] = None
+            self.builder_map[key] = None
             return
 
         if builder is not None:
@@ -89,9 +104,9 @@ cdef class BuilderManager:
             else:
                 builder = DatetimeBuilder()
         elif value_t == BSON_TYPE_DOCUMENT:
-            builder = DocumentBuilder(self, key)
+            builder = DocumentBuilder()
         elif value_t == BSON_TYPE_ARRAY:
-            builder = ListBuilder(self, key)
+            builder = ListBuilder()
         elif value_t == BSON_TYPE_BINARY:
             bson_iter_binary (doc_iter, &subtype,
                 &val_buf_len, &val_buf)
@@ -117,7 +132,7 @@ cdef class BuilderManager:
         elif value_t == BSON_TYPE_CODE:
             builder = CodeBuilder()
 
-        self.builder_map[full_key] = builder
+        self.builder_map[key] = builder
         return builder
 
     cdef uint8_t parse_document(self, bson_iter_t * doc_iter, cstring base_key, uint8_t parent_type) except *:
@@ -200,7 +215,12 @@ cdef class BuilderManager:
 
     cpdef finish(self):
         """Finish building the arrays."""
-        builder_map = self.builder_map
+        cdef dict builder_map = self.builder_map
+        cdef dict array_map = {}
+        cdef bytes key
+        cdef str field
+        cdef _ArrayBuilderBase value
+
         # Insert null fields.
         for key in list(builder_map):
             if builder_map[key] is None:
@@ -212,13 +232,12 @@ cdef class BuilderManager:
 
             # If it isn't a list item, append nulls as needed.
             # For lists, the nulls are stored in the parent.
-            if field.endswith('[]'):
-                continue
+            if not field.endswith('[]'):
+                if value.length() < self.count:
+                    value.append_nulls(self.count - value.length())
 
-            if value.length() < self.count:
-                value.append_nulls(self.count - value.length())
-
-        return builder_map
+            array_map[field] = value.finish()
+        return array_map
 
 
 cdef class _ArrayBuilderBase:
@@ -620,7 +639,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         dict field_map
         int32_t count
 
-    def __cinit__(self,):
+    def __cinit__(self):
         self.type_marker = BSON_TYPE_DOCUMENT
         self.field_map = dict()
 
@@ -637,7 +656,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         self.field_map[field_name] = 1
 
     def finish(self):
-        return set(self.field_map)
+        return set((f.decode('utf-8') for f in self.field_map))
 
 
 cdef class ListBuilder(_ArrayBuilderBase):

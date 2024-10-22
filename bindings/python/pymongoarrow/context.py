@@ -11,50 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyarrow import ListArray, StructArray, Table, timestamp
+from pyarrow import ListArray, StructArray, Table
 from pyarrow.types import is_struct
 
 from pymongoarrow.types import _BsonArrowTypes, _get_internal_typemap
-
-try:
-    from pymongoarrow.lib import (
-        BinaryBuilder,
-        BoolBuilder,
-        BuilderManager,
-        CodeBuilder,
-        Date32Builder,
-        Date64Builder,
-        DatetimeBuilder,
-        Decimal128Builder,
-        DocumentBuilder,
-        DoubleBuilder,
-        Int32Builder,
-        Int64Builder,
-        ListBuilder,
-        NullBuilder,
-        ObjectIdBuilder,
-        StringBuilder,
-    )
-
-    _TYPE_TO_BUILDER_CLS = {
-        _BsonArrowTypes.int32: Int32Builder,
-        _BsonArrowTypes.int64: Int64Builder,
-        _BsonArrowTypes.double: DoubleBuilder,
-        _BsonArrowTypes.datetime: DatetimeBuilder,
-        _BsonArrowTypes.objectid: ObjectIdBuilder,
-        _BsonArrowTypes.decimal128: Decimal128Builder,
-        _BsonArrowTypes.string: StringBuilder,
-        _BsonArrowTypes.bool: BoolBuilder,
-        _BsonArrowTypes.document: DocumentBuilder,
-        _BsonArrowTypes.array: ListBuilder,
-        _BsonArrowTypes.binary: BinaryBuilder,
-        _BsonArrowTypes.code: CodeBuilder,
-        _BsonArrowTypes.date32: Date32Builder,
-        _BsonArrowTypes.date64: Date64Builder,
-        _BsonArrowTypes.null: NullBuilder,
-    }
-except ImportError:
-    pass
 
 
 class PyMongoArrowContext:
@@ -73,58 +33,59 @@ class PyMongoArrowContext:
             self.tzinfo = codec_options.tzinfo
         else:
             self.tzinfo = None
-        builder_map = {}
+        schema_map = {}
         if self.schema is not None:
             str_type_map = _get_internal_typemap(schema.typemap)
-            _parse_types(str_type_map, builder_map, self.tzinfo)
+            _parse_types(str_type_map, schema_map, self.tzinfo)
 
-        self.manager = BuilderManager(builder_map, self.schema is not None, self.tzinfo)
+        # Delayed import to prevent import errors for unbuilt library.
+        from pymongoarrow.lib import BuilderManager
+
+        self.manager = BuilderManager(schema_map, self.schema is not None, self.tzinfo)
 
     def process_bson_stream(self, stream):
         self.manager.process_bson_stream(stream, len(stream))
 
     def finish(self):
-        builder_map = _parse_builder_map(self.manager.finish())
-        arrays = list(builder_map.values())
+        array_map = _parse_array_map(self.manager.finish())
+        arrays = list(array_map.values())
         if self.schema is not None:
             return Table.from_arrays(arrays=arrays, schema=self.schema.to_arrow())
-        return Table.from_arrays(arrays=arrays, names=list(builder_map.keys()))
+        return Table.from_arrays(arrays=arrays, names=list(array_map.keys()))
 
 
-def _parse_builder_map(builder_map):
+def _parse_array_map(array_map):
     # Handle nested builders.
     to_remove = []
     # Traverse the builder map right to left.
-    for key, value in reversed(builder_map.items()):
+    for key, value in reversed(array_map.items()):
         field = key.decode("utf-8")
-        if isinstance(value, DocumentBuilder):
-            arr = value.finish()
-            full_names = [f"{field}.{name.decode('utf-8')}" for name in arr]
-            arrs = [builder_map[c.encode("utf-8")] for c in full_names]
-            builder_map[field] = StructArray.from_arrays(arrs, names=arr)
+        if value.type_marker == _BsonArrowTypes.document:
+            full_names = [f"{field}.{name.decode('utf-8')}" for name in value]
+            arrs = [array_map[c.encode("utf-8")] for c in full_names]
+            array_map[field] = StructArray.from_arrays(arrs, names=value)
             to_remove.extend(full_names)
-        elif isinstance(value, ListBuilder):
-            arr = value.finish()
+        elif value.type_marker == _BsonArrowTypes.array:
             child_name = field + "[]"
             to_remove.append(child_name)
-            child = builder_map[child_name.encode("utf-8")]
-            builder_map[key] = ListArray.from_arrays(arr, child)
-        else:
-            builder_map[key] = value.finish()
+            child = array_map[child_name.encode("utf-8")]
+            array_map[key] = ListArray.from_arrays(value, child)
 
     for field in to_remove:
         key = field.encode("utf-8")
-        if key in builder_map:
-            del builder_map[key]
+        if key in array_map:
+            del array_map[key]
+
+    return array_map
 
 
-def _parse_types(str_type_map, builder_map, tzinfo):
+def _parse_types(str_type_map, schema_map, tzinfo):
     for fname, (ftype, arrow_type) in str_type_map.items():
-        builder_cls = _TYPE_TO_BUILDER_CLS[ftype]
         encoded_fname = fname.encode("utf-8")
+        schema_map[encoded_fname] = ftype, arrow_type
 
         # special-case nested builders
-        if builder_cls == DocumentBuilder:
+        if ftype == _BsonArrowTypes.document:
             # construct a sub type map here
             sub_type_map = {}
             for i in range(arrow_type.num_fields):
@@ -132,8 +93,8 @@ def _parse_types(str_type_map, builder_map, tzinfo):
                 sub_name = f"{fname}.{field.name}"
                 sub_type_map[sub_name] = field.type
             sub_type_map = _get_internal_typemap(sub_type_map)
-            _parse_types(sub_type_map, builder_map, tzinfo)
-        elif builder_cls == ListBuilder:
+            _parse_types(sub_type_map, schema_map, tzinfo)
+        elif ftype == _BsonArrowTypes.array:
             if is_struct(arrow_type.value_type):
                 # construct a sub type map here
                 sub_type_map = {}
@@ -142,15 +103,4 @@ def _parse_types(str_type_map, builder_map, tzinfo):
                     sub_name = f"{fname}[].{field.name}"
                     sub_type_map[sub_name] = field.type
                 sub_type_map = _get_internal_typemap(sub_type_map)
-                _parse_types(sub_type_map, sub_type_map, tzinfo)
-
-        # special-case initializing builders for parameterized types
-        if builder_cls == DatetimeBuilder:
-            if tzinfo is not None and arrow_type.tz is None:
-                arrow_type = timestamp(arrow_type.unit, tz=tzinfo)  # noqa: PLW2901
-            builder_map[encoded_fname] = DatetimeBuilder(dtype=arrow_type)
-        elif builder_cls == BinaryBuilder:
-            subtype = arrow_type.subtype
-            builder_map[fname] = BinaryBuilder(subtype)
-        else:
-            builder_map[fname] = builder_cls()
+                _parse_types(sub_type_map, schema_map, tzinfo)

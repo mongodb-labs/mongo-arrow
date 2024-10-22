@@ -183,14 +183,44 @@ class TestListBuilder(TestCase):
 class TestBuilderManager(TestCase):
     def test_simple(self):
         manager = BuilderManager({}, False, None)
-        data = b"".join(encode(d) for d in [dict(a=1), dict(a=2), dict(a=None)])
+        data = b"".join(encode(d) for d in [dict(a=1), dict(a=2), dict(a=None), dict(a=4)])
         manager.process_bson_stream(data, len(data))
-        builder_map = manager.finish()
-        assert list(builder_map) == [b"a"]
-        assert next(iter(builder_map.values())).finish().to_pylist() == [1, 2, None]
+        array_map = manager.finish()
+        assert list(array_map) == ["a"]
+        assert next(iter(array_map.values())).to_pylist() == [1, 2, None, 4]
 
-    def test_nested(self):
-        raise NotImplementedError()
+    def test_nested_object(self):
+        inner_values = []
+        for i in range(3):
+            inner_values.append(dict(a=i, b="1", c=None, d=[1.4], e=ObjectId()))
+        values = []
+        for i in range(3):
+            values.append(dict(c=inner_values[i], e=ObjectId(), f=None))
+        values.append(dict(c=None))
+        values.append(dict(c=inner_values[0], e=ObjectId(), f=None))
+        manager = BuilderManager({}, False, None)
+        data = b"".join(encode(v) for v in values)
+        manager.process_bson_stream(data, len(data))
+        array_map = manager.finish()
+        assert sorted(array_map.keys()) == [
+            "c",
+            "c.a",
+            "c.b",
+            "c.c",
+            "c.d",
+            "c.d[]",
+            "c.e",
+            "e",
+            "f",
+        ]
+        assert array_map["c"] == set(("a", "b", "c", "d", "e"))
+        assert array_map["c.c"].to_pylist() == [None, None, None, None, None]
+        assert array_map["f"].to_pylist() == [None, None, None, None, None]
+        assert array_map["c.d"].to_pylist() == [0, 1, 2, 3, 3, 4]
+        assert array_map["c.d[]"].to_pylist() == [1.4, 1.4, 1.4, 1.4]
+        assert array_map["c.b"].to_pylist() == ["1", "1", "1", None, "1"]
+        obj = array_map["c.e"].to_pylist()[0]
+        assert isinstance(obj, ObjectId)
 
 
 class TestBinaryBuilder(TestCase):
