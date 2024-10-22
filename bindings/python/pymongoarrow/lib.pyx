@@ -17,31 +17,24 @@
 # cython: language_level=3
 
 # Stdlib imports
-import copy
-import datetime
-import enum
 import sys
 
 # Python imports
 import bson
 import numpy as np
-from pyarrow import timestamp, struct, field
-from pyarrow.lib import (
-    tobytes, StructType, int32, int64, float64, string, bool_, list_
-)
+from pyarrow import timestamp
 
-from pymongoarrow.errors import InvalidBSON, PyMongoArrowError
-from pymongoarrow.context import PyMongoArrowContext
-from pymongoarrow.types import _BsonArrowTypes, _atypes, ObjectIdType, Decimal128Type as Decimal128Type_, BinaryType, CodeType
+from pymongoarrow.errors import InvalidBSON
+from pymongoarrow.types import ObjectIdType, Decimal128Type as Decimal128Type_, BinaryType, CodeType
 
 # Cython imports
-from cpython cimport object, PyBytes_Size
+from cpython cimport object
 from cython.operator cimport dereference, preincrement
 from libcpp.map cimport map
 from libcpp cimport bool as cbool
 from libc.math cimport isnan
 from libcpp.string cimport string as cstring
-from libc.string cimport strlen, memcpy
+from libc.string cimport memcpy
 from pyarrow.lib cimport *
 from pymongoarrow.libarrow cimport *
 from pymongoarrow.libbson cimport *
@@ -65,19 +58,16 @@ cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? N
 
 cdef class BuilderManager:
     cdef:
-        map[cstring, void*] builder_map
+        public dict builder_map
         uint32_t count
         bint has_schema
         object tzinfo
 
-    def __cinit__(self, object builder_map, bint has_schema, object tzinfo):
+    def __cinit__(self, dict builder_map, bint has_schema, object tzinfo):
         self.has_schema = has_schema
         self.tzinfo = tzinfo
         self.count = 0
-
-        # Build up a map of the builders.
-        for key, value in builder_map.items():
-            self.builder_map[key] = <void *>value
+        self.builder_map = builder_map
 
     cdef _ArrayBuilderBase get_builder(self, cstring key, bson_type_t value_t, bson_iter_t * doc_iter):
         cdef _ArrayBuilderBase builder = None
@@ -121,123 +111,141 @@ cdef class BuilderManager:
         elif value_t == BSON_TYPE_CODE:
             builder = CodeBuilder()
 
-        # If we still haven't found a builder, leave it as None until we find it.
-        self.builder_map[key] = <void *>builder
         return builder
 
-    cdef uint8_t parse_document(self, const uint8_t * docstream, size_t length, cstring base_key, uint8_t parent_type) except *:
-        cdef bson_reader_t* stream_reader = bson_reader_new_from_data(docstream, length)
+    cdef uint8_t parse_document(self, bson_iter_t * doc_iter, cstring base_key, uint8_t parent_type) except *:
         cdef bson_type_t value_t
-        cdef const bson_t * doc = NULL
-        cdef bson_iter_t doc_iter
         cdef cstring key
         cdef cstring full_key
         cdef uint32_t i
         cdef uint32_t builder_len
         cdef uint32_t diff
+        cdef uint32_t count = self.count
         cdef _ArrayBuilderBase builder = None
-        cdef map[cstring, void*].iterator it
 
-        try:
-            doc = bson_reader_read_safe(stream_reader)
-            if doc == NULL:
-                return 1
+        while bson_iter_next(doc_iter):
+            # Get the key and and value.
+            key = bson_iter_key(doc_iter)
+            value_t = bson_iter_type(doc_iter)
+            print('handling', key, value_t)
 
-            if not bson_iter_init(&doc_iter, doc):
-                raise InvalidBSON("Could not read BSON document")
+            # Get the appropriate full key.
+            if parent_type == BSON_TYPE_ARRAY:
+                full_key = base_key
+                full_key.append(b"[]")
 
-            while bson_iter_next(&doc_iter):
-                key = bson_iter_key(&doc_iter)
+            elif parent_type == BSON_TYPE_DOCUMENT:
+                full_key = base_key
+                full_key.append(b".")
+                full_key.append(key)
+                (<DocumentBuilder>self.builder_map[base_key]).add_field(key)
 
-                # Get the appropriate full key.
-                if parent_type == BSON_TYPE_ARRAY:
-                    full_key = base_key
-                    full_key.append(b"[]")
+            else:
+                full_key = key
 
-                elif parent_type == BSON_TYPE_DOCUMENT:
-                    full_key = base_key
-                    full_key.append(b".")
-                    full_key.append(key)
-                    (<DocumentBuilder>self.builder_map[base_key]).add_field_raw(key)
+            # Get the builder.
+            builder = <_ArrayBuilderBase>self.builder_map.get(full_key, None)
 
-                else:
-                    full_key = key
+            if builder is None and self.has_schema:
+                continue
 
-                # Get the builder.
-                value_t = bson_iter_type(&doc_iter)
+            # Mark a null key as missing until we find it.
+            if builder is None and value_t == BSON_TYPE_NULL:
+                self.builder_map[full_key] = None
+                continue
 
-                it = self.builder_map.find(full_key)
-                if it != self.builder_map.end():
-                    builder = <_ArrayBuilderBase>self.builder_map[key]
+            if builder is None:
+                builder = self.get_builder(full_key, value_t, doc_iter)
+                self.builder_map[full_key] = builder
 
-                if builder is None and self.has_schema:
-                    continue
+            if builder is None:
+                continue
 
-                # Mark a null key as missing until we find it.
-                if builder is None and value_t == BSON_TYPE_NULL:
-                    self.builder_map[key] = <void *>NULL
-                    continue
+            # Append nulls to catch up.
+            # For lists, the nulls are stored in the parent.
+            if parent_type != BSON_TYPE_ARRAY:
+                if count > builder.length():
+                    builder.append_nulls(count - builder.length())
 
-                if builder is None:
-                    builder = self.get_builder(full_key, value_t, &doc_iter)
+            # Append the next value.
+            builder.append_raw(doc_iter, value_t)
+            if parent_type == BSON_TYPE_ARRAY:
+                (<ListBuilder>self.builder_map[base_key]).append_count()
 
-                if builder is None:
-                    continue
+            # Update our count.
+            if builder.length() > self.count:
+                self.count = builder.length()
 
-                # Append nulls to catch up.
-                builder_len = builder.length()
-                diff = self.count - builder_len
-                if diff > 0:
-                    for i in range(diff):
-                        builder.append_null()
-                        if parent_type == BSON_TYPE_ARRAY:
-                            (<ListBuilder>self.builder_map[base_key]).append_count_raw()
-                    builder_len = self.count
-
-                # Append the next value.
-                builder.append_raw(&doc_iter, value_t)
-                if parent_type == BSON_TYPE_ARRAY:
-                    (<ListBuilder>self.builder_map[base_key])
-
-                # Update our count.
-                if builder_len + 1 > self.count:
-                    self.count = builder_len + 1
-
-            return 0
-        finally:
-            bson_reader_destroy(stream_reader)
+    cpdef parse_types(self, dict schema_map):
+        """Initialize builder_map from a type_map created by the context."""
+        dict builder_map = self.builder_map
+        for fname, (arrow_type, builder_cls) in schema_map.items():
+            # special-case initializing builders for parameterized types
+            if builder_cls == DatetimeBuilder:
+                if self.tzinfo is not None and arrow_type.tz is None:
+                    arrow_type = timestamp(arrow_type.unit, tz=self.tzinfo)
+                builder_map[fname] = DatetimeBuilder(dtype=arrow_type)
+            elif builder_cls == DocumentBuilder:
+                builder_map[fname] = DocumentBuilder(self, key)
+            elif builder_cls == ListBuilder:
+                builder_map[fname] = ListBuilder(self, key)
+            elif builder_cls == BinaryBuilder:
+                subtype = arrow_type.subtype
+                builder_map[fname] = BinaryBuilder(subtype)
+            else:
+                builder_map[fname] = builder_cls()
 
     cpdef void process_bson_stream(self, const uint8_t* bson_stream, size_t length):
         """Process a bson byte stream."""
-        cdef uint8_t ret
-        while True:
-            ret = self.parse_document(bson_stream, length, b"", 0)
-            if ret == 1:
-                break
+        cdef bson_reader_t* stream_reader = bson_reader_new_from_data(bson_stream, length)
+        cdef const bson_t * doc = NULL
+        cdef bson_iter_t doc_iter
+        try:
+            while True:
+                doc = bson_reader_read_safe(stream_reader)
+                if doc == NULL:
+                    break
+                if not bson_iter_init(&doc_iter, doc):
+                    raise InvalidBSON("Could not read BSON document")
+                self.parse_document(&doc_iter, b"", 0)
+        finally:
+                bson_reader_destroy(stream_reader)
 
     cpdef finish(self):
         """Finish building the arrays."""
-        cdef map[cstring, void*].iterator it
-        cdef _ArrayBuilderBase builder
-        builder_map = dict()
-
-        it = self.builder_map.begin()
-        while it != self.builder_map.end():
-            key = dereference(it).first
-            if dereference(it).second == NULL:
+        builder_map = self.builder_map
+        # Insert null fields.
+        for key in list(builder_map):
+            if builder_map[key] is None:
                 builder_map[key] = NullBuilder(self.count)
-            else:
-                builder = <_ArrayBuilderBase>self.builder_map[key]
-                builder_map[key] = builder
-            preincrement(it)
+
+        # Pad fields as needed.
+        for key, value inbuilder_map.items():
+            field = key.decode("utf-8")
+
+            # If it isn't a list item, append nulls as needed.
+            # For lists, the nulls are stored in the parent.
+            if field.endswith('[]'):
+                continue
+
+            if value.length() < self.count:
+                value.append_nulls(self.count - value.length())
 
         return builder_map
+
 
 cdef class _ArrayBuilderBase:
     cdef:
         uint8_t type_marker
 
-    cpdef void append(self, object value):
+    def append_values(self, values):
+        for value in values:
+            if value is None or value is np.nan:
+                self.append_null()
+            else:
+                self.append(value)
+
+    def append(self, value):
         """Interface to append a python value to the builder.
         """
         cdef bson_reader_t* stream_reader = NULL
@@ -245,15 +253,16 @@ cdef class _ArrayBuilderBase:
         cdef bson_iter_t doc_iter
 
         data = bson.encode(dict(data=value))
-        stream_reader = bson_reader_new_from_data(data[:], len(data))
+        stream_reader = bson_reader_new_from_data(data, len(data))
         doc = bson_reader_read_safe(stream_reader)
         if doc == NULL:
             raise ValueError("Could not append", value)
         if not bson_iter_init(&doc_iter, doc):
             raise InvalidBSON("Could not read BSON document")
-        bson_iter_key(&doc_iter)
-        value_t = bson_iter_type(&doc_iter)
-        self.append_raw(&doc_iter, value_t)
+        while bson_iter_next(&doc_iter):
+            bson_iter_key(&doc_iter)
+            value_t = bson_iter_type(&doc_iter)
+            self.append_raw(&doc_iter, value_t)
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
         pass
@@ -267,7 +276,11 @@ cdef class _ArrayBuilderBase:
     cpdef void append_null(self):
         self.get_builder().get().AppendNull()
 
-    cdef uint8_t length(self):
+    cpdef void append_nulls(self, uint32_t count):
+        for _ in range(count):
+            self.append_null()
+
+    cpdef uint32_t length(self):
         return self.get_builder().get().length()
 
     def finish(self):
@@ -319,7 +332,7 @@ cdef class CodeBuilder(StringBuilder):
         return <shared_ptr[CArrayBuilder]>self.builder
 
     def finish(self):
-        return super().finish().cast(CodeType)
+        return super().finish().cast(CodeType())
 
 
 cdef class ObjectIdBuilder(_ArrayBuilderBase):
@@ -439,6 +452,10 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
         self.builder.reset(new CTimestampBuilder(
             pyarrow_unwrap_data_type(self.dtype), pool))
         self.type_marker = BSON_TYPE_DATE_TIME
+
+    @property
+    def unit(self):
+        return self.dtype
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
         if value_t == BSON_TYPE_DATE_TIME:
@@ -613,7 +630,7 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
 cdef class DocumentBuilder(_ArrayBuilderBase):
     """The document builder stores a map of field names that can be retrieved as a set."""
     cdef:
-        map[cstring, int32_t] field_map
+        dict field_map
         BuilderManager manager
         cstring key
         int32_t count
@@ -624,31 +641,25 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         self.key = key
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
-        cdef const uint8_t *val_buf = NULL
-        cdef uint32_t val_buf_len = 0
-        self.count += 1
+        cdef bson_iter_t child_iter
         if value_t == BSON_TYPE_DOCUMENT:
-            bson_iter_document(doc_iter, &val_buf_len, &val_buf)
-            if val_buf_len <= 0:
-                raise ValueError("Subdocument is invalid")
-            self.manager.parse_document(val_buf, val_buf_len, self.key, BSON_TYPE_DOCUMENT)
+            bson_iter_recurse(doc_iter, &child_iter)
+            self.manager.parse_document(&child_iter, self.key, BSON_TYPE_DOCUMENT)
+            self.count += 1
+        else:
+            self.append_null()
+
+    cpdef uint32_t length(self):
+        return self.get_builder().get().length()
 
     cpdef void append_null(self):
         self.count += 1
 
-    cdef void add_field_raw(self, cstring field):
-        self.field_map[field] = 1
-
-    cpdef void add_field(self, field):
-        self.field_map[field] = 1
+    cpdef void add_field(self, cstring field_name):
+        self.field_map[field_name] = 1
 
     def finish(self):
-        it = self.field_map.begin()
-        names = set()
-        while it != self.field_map.end():
-            names.add(dereference(it).first)
-            preincrement(it)
-        return names
+        return set(self.field_map)
 
 
 cdef class ListBuilder(_ArrayBuilderBase):
@@ -668,17 +679,11 @@ cdef class ListBuilder(_ArrayBuilderBase):
         self.key = key
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
-        cdef const uint8_t *val_buf = NULL
-        cdef uint32_t val_buf_len = 0
+        cdef bson_iter_t child_iter
         self.builder.get().Append(self.count)
         if value_t == BSON_TYPE_ARRAY:
-            bson_iter_array(doc_iter, &val_buf_len, &val_buf)
-            if val_buf_len <= 0:
-                raise ValueError("Subarray is invalid")
-            self.manager.parse_document(val_buf, val_buf_len, self.key, BSON_TYPE_ARRAY)
-
-    cdef void append_count_raw(self):
-        self.count +=1
+            bson_iter_recurse(doc_iter, &child_iter)
+            self.manager.parse_document(&child_iter, self.key, BSON_TYPE_ARRAY)
 
     cpdef void append_count(self):
         self.count += 1
@@ -688,3 +693,7 @@ cdef class ListBuilder(_ArrayBuilderBase):
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
+
+    def finish(self):
+        self.builder.get().Append(self.count)
+        return super().finish()

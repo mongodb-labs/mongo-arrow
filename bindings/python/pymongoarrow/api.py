@@ -88,7 +88,7 @@ def find_arrow_all(collection, query, *, schema=None, **kwargs):
     :Returns:
       An instance of class:`pyarrow.Table`.
     """
-    context = PyMongoArrowContext.from_schema(schema, codec_options=collection.codec_options)
+    context = PyMongoArrowContext(schema, codec_options=collection.codec_options)
 
     for opt in ("cursor_type",):
         if kwargs.pop(opt, None):
@@ -126,7 +126,7 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, **kwargs):
     :Returns:
       An instance of class:`pyarrow.Table`.
     """
-    context = PyMongoArrowContext.from_schema(schema, codec_options=collection.codec_options)
+    context = PyMongoArrowContext(schema, codec_options=collection.codec_options)
 
     if pipeline and ("$out" in pipeline[-1] or "$merge" in pipeline[-1]):
         msg = (

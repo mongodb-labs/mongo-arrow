@@ -17,7 +17,6 @@ import pyarrow as pa
 from bson import Decimal128, Int64, InvalidBSON, encode
 
 from pymongoarrow.context import PyMongoArrowContext
-from pymongoarrow.lib import process_bson_stream
 from pymongoarrow.schema import Schema
 from pymongoarrow.types import ObjectId, ObjectIdType, int64, string
 
