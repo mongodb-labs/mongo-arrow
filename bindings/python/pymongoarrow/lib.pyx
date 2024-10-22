@@ -29,8 +29,6 @@ from pymongoarrow.types import ObjectIdType, Decimal128Type as Decimal128Type_, 
 
 # Cython imports
 from cpython cimport object
-from cython.operator cimport dereference, preincrement
-from libcpp.map cimport map
 from libcpp cimport bool as cbool
 from libc.math cimport isnan
 from libcpp.string cimport string as cstring
@@ -58,7 +56,7 @@ cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? N
 
 cdef class BuilderManager:
     cdef:
-        public dict builder_map
+        dict builder_map
         uint32_t count
         bint has_schema
         object tzinfo
@@ -74,6 +72,14 @@ cdef class BuilderManager:
         cdef bson_subtype_t subtype
         cdef const uint8_t *val_buf = NULL
         cdef uint32_t val_buf_len = 0
+
+        # Mark a null key as missing until we find it.
+        if value_t == BSON_TYPE_NULL:
+            self.builder_map[full_key] = None
+            return
+
+        if builder is not None:
+            return builder
 
         # Handle the builders.
         if value_t == BSON_TYPE_DATE_TIME:
@@ -111,15 +117,14 @@ cdef class BuilderManager:
         elif value_t == BSON_TYPE_CODE:
             builder = CodeBuilder()
 
+        self.builder_map[full_key] = builder
         return builder
 
     cdef uint8_t parse_document(self, bson_iter_t * doc_iter, cstring base_key, uint8_t parent_type) except *:
         cdef bson_type_t value_t
         cdef cstring key
         cdef cstring full_key
-        cdef uint32_t i
-        cdef uint32_t builder_len
-        cdef uint32_t diff
+        cdef bson_iter_t child_iter
         cdef uint32_t count = self.count
         cdef _ArrayBuilderBase builder = None
 
@@ -145,19 +150,8 @@ cdef class BuilderManager:
 
             # Get the builder.
             builder = <_ArrayBuilderBase>self.builder_map.get(full_key, None)
-
-            if builder is None and self.has_schema:
-                continue
-
-            # Mark a null key as missing until we find it.
-            if builder is None and value_t == BSON_TYPE_NULL:
-                self.builder_map[full_key] = None
-                continue
-
-            if builder is None:
+            if builder is None and not self.has_schema:
                 builder = self.get_builder(full_key, value_t, doc_iter)
-                self.builder_map[full_key] = builder
-
             if builder is None:
                 continue
 
@@ -169,31 +163,24 @@ cdef class BuilderManager:
 
             # Append the next value.
             builder.append_raw(doc_iter, value_t)
+
+            # Recurse into documents.
+            if value_t == BSON_TYPE_DOCUMENT:
+                bson_iter_recurse(doc_iter, &child_iter)
+                self.parse_document(&child_iter, full_key, BSON_TYPE_DOCUMENT)
+
+            # Recurse into arrays.
+            if value_t == BSON_TYPE_ARRAY:
+                bson_iter_recurse(doc_iter, &child_iter)
+                self.parse_document(&child_iter, full_key, BSON_TYPE_ARRAY)
+
+            # If we're a list element, increment the offset counter.
             if parent_type == BSON_TYPE_ARRAY:
                 (<ListBuilder>self.builder_map[base_key]).append_count()
 
             # Update our count.
             if builder.length() > self.count:
                 self.count = builder.length()
-
-    cpdef parse_types(self, dict schema_map):
-        """Initialize builder_map from a type_map created by the context."""
-        dict builder_map = self.builder_map
-        for fname, (arrow_type, builder_cls) in schema_map.items():
-            # special-case initializing builders for parameterized types
-            if builder_cls == DatetimeBuilder:
-                if self.tzinfo is not None and arrow_type.tz is None:
-                    arrow_type = timestamp(arrow_type.unit, tz=self.tzinfo)
-                builder_map[fname] = DatetimeBuilder(dtype=arrow_type)
-            elif builder_cls == DocumentBuilder:
-                builder_map[fname] = DocumentBuilder(self, key)
-            elif builder_cls == ListBuilder:
-                builder_map[fname] = ListBuilder(self, key)
-            elif builder_cls == BinaryBuilder:
-                subtype = arrow_type.subtype
-                builder_map[fname] = BinaryBuilder(subtype)
-            else:
-                builder_map[fname] = builder_cls()
 
     cpdef void process_bson_stream(self, const uint8_t* bson_stream, size_t length):
         """Process a bson byte stream."""
@@ -220,7 +207,7 @@ cdef class BuilderManager:
                 builder_map[key] = NullBuilder(self.count)
 
         # Pad fields as needed.
-        for key, value inbuilder_map.items():
+        for key, value in builder_map.items():
             field = key.decode("utf-8")
 
             # If it isn't a list item, append nulls as needed.
@@ -631,26 +618,17 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     """The document builder stores a map of field names that can be retrieved as a set."""
     cdef:
         dict field_map
-        BuilderManager manager
-        cstring key
         int32_t count
 
-    def __cinit__(self, BuilderManager manager, cstring key):
+    def __cinit__(self,):
         self.type_marker = BSON_TYPE_DOCUMENT
-        self.manager = manager
-        self.key = key
+        self.field_map = dict()
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
-        cdef bson_iter_t child_iter
-        if value_t == BSON_TYPE_DOCUMENT:
-            bson_iter_recurse(doc_iter, &child_iter)
-            self.manager.parse_document(&child_iter, self.key, BSON_TYPE_DOCUMENT)
-            self.count += 1
-        else:
-            self.append_null()
+        self.count += 1
 
     cpdef uint32_t length(self):
-        return self.get_builder().get().length()
+        return self.count
 
     cpdef void append_null(self):
         self.count += 1
@@ -665,25 +643,17 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
 cdef class ListBuilder(_ArrayBuilderBase):
     """The list builder stores an int32 list of offsets and a counter with the current value."""
     cdef:
-        BuilderManager manager
         int32_t count
-        cstring key
         shared_ptr[CInt32Builder] builder
 
-    def __cinit__(self, BuilderManager manager, cstring key, MemoryPool memory_pool=None):
+    def __cinit__(self, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CInt32Builder(pool))
         self.count = 0
         self.type_marker = BSON_TYPE_ARRAY
-        self.manager = manager
-        self.key = key
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
-        cdef bson_iter_t child_iter
         self.builder.get().Append(self.count)
-        if value_t == BSON_TYPE_ARRAY:
-            bson_iter_recurse(doc_iter, &child_iter)
-            self.manager.parse_document(&child_iter, self.key, BSON_TYPE_ARRAY)
 
     cpdef void append_count(self):
         self.count += 1

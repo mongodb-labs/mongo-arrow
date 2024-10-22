@@ -151,33 +151,33 @@ class TestStringBuilder(TestCase):
 
 class TestDocumentBuilder(TestCase):
     def test_simple(self):
-        manager = BuilderManager({}, False, None)
-        builder = DocumentBuilder(manager, b"foo")
-        manager.builder_map[b"foo"] = builder
+        builder = DocumentBuilder()
         builder.append(dict(a=1, b=2, c=3))
+        builder.add_field(b"a")
+        builder.add_field(b"b")
+        builder.add_field(b"c")
         builder.append_null()
+        builder.append(dict(a=1, b=2))
+        builder.add_field(b"a")
+        builder.add_field(b"b")
         names = builder.finish()
         assert names == set((b"a", b"b", b"c"))
-        child = manager.builder_map[b"foo.a"]
-        assert child.finish().to_pylist() == [1, None]
-        child = manager.builder_map[b"foo.b"]
-        assert child.finish().to_pylist() == [2, None]
-        child = manager.builder_map[b"foo.c"]
-        assert child.finish().to_pylist() == [3, None]
 
 
 class TestListBuilder(TestCase):
     def test_simple(self):
-        manager = BuilderManager({}, False, None)
-        builder = ListBuilder(manager, b"foo")
-        manager.builder_map[b"foo"] = builder
+        builder = ListBuilder()
         builder.append([1, 2])
-        # TODO: test appending nulls in the middle.
+        builder.append_count()
+        builder.append_count()
+        builder.append_null()
         builder.append([3, 4, 5])
-        # builder.append_null()
-        manager.finish()
-        arr = manager.builder_map[b"foo"]
-        assert arr.to_pylist() == None
+        builder.append_count()
+        builder.append_count()
+        builder.append_count()
+        builder.append_null()
+        arr = builder.finish()
+        assert arr.to_pylist() == [0, 2, 2, 5, 5]
 
 
 class TestBuilderManager(TestCase):
@@ -187,7 +187,7 @@ class TestBuilderManager(TestCase):
         manager.process_bson_stream(data, len(data))
         builder_map = manager.finish()
         assert list(builder_map) == [b"a"]
-        assert list(builder_map.values())[0].to_pylist() == [1, 2, None]
+        assert next(iter(builder_map.values())).finish().to_pylist() == [1, 2, None]
 
     def test_nested(self):
         raise NotImplementedError()

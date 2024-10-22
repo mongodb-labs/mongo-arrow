@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from pyarrow import ListArray, StructArray, Table
+from pyarrow import ListArray, StructArray, Table, timestamp
 from pyarrow.types import is_struct
 
 from pymongoarrow.types import _BsonArrowTypes, _get_internal_typemap
@@ -73,55 +73,55 @@ class PyMongoArrowContext:
             self.tzinfo = codec_options.tzinfo
         else:
             self.tzinfo = None
-        self.manager = BuilderManager(self.schema is not None, self.tzinfo)
+        builder_map = {}
         if self.schema is not None:
-            schema_map = {}
             str_type_map = _get_internal_typemap(schema.typemap)
-            _parse_types(str_type_map, schema_map, self.tzinfo)
-            self.manager.parse_types(schema_map)
+            _parse_types(str_type_map, builder_map, self.tzinfo)
+
+        self.manager = BuilderManager(builder_map, self.schema is not None, self.tzinfo)
 
     def process_bson_stream(self, stream):
         self.manager.process_bson_stream(stream, len(stream))
 
     def finish(self):
-        builder_map = self.manager.finish().copy()
-
-        # Handle nested builders.
-        to_remove = []
-        # Traverse the builder map right to left.
-        for key, value in reversed(builder_map.items()):
-            field = key.decode("utf-8")
-            if isinstance(value, DocumentBuilder):
-                arr = value.finish()
-                full_names = [f"{field}.{name.decode('utf-8')}" for name in arr]
-                arrs = [builder_map[c.encode("utf-8")] for c in full_names]
-                builder_map[field] = StructArray.from_arrays(arrs, names=arr)
-                to_remove.extend(full_names)
-            elif isinstance(value, ListBuilder):
-                arr = value.finish()
-                child_name = field + "[]"
-                to_remove.append(child_name)
-                child = builder_map[child_name.encode("utf-8")]
-                builder_map[key] = ListArray.from_arrays(arr, child)
-            else:
-                builder_map[key] = value.finish()
-
-        for field in to_remove:
-            key = field.encode("utf-8")
-            if key in builder_map:
-                del builder_map[key]
-
+        builder_map = _parse_builder_map(self.manager.finish())
         arrays = list(builder_map.values())
         if self.schema is not None:
             return Table.from_arrays(arrays=arrays, schema=self.schema.to_arrow())
         return Table.from_arrays(arrays=arrays, names=list(builder_map.keys()))
 
 
-def _parse_types(str_type_map, schema_map, tzinfo):
+def _parse_builder_map(builder_map):
+    # Handle nested builders.
+    to_remove = []
+    # Traverse the builder map right to left.
+    for key, value in reversed(builder_map.items()):
+        field = key.decode("utf-8")
+        if isinstance(value, DocumentBuilder):
+            arr = value.finish()
+            full_names = [f"{field}.{name.decode('utf-8')}" for name in arr]
+            arrs = [builder_map[c.encode("utf-8")] for c in full_names]
+            builder_map[field] = StructArray.from_arrays(arrs, names=arr)
+            to_remove.extend(full_names)
+        elif isinstance(value, ListBuilder):
+            arr = value.finish()
+            child_name = field + "[]"
+            to_remove.append(child_name)
+            child = builder_map[child_name.encode("utf-8")]
+            builder_map[key] = ListArray.from_arrays(arr, child)
+        else:
+            builder_map[key] = value.finish()
+
+    for field in to_remove:
+        key = field.encode("utf-8")
+        if key in builder_map:
+            del builder_map[key]
+
+
+def _parse_types(str_type_map, builder_map, tzinfo):
     for fname, (ftype, arrow_type) in str_type_map.items():
         builder_cls = _TYPE_TO_BUILDER_CLS[ftype]
         encoded_fname = fname.encode("utf-8")
-        schema_map[encoded_fname] = (arrow_type, builder_cls)
 
         # special-case nested builders
         if builder_cls == DocumentBuilder:
@@ -132,6 +132,7 @@ def _parse_types(str_type_map, schema_map, tzinfo):
                 sub_name = f"{fname}.{field.name}"
                 sub_type_map[sub_name] = field.type
             sub_type_map = _get_internal_typemap(sub_type_map)
+            _parse_types(sub_type_map, builder_map, tzinfo)
         elif builder_cls == ListBuilder:
             if is_struct(arrow_type.value_type):
                 # construct a sub type map here
@@ -141,4 +142,15 @@ def _parse_types(str_type_map, schema_map, tzinfo):
                     sub_name = f"{fname}[].{field.name}"
                     sub_type_map[sub_name] = field.type
                 sub_type_map = _get_internal_typemap(sub_type_map)
-                _parse_types(sub_type_map, schema_map, tzinfo)
+                _parse_types(sub_type_map, sub_type_map, tzinfo)
+
+        # special-case initializing builders for parameterized types
+        if builder_cls == DatetimeBuilder:
+            if tzinfo is not None and arrow_type.tz is None:
+                arrow_type = timestamp(arrow_type.unit, tz=tzinfo)  # noqa: PLW2901
+            builder_map[encoded_fname] = DatetimeBuilder(dtype=arrow_type)
+        elif builder_cls == BinaryBuilder:
+            subtype = arrow_type.subtype
+            builder_map[fname] = BinaryBuilder(subtype)
+        else:
+            builder_map[fname] = builder_cls()
