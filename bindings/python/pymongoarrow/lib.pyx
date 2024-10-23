@@ -59,7 +59,7 @@ cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? N
 cdef class BuilderManager:
     cdef:
         dict builder_map
-        uint32_t count
+        uint64_t count
         bint has_schema
         object tzinfo
 
@@ -86,7 +86,7 @@ cdef class BuilderManager:
         cdef _ArrayBuilderBase builder = None
         cdef bson_subtype_t subtype
         cdef const uint8_t *val_buf = NULL
-        cdef uint32_t val_buf_len = 0
+        cdef uint64_t val_buf_len = 0
 
         # Mark a null key as missing until we find it.
         if value_t == BSON_TYPE_NULL:
@@ -137,12 +137,12 @@ cdef class BuilderManager:
         self.builder_map[key] = builder
         return builder
 
-    cdef uint8_t parse_document(self, bson_iter_t * doc_iter, cstring base_key, uint8_t parent_type) except *:
+    cdef void parse_document(self, bson_iter_t * doc_iter, cstring base_key, uint8_t parent_type) except *:
         cdef bson_type_t value_t
         cdef cstring key
         cdef cstring full_key
         cdef bson_iter_t child_iter
-        cdef uint32_t count = self.count
+        cdef uint64_t count = self.count
         cdef _ArrayBuilderBase builder = None
 
         while bson_iter_next(doc_iter):
@@ -285,11 +285,11 @@ cdef class _ArrayBuilderBase:
     cpdef void append_null(self):
         self.get_builder().get().AppendNull()
 
-    cpdef void append_nulls(self, uint32_t count):
+    cpdef void append_nulls(self, uint64_t count):
         for _ in range(count):
             self.append_null()
 
-    cpdef uint32_t length(self):
+    cpdef uint64_t length(self):
         return self.get_builder().get().length()
 
     def finish(self):
@@ -311,7 +311,7 @@ cdef class StringBuilder(_ArrayBuilderBase):
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
         cdef const char* value
-        cdef uint32_t str_len
+        cdef uint64_t str_len
         if value_t == BSON_TYPE_UTF8:
             value = bson_iter_utf8(doc_iter, &str_len)
             self.builder.get().Append(value, str_len)
@@ -330,7 +330,7 @@ cdef class CodeBuilder(StringBuilder):
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
         cdef const char * bson_str
-        cdef uint32_t str_len
+        cdef uint64_t str_len
         if value_t == BSON_TYPE_CODE:
             bson_str = bson_iter_code(doc_iter, &str_len)
             self.builder.get().Append(bson_str, str_len)
@@ -531,9 +531,9 @@ cdef class Date32Builder(_ArrayBuilderBase):
 cdef class NullBuilder(_ArrayBuilderBase):
     cdef shared_ptr[CArrayBuilder] builder
 
-    def __cinit__(self, uint8_t count, MemoryPool memory_pool=None):
+    def __cinit__(self, uint64_t count, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
-        cdef uint8_t i
+        cdef uint64_t i
         self.builder.reset(new CNullBuilder(pool))
         self.type_marker = ARROW_TYPE_NULL
         for i in range(count):
@@ -617,7 +617,7 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
         cdef const char * val_buf
-        cdef uint32_t val_buf_len
+        cdef uint64_t val_buf_len
         cdef bson_subtype_t subtype
 
         if value_t == BSON_TYPE_BINARY:
@@ -649,7 +649,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
         self.count += 1
 
-    cpdef uint32_t length(self):
+    cpdef uint64_t length(self):
         return self.count
 
     cpdef void append_null(self):
