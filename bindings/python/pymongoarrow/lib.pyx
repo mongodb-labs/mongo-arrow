@@ -180,7 +180,9 @@ cdef class BuilderManager:
                     builder.append_nulls(count - builder.length())
 
             # Append the next value.
-            builder.append_raw(doc_iter, value_t)
+            status = builder.append_raw(doc_iter, value_t)
+            if not status.ok():
+                raise ValueError("Could not append raw value")
 
             # Recurse into documents.
             if value_t == BSON_TYPE_DOCUMENT:
@@ -271,9 +273,11 @@ cdef class _ArrayBuilderBase:
         while bson_iter_next(&doc_iter):
             bson_iter_key(&doc_iter)
             value_t = bson_iter_type(&doc_iter)
-            self.append_raw(&doc_iter, value_t)
+            status = self.append_raw(&doc_iter, value_t)
+            if not status.ok():
+                raise ValueError("Could not append raw value of type", value_t)
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         pass
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
@@ -309,14 +313,13 @@ cdef class StringBuilder(_ArrayBuilderBase):
         self.builder.reset(new CStringBuilder(pool))
         self.type_marker = BSON_TYPE_UTF8
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef const char* value
         cdef uint32_t str_len
         if value_t == BSON_TYPE_UTF8:
             value = bson_iter_utf8(doc_iter, &str_len)
-            self.builder.get().Append(value, str_len)
-        else:
-            self.builder.get().AppendNull()
+            return self.builder.get().Append(value, str_len)
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
@@ -328,14 +331,13 @@ cdef class CodeBuilder(StringBuilder):
         self.builder.reset(new CStringBuilder(pool))
         self.type_marker = BSON_TYPE_CODE
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef const char * bson_str
         cdef uint32_t str_len
         if value_t == BSON_TYPE_CODE:
             bson_str = bson_iter_code(doc_iter, &str_len)
-            self.builder.get().Append(bson_str, str_len)
-        else:
-            self.builder.get().AppendNull()
+            return self.builder.get().Append(bson_str, str_len)
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
@@ -353,11 +355,10 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
         self.builder.reset(new CFixedSizeBinaryBuilder(dtype, pool))
         self.type_marker = BSON_TYPE_OID
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         if value_t == BSON_TYPE_OID:
-            self.builder.get().Append(bson_iter_oid(doc_iter).bytes)
-        else:
-            self.builder.get().AppendNull()
+            return self.builder.get().Append(bson_iter_oid(doc_iter).bytes)
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
@@ -374,22 +375,27 @@ cdef class Int32Builder(_ArrayBuilderBase):
         self.builder.reset(new CInt32Builder(pool))
         self.type_marker = BSON_TYPE_INT32
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
         cdef double dvalue
+        cdef int64_t ivalue
 
         if (value_t == BSON_TYPE_INT32 or value_t == BSON_TYPE_BOOL or value_t == BSON_TYPE_INT64):
-            # The builder will surface overflow errors.
-            self.builder.get().Append(<int32_t>bson_iter_as_int64(doc_iter))
-        elif value_t == BSON_TYPE_DOUBLE:
+            # Check for overflow errors.
+            ivalue = bson_iter_as_int64(doc_iter)
+            if ivalue > INT_MAX or ivalue < INT_MIN:
+                raise OverflowError("Overflowed Int32 value")
+            return self.builder.get().Append(ivalue)
+        if value_t == BSON_TYPE_DOUBLE:
             # Treat nan as null.
             dvalue = bson_iter_as_double(doc_iter)
             if isnan(dvalue):
-                self.builder.get().AppendNull()
-            else:
-                # The builder will surface overflow errors.
-                self.builder.get().Append(<int32_t>bson_iter_as_int64(doc_iter))
-        else:
-            self.builder.get().AppendNull()
+               return self.builder.get().AppendNull()
+            # Check for overflow errors.
+            ivalue = bson_iter_as_int64(doc_iter)
+            if ivalue > INT_MAX or ivalue < INT_MIN:
+                raise OverflowError("Overflowed Int32 value")
+            return self.builder.get().Append(ivalue)
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
@@ -403,22 +409,20 @@ cdef class Int64Builder(_ArrayBuilderBase):
         self.builder.reset(new CInt64Builder(pool))
         self.type_marker = BSON_TYPE_INT64
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef double dvalue
 
         if (value_t == BSON_TYPE_INT64 or
                 value_t == BSON_TYPE_BOOL or
                 value_t == BSON_TYPE_INT32):
-            self.builder.get().Append(bson_iter_as_int64(doc_iter))
-        elif value_t == BSON_TYPE_DOUBLE:
+            return self.builder.get().Append(bson_iter_as_int64(doc_iter))
+        if value_t == BSON_TYPE_DOUBLE:
             # Treat nan as null.
             dvalue = bson_iter_as_double(doc_iter)
             if isnan(dvalue):
-                self.builder.get().AppendNull()
-            else:
-                self.builder.get().Append(bson_iter_as_int64(doc_iter))
-        else:
-            self.builder.get().AppendNull()
+                return self.builder.get().AppendNull()
+            return self.builder.get().Append(bson_iter_as_int64(doc_iter))
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
@@ -432,14 +436,13 @@ cdef class DoubleBuilder(_ArrayBuilderBase):
         self.builder.reset(new CDoubleBuilder(pool))
         self.type_marker = BSON_TYPE_DOUBLE
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         if (value_t == BSON_TYPE_DOUBLE or
                     value_t == BSON_TYPE_BOOL or
                     value_t == BSON_TYPE_INT32 or
                     value_t == BSON_TYPE_INT64):
-            self.builder.get().Append(bson_iter_as_double(doc_iter))
-        else:
-            self.builder.get().AppendNull()
+            return self.builder.get().Append(bson_iter_as_double(doc_iter))
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
@@ -466,11 +469,10 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
     def unit(self):
         return self.dtype
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         if value_t == BSON_TYPE_DATE_TIME:
-            self.builder.get().Append(bson_iter_date_time(doc_iter))
-        else:
-            self.builder.get().AppendNull()
+            return self.builder.get().Append(bson_iter_date_time(doc_iter))
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
@@ -485,11 +487,10 @@ cdef class Date64Builder(_ArrayBuilderBase):
         self.builder.reset(new CDate64Builder(pool))
         self.type_marker = ARROW_TYPE_DATE64
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         if value_t == BSON_TYPE_DATE_TIME:
-            self.builder.get().Append(bson_iter_date_time(doc_iter))
-        else:
-            self.builder.get().AppendNull()
+            return self.builder.get().Append(bson_iter_date_time(doc_iter))
+        return self.builder.get().AppendNull()
 
     @property
     def unit(self):
@@ -509,7 +510,7 @@ cdef class Date32Builder(_ArrayBuilderBase):
         self.builder.reset(new CDate32Builder(pool))
         self.type_marker = ARROW_TYPE_DATE32
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef int64_t value
         cdef int32_t seconds_val
 
@@ -517,9 +518,8 @@ cdef class Date32Builder(_ArrayBuilderBase):
             value = bson_iter_date_time(doc_iter)
             # Convert from milliseconds to days (1000*60*60*24)
             seconds_val = value // 86400000
-            self.builder.get().Append(seconds_val)
-        else:
-            self.builder.get().AppendNull()
+            return self.builder.get().Append(seconds_val)
+        return self.builder.get().AppendNull()
 
     @property
     def unit(self):
@@ -539,8 +539,8 @@ cdef class NullBuilder(_ArrayBuilderBase):
         for i in range(count):
             self.append_null()
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
-        self.builder.get().AppendNull()
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
@@ -554,11 +554,10 @@ cdef class BoolBuilder(_ArrayBuilderBase):
         self.builder.reset(new CBooleanBuilder(pool))
         self.type_marker = BSON_TYPE_BOOL
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         if value_t == BSON_TYPE_BOOL:
-            self.builder.get().Append(bson_iter_bool(doc_iter))
-        else:
-            self.builder.get().AppendNull()
+            return self.builder.get().Append(bson_iter_bool(doc_iter))
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
@@ -577,22 +576,20 @@ cdef class Decimal128Builder(_ArrayBuilderBase):
         else:
             self.supported = 0
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef uint8_t dec128_buf[16]
         cdef bson_decimal128_t dec128
 
         if self.supported == 0:
             # We do not support big-endian systems.
-            self.builder.get().AppendNull()
-            return
+            return self.builder.get().AppendNull()
 
         if value_t == BSON_TYPE_DECIMAL128:
             bson_iter_decimal128(doc_iter, &dec128)
             memcpy(dec128_buf, &dec128.low, 8);
             memcpy(dec128_buf + 8, &dec128.high, 8)
-            self.builder.get().Append(dec128_buf)
-        else:
-            self.builder.get().AppendNull()
+            return self.builder.get().Append(dec128_buf)
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
@@ -615,7 +612,7 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
     def subtype(self):
         return self._subtype
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef const char * val_buf
         cdef uint32_t val_buf_len
         cdef bson_subtype_t subtype
@@ -623,11 +620,9 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
         if value_t == BSON_TYPE_BINARY:
             bson_iter_binary(doc_iter, &subtype, &val_buf_len, <const uint8_t **>&val_buf)
             if subtype != self._subtype:
-                self.builder.get().AppendNull()
-            else:
-                self.builder.get().Append(val_buf, val_buf_len)
-        else:
-            self.builder.get().AppendNull()
+                return self.builder.get().AppendNull()
+            return self.builder.get().Append(val_buf, val_buf_len)
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
@@ -646,8 +641,9 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         self.type_marker = BSON_TYPE_DOCUMENT
         self.field_map = dict()
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         self.count += 1
+        return CStatus_OK()
 
     cpdef uint64_t length(self):
         return self.count
@@ -675,8 +671,8 @@ cdef class ListBuilder(_ArrayBuilderBase):
         self.count = 0
         self.type_marker = BSON_TYPE_ARRAY
 
-    cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
-        self.builder.get().Append(self.count)
+    cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
+        return self.builder.get().Append(self.count)
 
     cpdef void append_count(self):
         self.count += 1
