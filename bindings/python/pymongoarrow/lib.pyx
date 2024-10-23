@@ -164,8 +164,6 @@ cdef class BuilderManager:
             else:
                 full_key = key
 
-            print('handling', full_key, value_t)
-
             # Get the builder.
             builder = <_ArrayBuilderBase>self.builder_map.get(full_key, None)
             if builder is None and not self.has_schema:
