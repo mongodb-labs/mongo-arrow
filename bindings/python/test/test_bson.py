@@ -24,7 +24,7 @@ from pymongoarrow.types import ObjectId, ObjectIdType, int64, string
 class TestBsonToArrowConversionBase(TestCase):
     def setUp(self):
         self.schema = Schema({"_id": ObjectId, "data": int64(), "title": string()})
-        self.context = PyMongoArrowContext.from_schema(self.schema)
+        self.context = PyMongoArrowContext(self.schema)
 
     @staticmethod
     def _generate_payload(doclist):
@@ -36,7 +36,7 @@ class TestBsonToArrowConversionBase(TestCase):
     def _run_test(self, doclist, as_dict):
         payload = type(self)._generate_payload(doclist)
 
-        process_bson_stream(payload, self.context)
+        self.context.process_bson_stream(payload)
         table = self.context.finish()
         table_dict = table.to_pydict()
 
@@ -104,13 +104,13 @@ class TestUnsupportedDataType(TestBsonToArrowConversionBase):
         schema = Schema({"_id": ObjectId, "data": int64(), "fake": pa.float16()})
         msg = 'Unsupported data type in schema for field "fake" of type "halffloat"'
         with self.assertRaisesRegex(ValueError, msg):
-            PyMongoArrowContext.from_schema(schema)
+            PyMongoArrowContext(schema)
 
 
 class TestNonAsciiFieldName(TestBsonToArrowConversionBase):
     def setUp(self):
         self.schema = Schema({"_id": ObjectIdType(), "dätá": int64()})
-        self.context = PyMongoArrowContext.from_schema(self.schema)
+        self.context = PyMongoArrowContext(self.schema)
 
     def test_simple(self):
         ids = [ObjectId() for i in range(4)]
@@ -150,7 +150,7 @@ class TestSerializeExtensions(TestCase):
 class TestInt64Type(TestBsonToArrowConversionBase):
     def setUp(self):
         self.schema = Schema({"data": Int64})
-        self.context = PyMongoArrowContext.from_schema(self.schema)
+        self.context = PyMongoArrowContext(self.schema)
 
     def test_simple(self):
         docs = [
@@ -165,7 +165,7 @@ class TestInt64Type(TestBsonToArrowConversionBase):
 class TestBooleanType(TestBsonToArrowConversionBase):
     def setUp(self):
         self.schema = Schema({"data": bool})
-        self.context = PyMongoArrowContext.from_schema(self.schema)
+        self.context = PyMongoArrowContext(self.schema)
 
     def test_simple(self):
         docs = [
@@ -183,7 +183,7 @@ class TestBooleanType(TestBsonToArrowConversionBase):
 class TestStringType(TestBsonToArrowConversionBase):
     def setUp(self):
         self.schema = Schema({"data": str})
-        self.context = PyMongoArrowContext.from_schema(self.schema)
+        self.context = PyMongoArrowContext(self.schema)
 
     def test_simple(self):
         docs = [
@@ -197,7 +197,7 @@ class TestStringType(TestBsonToArrowConversionBase):
 class TestDecimal128Type(TestBsonToArrowConversionBase):
     def setUp(self):
         self.schema = Schema({"data": Decimal128})
-        self.context = PyMongoArrowContext.from_schema(self.schema)
+        self.context = PyMongoArrowContext(self.schema)
 
     def test_simple(self):
         docs = [
@@ -212,7 +212,7 @@ class TestDecimal128Type(TestBsonToArrowConversionBase):
 class TestSubdocumentType(TestBsonToArrowConversionBase):
     def setUp(self):
         self.schema = Schema({"data": dict(x=bool)})
-        self.context = PyMongoArrowContext.from_schema(self.schema)
+        self.context = PyMongoArrowContext(self.schema)
 
     def test_simple(self):
         docs = [
@@ -237,7 +237,7 @@ class TestSubdocumentType(TestBsonToArrowConversionBase):
 
     def test_nested(self):
         self.schema = Schema({"data": dict(x=bool, y=dict(a=int))})
-        self.context = PyMongoArrowContext.from_schema(self.schema)
+        self.context = PyMongoArrowContext(self.schema)
 
         docs = [
             {"data": dict(x=True, y=dict(a=1))},

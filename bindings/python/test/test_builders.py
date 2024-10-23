@@ -187,7 +187,7 @@ class TestBuilderManager(TestCase):
         manager.process_bson_stream(data, len(data))
         array_map = manager.finish()
         assert list(array_map) == ["a"]
-        assert next(iter(array_map.values())).to_pylist() == [1, 2, None, 4]
+        assert next(iter(array_map.values())).finish().to_pylist() == [1, 2, None, 4]
 
     def test_nested_object(self):
         inner_values = []
@@ -204,6 +204,8 @@ class TestBuilderManager(TestCase):
         data = b"".join(encode(v) for v in values)
         manager.process_bson_stream(data, len(data))
         array_map = manager.finish()
+        for key, value in array_map.items():
+            array_map[key] = value.finish()
         assert sorted(array_map.keys()) == [
             "c",
             "c.a",
@@ -220,7 +222,7 @@ class TestBuilderManager(TestCase):
             "g[].a",
         ]
         # Dict has its top level keys.
-        assert array_map["c"] == set(("a", "b", "c", "d", "e", "f"))
+        assert array_map["c"] == ["a", "b", "c", "d", "e", "f"]
         # Deferred nested field.
         assert array_map["c.c"].to_pylist() == [None, None, None, None, 1.0]
         assert array_map["f"].to_pylist() == [None, None, None, None, None]
