@@ -123,7 +123,7 @@ jobs:
           export LIBBSON_INSTALL_DIR="$(pwd)/libbson"
           python -m pip install dist/*.gz
           cd ..
-          python -c "from pymongoarrow.lib import process_bson_stream"
+          python -c "from pymongoarrow.lib import libbson_version"
 
       - uses: actions/upload-artifact@v4
         with:
