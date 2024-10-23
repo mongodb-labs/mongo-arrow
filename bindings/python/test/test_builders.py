@@ -161,7 +161,7 @@ class TestDocumentBuilder(TestCase):
         builder.add_field(b"a")
         builder.add_field(b"b")
         names = builder.finish()
-        assert names == set((b"a", b"b", b"c"))
+        assert names == ["a", "b", "c"]
 
 
 class TestListBuilder(TestCase):
@@ -192,12 +192,14 @@ class TestBuilderManager(TestCase):
     def test_nested_object(self):
         inner_values = []
         for i in range(3):
-            inner_values.append(dict(a=i, b="1", c=None, d=[1.4], e=ObjectId()))
+            inner_values.append(dict(a=i, b="1", c=None, d=[1.4], e=ObjectId(), f=None))
         values = []
         for i in range(3):
-            values.append(dict(c=inner_values[i], e=ObjectId(), f=None))
+            values.append(dict(c=inner_values[i], e=ObjectId(), f=None, g=[dict(a=1)]))
         values.append(dict(c=None))
-        values.append(dict(c=inner_values[0], e=ObjectId(), f=None))
+        inner = inner_values[0].copy()
+        inner["c"] = 1.0
+        values.append(dict(c=inner, e=ObjectId(), f=None, g=[]))
         manager = BuilderManager({}, False, None)
         data = b"".join(encode(v) for v in values)
         manager.process_bson_stream(data, len(data))
@@ -210,17 +212,28 @@ class TestBuilderManager(TestCase):
             "c.d",
             "c.d[]",
             "c.e",
+            "c.f",
             "e",
             "f",
+            "g",
+            "g[]",
+            "g[].a",
         ]
-        assert array_map["c"] == set(("a", "b", "c", "d", "e"))
-        assert array_map["c.c"].to_pylist() == [None, None, None, None, None]
+        # Dict has its top level keys.
+        assert array_map["c"] == set(("a", "b", "c", "d", "e", "f"))
+        # Deferred nested field.
+        assert array_map["c.c"].to_pylist() == [None, None, None, None, 1.0]
         assert array_map["f"].to_pylist() == [None, None, None, None, None]
+        # List with a null in the middle.
         assert array_map["c.d"].to_pylist() == [0, 1, 2, 3, 3, 4]
         assert array_map["c.d[]"].to_pylist() == [1.4, 1.4, 1.4, 1.4]
+        # Regular item with a null in the middle.
         assert array_map["c.b"].to_pylist() == ["1", "1", "1", None, "1"]
+        # Nested object ids are object ids.
         obj = array_map["c.e"].to_pylist()[0]
         assert isinstance(obj, ObjectId)
+        # Lists can contain objects.
+        assert array_map["g[].a"].to_pylist() == [1, 1, 1, None, None]
 
 
 class TestBinaryBuilder(TestCase):

@@ -67,22 +67,22 @@ cdef class BuilderManager:
         self.has_schema = has_schema
         self.tzinfo = tzinfo
         self.count = 0
-        self.builder_map = builder_map = {}
+        self.builder_map = {}
         # Unpack the schema map.
         for fname, (ftype, arrow_type) in schema_map.items():
-            encoded_fname = fname.encode("utf-8")
+            name = fname.encode('utf-8')
             # special-case initializing builders for parameterized types
             if ftype == BSON_TYPE_DATE_TIME:
                 if tzinfo is not None and arrow_type.tz is None:
                     arrow_type = timestamp(arrow_type.unit, tz=tzinfo)  # noqa: PLW2901
-                builder_map[encoded_fname] = DatetimeBuilder(dtype=arrow_type)
+                self.builder_map[name] = DatetimeBuilder(dtype=arrow_type)
             elif ftype == BSON_TYPE_BINARY:
-                subtype = arrow_type.subtype
-                builder_map[encoded_fname] = BinaryBuilder(subtype)
+                self.builder_map[name] = BinaryBuilder(arrow_type.subtype)
             else:
-                self.get_builder(encoded_fname, ftype, <bson_iter_t *>nullptr)
+                # We only use the doc_iter for binary arrays, which are handled already.
+                self.get_builder(name, ftype, <bson_iter_t *>nullptr)
 
-    cdef _ArrayBuilderBase get_builder(self, cstring key, bson_type_t value_t, bson_iter_t * doc_iter):
+    cdef _ArrayBuilderBase get_builder(self, cstring key, bson_type_t value_t, bson_iter_t * doc_iter) except *:
         cdef _ArrayBuilderBase builder = None
         cdef bson_subtype_t subtype
         cdef const uint8_t *val_buf = NULL
@@ -108,6 +108,8 @@ cdef class BuilderManager:
         elif value_t == BSON_TYPE_ARRAY:
             builder = ListBuilder()
         elif value_t == BSON_TYPE_BINARY:
+            if doc_iter == NULL:
+                raise ValueError('Did not pass a doc_iter!')
             bson_iter_binary (doc_iter, &subtype,
                 &val_buf_len, &val_buf)
             builder = BinaryBuilder(subtype)
@@ -147,7 +149,6 @@ cdef class BuilderManager:
             # Get the key and and value.
             key = bson_iter_key(doc_iter)
             value_t = bson_iter_type(doc_iter)
-            print('handling', key, value_t)
 
             # Get the appropriate full key.
             if parent_type == BSON_TYPE_ARRAY:
@@ -162,6 +163,8 @@ cdef class BuilderManager:
 
             else:
                 full_key = key
+
+            print('handling', full_key, value_t)
 
             # Get the builder.
             builder = <_ArrayBuilderBase>self.builder_map.get(full_key, None)
@@ -193,9 +196,9 @@ cdef class BuilderManager:
             if parent_type == BSON_TYPE_ARRAY:
                 (<ListBuilder>self.builder_map[base_key]).append_count()
 
-            # Update our count.
-            if builder.length() > self.count:
-                self.count = builder.length()
+        # Update our count for top level documents.
+        if parent_type == 0:
+            self.count += 1
 
     cpdef void process_bson_stream(self, const uint8_t* bson_stream, size_t length):
         """Process a bson byte stream."""
@@ -214,35 +217,35 @@ cdef class BuilderManager:
                 bson_reader_destroy(stream_reader)
 
     cpdef finish(self):
-        """Finish building the arrays."""
-        cdef dict builder_map = self.builder_map
-        cdef dict array_map = {}
+        """Finish appending to the builders."""
+        cdef dict return_map = {}
         cdef bytes key
         cdef str field
         cdef _ArrayBuilderBase value
 
+        # Move the builders to a new dict with string keys.
+        for key, value in self.builder_map.items():
+            return_map[key.decode('utf-8')] = value
+
         # Insert null fields.
-        for key in list(builder_map):
-            if builder_map[key] is None:
-                builder_map[key] = NullBuilder(self.count)
+        for field in list(return_map):
+            if return_map[field] is None:
+                return_map[field] = NullBuilder(self.count)
 
         # Pad fields as needed.
-        for key, value in builder_map.items():
-            field = key.decode("utf-8")
-
+        for field, value in return_map.items():
             # If it isn't a list item, append nulls as needed.
             # For lists, the nulls are stored in the parent.
             if not field.endswith('[]'):
                 if value.length() < self.count:
                     value.append_nulls(self.count - value.length())
 
-            array_map[field] = value.finish()
-        return array_map
+        return return_map
 
 
 cdef class _ArrayBuilderBase:
     cdef:
-        uint8_t type_marker
+        public uint8_t type_marker
 
     def append_values(self, values):
         for value in values:
@@ -656,7 +659,8 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
         self.field_map[field_name] = 1
 
     def finish(self):
-        return set((f.decode('utf-8') for f in self.field_map))
+        # Fields must be in order if we were given a schema.
+        return list(f.decode('utf-8') for f in self.field_map)
 
 
 cdef class ListBuilder(_ArrayBuilderBase):

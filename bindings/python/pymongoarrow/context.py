@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from pyarrow import ListArray, StructArray, Table
-from pyarrow.types import is_struct
 
 from pymongoarrow.types import _BsonArrowTypes, _get_internal_typemap
 
@@ -47,45 +46,45 @@ class PyMongoArrowContext:
         self.manager.process_bson_stream(stream, len(stream))
 
     def finish(self):
-        array_map = _parse_array_map(self.manager.finish())
+        array_map = _parse_builder_map(self.manager.finish())
         arrays = list(array_map.values())
         if self.schema is not None:
             return Table.from_arrays(arrays=arrays, schema=self.schema.to_arrow())
         return Table.from_arrays(arrays=arrays, names=list(array_map.keys()))
 
 
-def _parse_array_map(array_map):
+def _parse_builder_map(builder_map):
     # Handle nested builders.
     to_remove = []
     # Traverse the builder map right to left.
-    for key, value in reversed(array_map.items()):
-        field = key.decode("utf-8")
-        if value.type_marker == _BsonArrowTypes.document:
-            full_names = [f"{field}.{name.decode('utf-8')}" for name in value]
-            arrs = [array_map[c.encode("utf-8")] for c in full_names]
-            array_map[field] = StructArray.from_arrays(arrs, names=value)
+    for key, value in reversed(builder_map.items()):
+        if value.type_marker == _BsonArrowTypes.document.value:
+            names = value.finish()
+            full_names = [f"{key}.{name}" for name in names]
+            arrs = [builder_map[c] for c in full_names]
+            builder_map[key] = StructArray.from_arrays(arrs, names=names)
             to_remove.extend(full_names)
-        elif value.type_marker == _BsonArrowTypes.array:
-            child_name = field + "[]"
+        elif value.type_marker == _BsonArrowTypes.array.value:
+            child_name = key + "[]"
             to_remove.append(child_name)
-            child = array_map[child_name.encode("utf-8")]
-            array_map[key] = ListArray.from_arrays(value, child)
+            child = builder_map[child_name]
+            builder_map[key] = ListArray.from_arrays(value.finish(), child)
+        else:
+            builder_map[key] = value.finish()
 
-    for field in to_remove:
-        key = field.encode("utf-8")
-        if key in array_map:
-            del array_map[key]
+    for key in to_remove:
+        if key in builder_map:
+            del builder_map[key]
 
-    return array_map
+    return builder_map
 
 
 def _parse_types(str_type_map, schema_map, tzinfo):
     for fname, (ftype, arrow_type) in str_type_map.items():
-        encoded_fname = fname.encode("utf-8")
-        schema_map[encoded_fname] = ftype, arrow_type
+        schema_map[fname] = ftype, arrow_type
 
         # special-case nested builders
-        if ftype == _BsonArrowTypes.document:
+        if ftype == _BsonArrowTypes.document.value:
             # construct a sub type map here
             sub_type_map = {}
             for i in range(arrow_type.num_fields):
@@ -94,13 +93,10 @@ def _parse_types(str_type_map, schema_map, tzinfo):
                 sub_type_map[sub_name] = field.type
             sub_type_map = _get_internal_typemap(sub_type_map)
             _parse_types(sub_type_map, schema_map, tzinfo)
-        elif ftype == _BsonArrowTypes.array:
-            if is_struct(arrow_type.value_type):
-                # construct a sub type map here
-                sub_type_map = {}
-                for i in range(arrow_type.value_type.num_fields):
-                    field = arrow_type.value_type[i]
-                    sub_name = f"{fname}[].{field.name}"
-                    sub_type_map[sub_name] = field.type
-                sub_type_map = _get_internal_typemap(sub_type_map)
-                _parse_types(sub_type_map, schema_map, tzinfo)
+        elif ftype == _BsonArrowTypes.array.value:
+            sub_type_map = {}
+            sub_name = f"{fname}[]"
+            sub_value_type = arrow_type.value_type
+            sub_type_map[sub_name] = sub_value_type
+            sub_type_map = _get_internal_typemap(sub_type_map)
+            _parse_types(sub_type_map, schema_map, tzinfo)
