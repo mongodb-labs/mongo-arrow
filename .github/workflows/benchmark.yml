@@ -51,7 +51,7 @@ jobs:
               tox -e benchmark -- --set-commit-hash $(git rev-parse HEAD)
           }
 
-          pip install asv
+          pip install asv virtualenv
           asv machine --yes
           git fetch origin main:main
           git update-ref refs/bm/pr HEAD
