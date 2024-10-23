@@ -11,5 +11,5 @@
          }
     },
     "environment_type": "virtualenv",
-    "plugins": []
+    "plugins": ["virtualenv"]
 }
