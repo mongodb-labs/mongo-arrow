@@ -66,8 +66,8 @@ jobs:
 
       - name: Compare benchmarks
         run: |
-          asv compare refs/bm/merge-target refs/bm/pr --
+          asv compare --factor 1.2 --split refs/bm/merge-target refs/bm/pr --
+
       - name: Fail if any benchmarks have slowed down too much
         run: |
-          asv compare --factor 1.2 --split refs/bm/merge-target refs/bm/pr
-          ! asv compare --factor 1.2 --split refs/bm/merge-target refs/bm/pr | grep -q "got worse"
+          ! asv compare --factor 1.2 --split refs/bm/merge-target refs/bm/pr 2> /dev/null | grep -q "got worse"

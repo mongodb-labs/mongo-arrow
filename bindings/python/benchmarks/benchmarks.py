@@ -114,11 +114,6 @@ class Read(ABC):
     def setup(self):
         raise NotImplementedError
 
-    # We need this because the naive methods don't always convert nested objects.
-    @staticmethod  # noqa: B027
-    def exercise_table(table):
-        pass
-
     def time_conventional_ndarray(self):
         collection = db.benchmark
         cursor = collection.find(projection={"_id": 0})
@@ -147,13 +142,11 @@ class Read(ABC):
     def time_conventional_arrow(self):
         c = db.benchmark
         f = list(c.find({}, projection={"_id": 0}))
-        table = pa.Table.from_pylist(f)
-        self.exercise_table(table)
+        pa.Table.from_pylist(f)
 
     def time_to_arrow(self):
         c = db.benchmark
-        table = find_arrow_all(c, {}, schema=self.schema, projection={"_id": 0})
-        self.exercise_table(table)
+        find_arrow_all(c, {}, schema=self.schema, projection={"_id": 0})
 
     def time_conventional_polars(self):
         collection = db.benchmark
@@ -211,14 +204,6 @@ class ProfileReadArray(Read):
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
 
-    # We need this because the naive methods don't always convert nested objects.
-    @staticmethod
-    def exercise_table(table):
-        [
-            [[n for n in i.values] if isinstance(i, pa.ListScalar) else i for i in column]
-            for column in table.columns
-        ]
-
     # All of the following tests are being skipped because NumPy/Pandas do not work with nested arrays.
     def time_to_numpy(self):
         pass
@@ -259,14 +244,6 @@ class ProfileReadDocument(Read):
             "%d docs, %dk each with %d keys"
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
-
-    # We need this because the naive methods don't always convert nested objects.
-    @staticmethod
-    def exercise_table(table):
-        [
-            [[n for n in i.values()] if isinstance(i, pa.StructScalar) else i for i in column]
-            for column in table.columns
-        ]
 
     # All of the following tests are being skipped because NumPy/Pandas do not work with nested documents.
     def time_to_numpy(self):
