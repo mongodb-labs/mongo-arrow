@@ -86,7 +86,7 @@ cdef class BuilderManager:
         cdef _ArrayBuilderBase builder = None
         cdef bson_subtype_t subtype
         cdef const uint8_t *val_buf = NULL
-        cdef uint64_t val_buf_len = 0
+        cdef uint32_t val_buf_len = 0
 
         # Mark a null key as missing until we find it.
         if value_t == BSON_TYPE_NULL:
@@ -311,7 +311,7 @@ cdef class StringBuilder(_ArrayBuilderBase):
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
         cdef const char* value
-        cdef uint64_t str_len
+        cdef uint32_t str_len
         if value_t == BSON_TYPE_UTF8:
             value = bson_iter_utf8(doc_iter, &str_len)
             self.builder.get().Append(value, str_len)
@@ -330,7 +330,7 @@ cdef class CodeBuilder(StringBuilder):
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
         cdef const char * bson_str
-        cdef uint64_t str_len
+        cdef uint32_t str_len
         if value_t == BSON_TYPE_CODE:
             bson_str = bson_iter_code(doc_iter, &str_len)
             self.builder.get().Append(bson_str, str_len)
@@ -617,7 +617,7 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
 
     cdef void append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
         cdef const char * val_buf
-        cdef uint64_t val_buf_len
+        cdef uint32_t val_buf_len
         cdef bson_subtype_t subtype
 
         if value_t == BSON_TYPE_BINARY:
