@@ -204,11 +204,14 @@ class ProfileReadArray(Read):
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
 
-    # All of the following tests are being skipped because NumPy/Pandas do not work with nested arrays.
+    # All of the following tests are being skipped because NumPy/Pandas/Polars do not work with nested arrays.
     def time_to_numpy(self):
         pass
 
     def time_to_pandas(self):
+        pass
+
+    def time_to_polars(self):
         pass
 
     def time_conventional_ndarray(self):
