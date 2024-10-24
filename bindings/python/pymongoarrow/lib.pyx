@@ -196,10 +196,6 @@ cdef class BuilderManager:
             if parent_type == BSON_TYPE_ARRAY:
                 (<ListBuilder>self.builder_map[base_key]).append_count()
 
-        # Update our count for top level documents.
-        if parent_type == 0:
-            self.count += 1
-
     cpdef void process_bson_stream(self, const uint8_t* bson_stream, size_t length):
         """Process a bson byte stream."""
         cdef bson_reader_t* stream_reader = bson_reader_new_from_data(bson_stream, length)
@@ -213,6 +209,7 @@ cdef class BuilderManager:
                 if not bson_iter_init(&doc_iter, doc):
                     raise InvalidBSON("Could not read BSON document")
                 self.parse_document(&doc_iter, b"", 0)
+                self.count += 1
         finally:
                 bson_reader_destroy(stream_reader)
 
