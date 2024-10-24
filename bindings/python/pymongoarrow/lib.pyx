@@ -22,7 +22,7 @@ import sys
 # Python imports
 import bson
 import numpy as np
-from pyarrow import timestamp, default_memory_pool
+from pyarrow import timestamp
 
 from pymongoarrow.errors import InvalidBSON
 from pymongoarrow.types import ObjectIdType, Decimal128Type as Decimal128Type_, BinaryType, CodeType
@@ -62,14 +62,12 @@ cdef class BuilderManager:
         uint64_t count
         bint has_schema
         object tzinfo
-        public object pool
 
     def __cinit__(self, dict schema_map, bint has_schema, object tzinfo):
         self.has_schema = has_schema
         self.tzinfo = tzinfo
         self.count = 0
         self.builder_map = {}
-        self.pool = default_memory_pool()
         # Unpack the schema map.
         for fname, (ftype, arrow_type) in schema_map.items():
             name = fname.encode('utf-8')
@@ -77,9 +75,9 @@ cdef class BuilderManager:
             if ftype == BSON_TYPE_DATE_TIME:
                 if tzinfo is not None and arrow_type.tz is None:
                     arrow_type = timestamp(arrow_type.unit, tz=tzinfo)  # noqa: PLW2901
-                self.builder_map[name] = DatetimeBuilder(dtype=arrow_type, memory_pool=self.pool)
+                self.builder_map[name] = DatetimeBuilder(dtype=arrow_type)
             elif ftype == BSON_TYPE_BINARY:
-                self.builder_map[name] = BinaryBuilder(arrow_type.subtype, memory_pool=self.pool)
+                self.builder_map[name] = BinaryBuilder(arrow_type.subtype)
             else:
                 # We only use the doc_iter for binary arrays, which are handled already.
                 self.get_builder(name, ftype, <bson_iter_t *>nullptr)
@@ -102,39 +100,39 @@ cdef class BuilderManager:
         if value_t == BSON_TYPE_DATE_TIME:
             if self.tzinfo is not None:
                 arrow_type = timestamp('ms', tz=self.tzinfo)
-                builder = DatetimeBuilder(dtype=arrow_type, memory_pool=self.pool)
+                builder = DatetimeBuilder(dtype=arrow_type)
             else:
-                builder = DatetimeBuilder(memory_pool=self.pool)
+                builder = DatetimeBuilder()
         elif value_t == BSON_TYPE_DOCUMENT:
             builder = DocumentBuilder()
         elif value_t == BSON_TYPE_ARRAY:
-            builder = ListBuilder(memory_pool=self.pool)
+            builder = ListBuilder()
         elif value_t == BSON_TYPE_BINARY:
             if doc_iter == NULL:
                 raise ValueError('Did not pass a doc_iter!')
             bson_iter_binary (doc_iter, &subtype,
                 &val_buf_len, &val_buf)
-            builder = BinaryBuilder(subtype, memory_pool=self.pool)
+            builder = BinaryBuilder(subtype)
         elif value_t == ARROW_TYPE_DATE32:
-            builder = Date32Builder(memory_pool=self.pool)
+            builder = Date32Builder()
         elif value_t == ARROW_TYPE_DATE64:
-            builder = Date64Builder(memory_pool=self.pool)
+            builder = Date64Builder()
         elif value_t == BSON_TYPE_INT32:
-            builder = Int32Builder(memory_pool=self.pool)
+            builder = Int32Builder()
         elif value_t == BSON_TYPE_INT64:
-            builder = Int64Builder(memory_pool=self.pool)
+            builder = Int64Builder()
         elif value_t == BSON_TYPE_DOUBLE:
-            builder = DoubleBuilder(memory_pool=self.pool)
+            builder = DoubleBuilder()
         elif value_t == BSON_TYPE_OID:
-            builder = ObjectIdBuilder(memory_pool=self.pool)
+            builder = ObjectIdBuilder()
         elif value_t == BSON_TYPE_UTF8:
-            builder = StringBuilder(memory_pool=self.pool)
+            builder = StringBuilder()
         elif value_t == BSON_TYPE_BOOL:
-            builder = BoolBuilder(memory_pool=self.pool)
+            builder = BoolBuilder()
         elif value_t == BSON_TYPE_DECIMAL128:
-            builder = Decimal128Builder(memory_pool=self.pool)
+            builder = Decimal128Builder()
         elif value_t == BSON_TYPE_CODE:
-            builder = CodeBuilder(memory_pool=self.pool)
+            builder = CodeBuilder()
 
         self.builder_map[key] = builder
         return builder
@@ -177,15 +175,12 @@ cdef class BuilderManager:
             # For lists, the nulls are stored in the parent.
             if parent_type != BSON_TYPE_ARRAY:
                 if count > builder.length():
-                    for _ in range(count - builder.length()):
-                        status = builder.append_null_raw()
-                        if not status.ok():
-                            raise ValueError("Could not append nulls to", full_key)
+                    builder.append_nulls(count - builder.length())
 
             # Append the next value.
             status = builder.append_raw(doc_iter, value_t)
             if not status.ok():
-                raise ValueError("Could not append raw value to", full_key, type(builder), self.count)
+                raise ValueError("Could not append raw value")
 
             # Recurse into documents.
             if value_t == BSON_TYPE_DOCUMENT:
@@ -201,6 +196,9 @@ cdef class BuilderManager:
             if parent_type == BSON_TYPE_ARRAY:
                 (<ListBuilder>self.builder_map[base_key]).append_count()
 
+        # Update our count for top level documents.
+        if parent_type == 0:
+            self.count += 1
 
     cpdef void process_bson_stream(self, const uint8_t* bson_stream, size_t length):
         """Process a bson byte stream."""
@@ -214,7 +212,6 @@ cdef class BuilderManager:
                     break
                 if not bson_iter_init(&doc_iter, doc):
                     raise InvalidBSON("Could not read BSON document")
-                self.count += 1
                 self.parse_document(&doc_iter, b"", 0)
         finally:
                 bson_reader_destroy(stream_reader)
@@ -224,7 +221,6 @@ cdef class BuilderManager:
         cdef dict return_map = {}
         cdef bytes key
         cdef str field
-        cdef CStatus status
         cdef _ArrayBuilderBase value
 
         # Move the builders to a new dict with string keys.
@@ -234,7 +230,7 @@ cdef class BuilderManager:
         # Insert null fields.
         for field in list(return_map):
             if return_map[field] is None:
-                return_map[field] = NullBuilder()
+                return_map[field] = NullBuilder(self.count)
 
         # Pad fields as needed.
         for field, value in return_map.items():
@@ -242,9 +238,7 @@ cdef class BuilderManager:
             # For lists, the nulls are stored in the parent.
             if not field.endswith('[]'):
                 if value.length() < self.count:
-                    status = value.append_null_raw()
-                    if not status.ok():
-                        raise ValueError("Could not append nulls to", field)
+                    value.append_nulls(self.count - value.length())
 
         return return_map
 
@@ -256,11 +250,9 @@ cdef class _ArrayBuilderBase:
     def append_values(self, values):
         for value in values:
             if value is None or value is np.nan:
-                status = self.append_null()
+                self.append_null()
             else:
-                status = self.append(value)
-            if not status.ok():
-                raise ValueError("Failed to append value")
+                self.append(value)
 
     def append(self, value):
         """Interface to append a python value to the builder.
@@ -292,13 +284,12 @@ cdef class _ArrayBuilderBase:
     def __len__(self):
         return self.length()
 
-    def append_null(self):
-        cdef CStatus status = self.append_null_raw()
-        if not status.ok():
-            raise ValueError("Could not append null")
+    cpdef void append_null(self):
+        self.get_builder().get().AppendNull()
 
-    cdef CStatus append_null_raw(self):
-        return self.get_builder().get().AppendNull()
+    cpdef void append_nulls(self, uint64_t count):
+        for _ in range(count):
+            self.append_null()
 
     cpdef uint64_t length(self):
         return self.get_builder().get().length()
@@ -538,10 +529,13 @@ cdef class Date32Builder(_ArrayBuilderBase):
 cdef class NullBuilder(_ArrayBuilderBase):
     cdef shared_ptr[CArrayBuilder] builder
 
-    def __cinit__(self, MemoryPool memory_pool=None):
+    def __cinit__(self, uint64_t count, MemoryPool memory_pool=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
+        cdef uint64_t i
         self.builder.reset(new CNullBuilder(pool))
         self.type_marker = ARROW_TYPE_NULL
+        for i in range(count):
+            self.append_null()
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         return self.builder.get().AppendNull()
@@ -607,10 +601,9 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
         uint8_t _subtype
         shared_ptr[CBinaryBuilder] builder
 
-    def __cinit__(self, uint8_t subtype, MemoryPool memory_pool=None):
+    def __cinit__(self, uint8_t subtype):
         self._subtype = subtype
-        cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
-        self.builder.reset(new CBinaryBuilder(pool))
+        self.builder.reset(new CBinaryBuilder())
         self.type_marker = BSON_TYPE_BINARY
 
     @property
@@ -653,9 +646,8 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
     cpdef uint64_t length(self):
         return self.count
 
-    cdef CStatus append_null_raw(self):
+    cpdef void append_null(self):
         self.count += 1
-        return CStatus_OK()
 
     cpdef void add_field(self, cstring field_name):
         self.field_map[field_name] = 1
@@ -683,8 +675,8 @@ cdef class ListBuilder(_ArrayBuilderBase):
     cpdef void append_count(self):
         self.count += 1
 
-    cdef CStatus append_null_raw(self):
-        return self.builder.get().Append(self.count)
+    cpdef void append_null(self):
+        self.builder.get().Append(self.count)
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
