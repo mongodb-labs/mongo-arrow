@@ -220,6 +220,9 @@ class ProfileReadArray(Read):
     def time_conventional_pandas(self):
         pass
 
+    def time_conventional_polars(self):
+        pass
+
 
 class ProfileReadDocument(Read):
     schema = Schema(
@@ -248,17 +251,23 @@ class ProfileReadDocument(Read):
             % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
         )
 
-    # All of the following tests are being skipped because NumPy/Pandas do not work with nested documents.
+    # All of the following tests are being skipped because NumPy/Pandas/Polars do not work with nested documents.
     def time_to_numpy(self):
         pass
 
     def time_to_pandas(self):
         pass
 
+    def time_to_polars(self):
+        pass
+
     def time_conventional_ndarray(self):
         pass
 
     def time_conventional_pandas(self):
+        pass
+
+    def time_conventional_polars(self):
         pass
 
 
