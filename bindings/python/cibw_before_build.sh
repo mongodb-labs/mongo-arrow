@@ -14,7 +14,7 @@ then
     platform="macosx_11_0_arm64"
     export CMAKE_OSX_ARCHITECTURES="arm64"
   else
-    platform="macosx_10_14_x86_64"
+    platform="macosx_12_0_x86_64"
     export CMAKE_OSX_ARCHITECTURES="x86_64"
   fi
 

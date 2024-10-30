@@ -1,5 +1,5 @@
 # Dependencies:
-# - auditwheel>=5,<6
+# - auditwheel>=5,<7
 # Requires AUDITWHEEL_PLAT to be set (e.g. manylinux2014_x86_64)
 # Usage:
 # $ python addtags.py WHEEL_PATH WHEEL_DIR
