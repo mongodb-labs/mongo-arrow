@@ -3,12 +3,9 @@
 
 ---
 
-# Changes in Version 1.7.0.
-
-- Support for PyArrow 18.0 and Python 3.13.
-
 # Changes in Version 1.6.0
 
+- Add support for PyArrow 18.0 and Python 3.13.
 - Drop support for Python 3.8.
 
 # Changes in Version 1.5.2
