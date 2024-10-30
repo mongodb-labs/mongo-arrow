@@ -34,7 +34,7 @@ def main(wheel_path, abi, wheel_dir):
     out_wheel = repair_wheel(wheel_path, abi, wheel_dir)
 
     if out_wheel is not None:
-        analyzed_tag = analyze_wheel_abi(policies, out_wheel, set()).overall_tag
+        analyzed_tag = analyze_wheel_abi(policies, out_wheel, frozenset()).overall_tag
         if reqd_tag < policies.get_priority_by_name(analyzed_tag):
             print(
                 "Wheel is eligible for a higher priority tag. "
