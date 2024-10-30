@@ -32,7 +32,7 @@ jobs:
         - [ubuntu-20.04, manylinux_aarch64]
         - [macos-14, macosx_*]
         - [windows-2019, win_amd64]
-        python: ["cp39", "cp310", "cp311", "cp312"]
+        python: ["cp39", "cp310", "cp311", "cp312", "cp13"]
         exclude:
           - buildplat: [macos-14, macosx_*]
             python: "cp39"
