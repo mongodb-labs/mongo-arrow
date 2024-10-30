@@ -3,6 +3,8 @@ requires = [
     # ARROW-248, pin to less than 72.2.
     "setuptools>=70,<72.2",
     "cython>=3.0",
+    # Needed for numpy headers.
+    "numpy>=2.1.0",
     # Must be kept in sync with "project.dependencies" below.
     "pyarrow>=18.0,<18.1.0",
 ]

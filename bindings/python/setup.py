@@ -132,9 +132,12 @@ def append_libbson_flags(module):
 
 
 def append_arrow_flags(ext):
+    import numpy as np
     import pyarrow as pa
 
     # From https://arrow.apache.org/docs/python/integration/extending.html#example
+    # The Numpy C headers are currently required
+    ext.include_dirs.append(np.get_include())
     ext.include_dirs.append(pa.get_include())
     ext.libraries.extend(pa.get_libraries())
     ext.library_dirs.extend(pa.get_library_dirs())
