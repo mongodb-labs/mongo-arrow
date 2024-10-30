@@ -28,11 +28,11 @@ jobs:
         # Github Actions doesn't support pairing matrix values together, let's improvise
         # https://github.com/github/feedback/discussions/7835#discussioncomment-1769026
         buildplat:
-        - [ubuntu-24.04, manylinux_x86_64]
-        - [ubuntu-24.04, manylinux_aarch64]
+        - [ubuntu-20.04, manylinux_x86_64]
+        - [ubuntu-20.04, manylinux_aarch64]
         - [macos-14, macosx_*]
-        - [windows-2022, win_amd64]
-        python: ["cp39", "cp310", "cp311", "cp312", "cp13"]
+        - [windows-2019, win_amd64]
+        python: ["cp39", "cp310", "cp311", "cp312", "cp313"]
         exclude:
           - buildplat: [macos-14, macosx_*]
             python: "cp39"
