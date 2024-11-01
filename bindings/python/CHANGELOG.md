@@ -7,6 +7,9 @@
 
 - Add support for PyArrow 18.0 and Python 3.13.
 - Drop support for Python 3.8.
+- Fix support for nulls and extension types in nested data.
+- Add support for PyArrow's `null` type.
+- Prevent segmentation faults by checking the status of all calls to the PyArrow C APIs.
 
 # Changes in Version 1.5.2
 
