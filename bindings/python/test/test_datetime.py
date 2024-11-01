@@ -52,7 +52,7 @@ class TestDateTimeType(unittest.TestCase):
         for g in unsupported_granularities:
             schema = Schema({"_id": int32(), "data": timestamp(g)})
             with self.assertRaises(TypeError):
-                PyMongoArrowContext.from_schema(schema)
+                PyMongoArrowContext(schema)
 
     def test_round_trip(self):
         expected = Table.from_pydict(

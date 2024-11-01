@@ -94,6 +94,12 @@ repos:
     stages: [manual]
     args: ["--no-strict-imports"]
 
+- repo: https://github.com/MarcoGorelli/cython-lint
+  rev: v0.16.2
+  hooks:
+  - id: cython-lint
+    args: ["--no-pycodestyle"]
+
 - repo: https://github.com/codespell-project/codespell
   rev: "v2.2.6"
   hooks:

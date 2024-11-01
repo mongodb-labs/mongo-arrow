@@ -23,8 +23,6 @@ import pyarrow as pa
 import pymongo
 from bson import Binary, Code, CodecOptions, Decimal128, ObjectId
 from pyarrow import (
-    DataType,
-    FixedSizeBinaryType,
     Table,
     bool_,
     csv,
@@ -405,7 +403,7 @@ class ArrowApiTestMixin:
             if use_none:
                 inner_dict["null"] = None
             if nested_elem:
-                inner_dict["list"] = [nested_elem]
+                inner_dict["list_of_objs"] = [nested_elem]
             return inner_dict
 
         if nested_elem:
@@ -480,6 +478,18 @@ class ArrowApiTestMixin:
             for name in out.column_names:
                 self.assertEqual(data[name], out[name].cast(data[name].type))
 
+    def test_auto_schema_nested_null(self):
+        # Create table with random data of various types.
+        _, data = self._create_nested_data(use_none=True)
+
+        self.coll.drop()
+        res = write(self.coll, data)
+        self.assertEqual(len(data), res.raw_result["insertedCount"])
+        for func in [find_arrow_all, aggregate_arrow_all]:
+            out = func(self.coll, {} if func == find_arrow_all else []).drop(["_id"])
+            for name in out.column_names:
+                self.assertEqual(data[name], out[name].cast(data[name].type))
+
     def test_schema_nested_null(self):
         schema, data = self._create_nested_data(use_none=True)
 
@@ -514,7 +524,13 @@ class ArrowApiTestMixin:
             {"a": ["str"]},
             {"a": []},
         ]
-        expected = pa.Table.from_pylist(docs)
+        expected = pa.Table.from_pylist(
+            [
+                {"a": []},
+                {"a": ["str"]},
+                {"a": []},
+            ]
+        )
         self._test_auto_schema_list(docs, expected)
 
     def test_auto_schema_first_list_empty(self):
@@ -525,7 +541,7 @@ class ArrowApiTestMixin:
         ]
         expected = pa.Table.from_pylist(
             [
-                {"a": None},  # TODO: We incorrectly set the first empty list to null.
+                {"a": []},
                 {"a": ["str"]},
                 {"a": []},
             ]
@@ -538,20 +554,30 @@ class ArrowApiTestMixin:
             {"a": [None, None, "str"]},  # Inferred schema should use the first non-null element.
             {"a": []},
         ]
-        expected = pa.Table.from_pylist(docs)
+        expected = pa.Table.from_pylist(
+            [
+                {"a": []},
+                {"a": ["str"]},  # Inferred schema should use the first non-null element.
+                {"a": []},
+            ]
+        )
         self._test_auto_schema_list(docs, expected)
 
-    @unittest.expectedFailure  # TODO: Our inferred value for the first a.b field differs from pyarrow's.
     def test_auto_schema_first_embedded_list_null(self):
         docs = [
             {"a": {"b": None}},
             {"a": {"b": ["str"]}},
             {"a": {"b": []}},
         ]
-        expected = pa.Table.from_pylist(docs)
+        expected = pa.Table.from_pylist(
+            [
+                {"a": {"b": []}},
+                {"a": {"b": ["str"]}},
+                {"a": {"b": []}},
+            ]
+        )
         self._test_auto_schema_list(docs, expected)
 
-    @unittest.expectedFailure  # TODO: Our inferred value for the first a.b field differs from pyarrow's.
     def test_auto_schema_first_embedded_doc_null(self):
         docs = [
             {"a": {"b": None}},
@@ -747,18 +773,10 @@ class ArrowApiTestMixin:
         out = find_arrow_all(self.coll, {})
         obj_schema_type = out.field("obj").type
 
-        self.assertIsInstance(obj_schema_type.field("obj_id").type, FixedSizeBinaryType)
-        self.assertIsInstance(obj_schema_type.field("dec_128").type, FixedSizeBinaryType)
-        self.assertIsInstance(obj_schema_type.field("binary").type, DataType)
-        self.assertIsInstance(obj_schema_type.field("code").type, DataType)
-
-        new_types = [ObjectIdType(), Decimal128Type(), BinaryType(0), CodeType()]
-        new_names = [f.name for f in out["obj"].type]
-        new_obj = out["obj"].cast(struct(zip(new_names, new_types)))
-        self.assertIsInstance(new_obj.type[0].type, ObjectIdType)
-        self.assertIsInstance(new_obj.type[1].type, Decimal128Type)
-        self.assertIsInstance(new_obj.type[2].type, BinaryType)
-        self.assertIsInstance(new_obj.type[3].type, CodeType)
+        self.assertIsInstance(obj_schema_type.field("obj_id").type, ObjectIdType)
+        self.assertIsInstance(obj_schema_type.field("dec_128").type, Decimal128Type)
+        self.assertIsInstance(obj_schema_type.field("binary").type, BinaryType)
+        self.assertIsInstance(obj_schema_type.field("code").type, CodeType)
 
     def test_large_string_type(self):
         """Tests pyarrow._large_string() DataType"""

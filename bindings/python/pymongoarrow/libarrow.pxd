@@ -18,7 +18,7 @@
 from libcpp.vector cimport vector
 from libc.stdint cimport int32_t, uint8_t
 from pyarrow.lib cimport *
-from pyarrow.includes.libarrow cimport (CStatus, CMemoryPool)  # noqa: E211
+from pyarrow.includes.libarrow cimport (CStatus, CStatus_OK, CMemoryPool)  # noqa: E211
 
 
 # libarrow type wrappings
@@ -51,3 +51,9 @@ cdef extern from "arrow/builder.h" namespace "arrow" nogil:
 
 cdef extern from "arrow/type_fwd.h" namespace "arrow" nogil:
     shared_ptr[CDataType] fixed_size_binary(int32_t byte_width)
+
+
+# Values used to check for overflow errors.
+cdef extern from "limits.h":
+    cdef int INT_MAX
+    cdef int INT_MIN

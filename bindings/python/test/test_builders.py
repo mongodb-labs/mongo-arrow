@@ -11,16 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import calendar
-from datetime import date, datetime, timedelta, timezone
+
+from datetime import datetime, timedelta, timezone
 from unittest import TestCase
 
-from bson import Binary, Code, Decimal128, ObjectId
-from pyarrow import Array, bool_, field, int32, int64, list_, struct, timestamp
+from bson import Binary, Code, Decimal128, ObjectId, encode
+from pyarrow import Array, bool_, int32, int64, timestamp
 
 from pymongoarrow.lib import (
     BinaryBuilder,
     BoolBuilder,
+    BuilderManager,
     CodeBuilder,
     Date32Builder,
     Date64Builder,
@@ -34,7 +35,6 @@ from pymongoarrow.lib import (
     ObjectIdBuilder,
     StringBuilder,
 )
-from pymongoarrow.types import ObjectIdType
 
 
 class IntBuildersTestMixin:
@@ -42,13 +42,14 @@ class IntBuildersTestMixin:
         builder = self.builder_cls()
         builder.append(0)
         builder.append_values([1, 2, 3, 4])
+        builder.append("a")
         builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 6)
-        self.assertEqual(arr.to_pylist(), [0, 1, 2, 3, 4, None])
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 7)
+        self.assertEqual(arr.to_pylist(), [0, 1, 2, 3, 4, None, None])
         self.assertEqual(arr.type, self.data_type)
 
 
@@ -70,36 +71,23 @@ class TestDatetimeBuilder(TestCase):
         builder = DatetimeBuilder()
         self.assertEqual(builder.unit, timestamp("ms"))
 
-    def _datetime_to_millis(self, dtm):
-        """Convert datetime to milliseconds since epoch UTC.
-        Vendored from bson."""
-        if dtm.utcoffset() is not None:
-            dtm = dtm - dtm.utcoffset()
-        return int(calendar.timegm(dtm.timetuple()) * 1000 + dtm.microsecond // 1000)
-
-    def _millis_only(self, dt):
-        """Convert a datetime to millisecond resolution."""
-        micros = (dt.microsecond // 1000) * 1000
-        return dt.replace(microsecond=micros)
-
     def test_simple(self):
         self.maxDiff = None
 
         builder = DatetimeBuilder(dtype=timestamp("ms"))
         datetimes = [datetime.now(timezone.utc) + timedelta(days=k * 100) for k in range(5)]
-        builder.append(self._datetime_to_millis(datetimes[0]))
-        builder.append_values([self._datetime_to_millis(k) for k in datetimes[1:]])
+        builder.append(datetimes[0])
+        builder.append_values(datetimes[1:])
+        builder.append(1)
         builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), len(datetimes) + 1)
-        for actual, expected in zip(arr, datetimes + [None]):
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), len(datetimes) + 2)
+        for actual, expected in zip(arr, datetimes + [None, None]):
             if actual.is_valid:
-                self.assertEqual(
-                    actual.as_py().timetuple(), self._millis_only(expected).timetuple()
-                )
+                self.assertEqual(actual.as_py().timetuple(), expected.timetuple())
             else:
                 self.assertIsNone(expected)
         self.assertEqual(arr.type, timestamp("ms"))
@@ -113,30 +101,33 @@ class TestDatetimeBuilder(TestCase):
 class TestDoubleBuilder(TestCase):
     def test_simple(self):
         builder = DoubleBuilder()
-        builder.append(0.123)
-        builder.append_values([1.234, 2.345, 3.456, 4.567])
+        values = [0.123, 1.234, 2.345, 3.456, 4.567, 1]
+        builder.append(values[0])
+        builder.append_values(values[1:])
+        builder.append("a")
         builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 6)
-        self.assertEqual(arr.to_pylist(), [0.123, 1.234, 2.345, 3.456, 4.567, None])
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 8)
+        self.assertEqual(arr.to_pylist(), values + [None, None])
 
 
 class TestObjectIdBuilder(TestCase):
     def test_simple(self):
         ids = [ObjectId() for i in range(5)]
         builder = ObjectIdBuilder()
-        builder.append(ids[0].binary)
-        builder.append_values([oid.binary for oid in ids[1:]])
+        builder.append(ids[0])
+        builder.append_values(ids[1:])
+        builder.append(b"123456789123")
         builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 6)
-        self.assertEqual(arr.to_pylist(), ids + [None])
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 7)
+        self.assertEqual(arr.to_pylist(), ids + [None, None])
 
 
 class TestStringBuilder(TestCase):
@@ -146,74 +137,105 @@ class TestStringBuilder(TestCase):
         values = ["Hello world", "Καλημέρα κόσμε", "コンニチハ"]
         values += ["hello\u0000world"]
         builder = StringBuilder()
-        builder.append(values[0].encode("utf8"))
+        builder.append(values[0])
         builder.append_values(values[1:])
+        builder.append(b"1")
         builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 5)
-        self.assertEqual(arr.to_pylist(), values + [None])
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 6)
+        self.assertEqual(arr.to_pylist(), values + [None, None])
 
 
 class TestDocumentBuilder(TestCase):
     def test_simple(self):
-        dtype = struct([field("a", int32()), field("b", bool_())])
-        builder = DocumentBuilder(dtype)
-        builder.append({"a": 1, "b": True})
-        builder.append_values([{"a": 1, "b": False}, {"a": 2, "b": True}])
+        builder = DocumentBuilder()
+        builder.append(dict(a=1, b=2, c=3))
+        builder.add_field(b"a")
+        builder.add_field(b"b")
+        builder.add_field(b"c")
         builder.append_null()
-        arr = builder.finish()
-
-        self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 4)
-        self.assertEqual(arr.type, dtype)
-
-    def test_nested(self):
-        sub_struct = struct([field("c", bool_()), field("d", ObjectIdType())])
-        dtype = struct([field("a", int32()), field("b", sub_struct)])
-        builder = DocumentBuilder(dtype)
-        builder.append({"a": 1, "b": {"c": True, "d": ObjectId()}})
-        builder.append_values(
-            [
-                {"a": 1, "b": {"c": False, "d": ObjectId()}},
-                {"a": 2, "b": {"c": True, "d": ObjectId()}},
-                {"a": 3, "b": None},  # Null
-                {"a": 4},  # Missing
-                {"a": 5, "b": {}},  # Empty
-                {"a": 6, "b": 1},  # Wrong type
-                {"a": 6, "b": {"c": 1, "d": 1}},  # Wrong field types
-            ]
-        )
-        builder.append_null()
-        arr = builder.finish()
-
-        self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 9)
+        builder.append(dict(a=1, b=2))
+        builder.add_field(b"a")
+        builder.add_field(b"b")
+        names = builder.finish()
+        assert names == ["a", "b", "c"]
 
 
 class TestListBuilder(TestCase):
     def test_simple(self):
-        dtype = list_(int32())
-        builder = ListBuilder(dtype)
-        builder.append({"1": 1, "2": 3})
-        builder.append_values(
-            [
-                {"1": 1, "2": 4},
-                {"1": 2},
-                {"1": None},  # Null
-                None,
-                {"a": 5, "b": 1},
-            ]
-        )
+        builder = ListBuilder()
+        builder.append([1, 2])
+        builder.append_count()
+        builder.append_count()
+        builder.append_null()
+        builder.append([3, 4, 5])
+        builder.append_count()
+        builder.append_count()
+        builder.append_count()
+        builder.append_null()
         arr = builder.finish()
+        assert arr.to_pylist() == [0, 2, 2, 5, 5]
 
-        self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 6)
+
+class TestBuilderManager(TestCase):
+    def test_simple(self):
+        manager = BuilderManager({}, False, None)
+        data = b"".join(encode(d) for d in [dict(a=1), dict(a=2), dict(a=None), dict(a=4)])
+        manager.process_bson_stream(data, len(data))
+        array_map = manager.finish()
+        assert list(array_map) == ["a"]
+        assert next(iter(array_map.values())).finish().to_pylist() == [1, 2, None, 4]
+
+    def test_nested_object(self):
+        inner_values = []
+        for i in range(3):
+            inner_values.append(dict(a=i, b="1", c=None, d=[1.4], e=ObjectId(), f=None))
+        values = []
+        for i in range(3):
+            values.append(dict(c=inner_values[i], e=ObjectId(), f=None, g=[dict(a=1)]))
+        values.append(dict(c=None))
+        inner = inner_values[0].copy()
+        inner["c"] = 1.0
+        values.append(dict(c=inner, e=ObjectId(), f=None, g=[]))
+        manager = BuilderManager({}, False, None)
+        data = b"".join(encode(v) for v in values)
+        manager.process_bson_stream(data, len(data))
+        array_map = manager.finish()
+        for key, value in array_map.items():
+            array_map[key] = value.finish()
+        assert sorted(array_map.keys()) == [
+            "c",
+            "c.a",
+            "c.b",
+            "c.c",
+            "c.d",
+            "c.d[]",
+            "c.e",
+            "c.f",
+            "e",
+            "f",
+            "g",
+            "g[]",
+            "g[].a",
+        ]
+        # Dict has its top level keys.
+        assert array_map["c"] == ["a", "b", "c", "d", "e", "f"]
+        # Deferred nested field.
+        assert array_map["c.c"].to_pylist() == [None, None, None, None, 1.0]
+        assert array_map["f"].to_pylist() == [None, None, None, None, None]
+        # List with a null in the middle.
+        assert array_map["c.d"].to_pylist() == [0, 1, 2, 3, 3, 4]
+        assert array_map["c.d[]"].to_pylist() == [1.4, 1.4, 1.4, 1.4]
+        # Regular item with a null in the middle.
+        assert array_map["c.b"].to_pylist() == ["1", "1", "1", None, "1"]
+        # Nested object ids are object ids.
+        obj = array_map["c.e"].to_pylist()[0]
+        assert isinstance(obj, ObjectId)
+        # Lists can contain objects.
+        assert array_map["g[].a"].to_pylist() == [1, 1, 1, None, None]
 
 
 class TestBinaryBuilder(TestCase):
@@ -222,28 +244,30 @@ class TestBinaryBuilder(TestCase):
         builder = BinaryBuilder(10)
         builder.append(data[0])
         builder.append_values(data[1:])
+        builder.append(1)
         builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 6)
-        self.assertEqual(arr.to_pylist(), data + [None])
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 7)
+        self.assertEqual(arr.to_pylist(), data + [None, None])
 
 
 class TestDecimal128Builder(TestCase):
     def test_simple(self):
         data = [Decimal128([i, i]) for i in range(5)]
         builder = Decimal128Builder()
-        builder.append(data[0].bid)
-        builder.append_values([item.bid for item in data[1:]])
+        builder.append(data[0])
+        builder.append_values(data[1:])
+        builder.append(1)
         builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 6)
-        self.assertEqual(arr.to_pylist(), data + [None])
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 7)
+        self.assertEqual(arr.to_pylist(), data + [None, None])
 
 
 class BoolBuilderTestMixin:
@@ -251,13 +275,16 @@ class BoolBuilderTestMixin:
         builder = BoolBuilder()
         builder.append(False)
         builder.append_values([True, False, True, False, True, False])
+        builder.append(1)
         builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 8)
-        self.assertEqual(arr.to_pylist(), [False, True, False, True, False, True, False, None])
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 9)
+        self.assertEqual(
+            arr.to_pylist(), [False, True, False, True, False, True, False, None, None]
+        )
         self.assertEqual(arr.type, self.data_type)
 
 
@@ -274,51 +301,49 @@ class TestCodeBuilder(TestCase):
         values = ["Hello world", "Καλημέρα κόσμε", "コンニチハ"]
         values += ["hello\u0000world"]
         builder = CodeBuilder()
-        builder.append(values[0].encode("utf8"))
-        builder.append_values(values[1:])
+        builder.append(Code(values[0]))
+        builder.append_values([Code(v) for v in values[1:]])
+        builder.append("foo")
         builder.append_null()
         arr = builder.finish()
 
         codes = [Code(v) for v in values]
 
         self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 5)
-        self.assertEqual(arr.to_pylist(), codes + [None])
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 6)
+        self.assertEqual(arr.to_pylist(), codes + [None, None])
 
 
 class TestDate32Builder(TestCase):
     def test_simple(self):
-        epoch = date(1970, 1, 1)
-        values = [date(2012, 1, 1), date(2012, 1, 2), date(2014, 4, 5)]
+        values = [datetime(1970 + i, 1, 1) for i in range(3)]
         builder = Date32Builder()
-        builder.append(values[0].toordinal() - epoch.toordinal())
-        builder.append_values([v.toordinal() - epoch.toordinal() for v in values[1:]])
+        builder.append(values[0])
+        builder.append_values(values[1:])
+        builder.append(1)
         builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 4)
-        self.assertEqual(arr.to_pylist(), values + [None])
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 5)
+        dates = [v.date() for v in values]
+        self.assertEqual(arr.to_pylist(), dates + [None, None])
 
 
 class TestDate64Builder(TestCase):
     def test_simple(self):
-        def msec_since_epoch(d):
-            epoch = datetime(1970, 1, 1)
-            d = datetime.fromordinal(d.toordinal())
-            diff = d - epoch
-            return diff.total_seconds() * 1000
-
-        values = [date(2012, 1, 1), date(2012, 1, 2), date(2014, 4, 5)]
+        values = [datetime(1970 + i, 1, 1) for i in range(3)]
         builder = Date64Builder()
-        builder.append(msec_since_epoch(values[0]))
-        builder.append_values([msec_since_epoch(v) for v in values[1:]])
+        builder.append(values[0])
+        builder.append_values(values[1:])
+        builder.append(1)
         builder.append_null()
         arr = builder.finish()
 
         self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 1)
-        self.assertEqual(len(arr), 4)
-        self.assertEqual(arr.to_pylist(), values + [None])
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 5)
+        dates = [v.date() for v in values]
+        self.assertEqual(arr.to_pylist(), dates + [None, None])
