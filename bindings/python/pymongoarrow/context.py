@@ -64,7 +64,10 @@ def _parse_builder_map(builder_map):
             full_names = []
             for candidate in list(builder_map):
                 if candidate.startswith(key + "."):
-                    names.append(candidate[len(key) + 1 :])
+                    name = candidate[len(key) + 1 :]
+                    if "." in name or "[" in name:
+                        continue
+                    names.append(name)
                     full_names.append(candidate)
             arrs = [builder_map[c] for c in full_names]
             builder_map[key] = StructArray.from_arrays(arrs, names=names)
