@@ -466,6 +466,32 @@ class ArrowApiTestMixin:
             ),
         )
 
+    def test_schema_missing_field(self):
+        self.coll.drop()
+        self.coll.insert_one(
+            {
+                "_id": ObjectId("000000000000000000000013"),
+                "list_field": [{"name": "Test1", "test": "Test2"}],
+            }
+        )
+
+        schema = Schema(
+            {
+                "_id": ObjectId,
+                "list_field": [
+                    {
+                        "name": pa.string(),
+                        "test": pa.string(),
+                        "test_test": pa.string(),  # does not exist in the database collection
+                    }
+                ],
+            }
+        )
+        expected = [[{"name": "Test1", "test": "Test2", "test_test": None}]]
+        for func in [find_arrow_all, aggregate_arrow_all]:
+            out = func(self.coll, {} if func == find_arrow_all else [], schema=schema).drop(["_id"])
+            self.assertEqual(out["list_field"].to_pylist(), expected)
+
     def test_auto_schema_nested(self):
         # Create table with random data of various types.
         _, data = self._create_nested_data()

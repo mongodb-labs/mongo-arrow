@@ -84,7 +84,7 @@ cdef class BuilderManager:
                 # We only use the doc_iter for binary arrays, which are handled already.
                 self.get_builder(name, ftype, <bson_iter_t *>nullptr)
 
-    cdef _ArrayBuilderBase get_builder(self, cstring key, bson_type_t value_t, bson_iter_t * doc_iter) except *:
+    cdef _ArrayBuilderBase get_builder(self, cstring key, bson_type_t value_t, bson_iter_t * doc_iter):
         cdef _ArrayBuilderBase builder = None
         cdef bson_subtype_t subtype
         cdef const uint8_t *val_buf = NULL

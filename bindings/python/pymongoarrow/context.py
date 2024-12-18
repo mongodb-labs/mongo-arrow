@@ -41,6 +41,7 @@ class PyMongoArrowContext:
         from pymongoarrow.lib import BuilderManager
 
         self.manager = BuilderManager(schema_map, self.schema is not None, self.tzinfo)
+        self.schema_map = schema_map
 
     def process_bson_stream(self, stream):
         self.manager.process_bson_stream(stream, len(stream))
@@ -59,8 +60,15 @@ def _parse_builder_map(builder_map):
     # Traverse the builder map right to left.
     for key, value in reversed(builder_map.items()):
         if value.type_marker == _BsonArrowTypes.document.value:
-            names = value.finish()
-            full_names = [f"{key}.{name}" for name in names]
+            names = []
+            full_names = []
+            for candidate in list(builder_map):
+                if candidate.startswith(key + "."):
+                    name = candidate[len(key) + 1 :]
+                    if "." in name or "[" in name:
+                        continue
+                    names.append(name)
+                    full_names.append(candidate)
             arrs = [builder_map[c] for c in full_names]
             builder_map[key] = StructArray.from_arrays(arrs, names=names)
             to_remove.extend(full_names)
