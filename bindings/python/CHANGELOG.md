@@ -3,7 +3,11 @@
 
 ---
 
-# Changes in Version 1.6.0 (YYYY/MM/DD)
+# Changes in Version 1.6.1 (2024/12/18)
+
+- Fix handling of missing document fields.
+
+# Changes in Version 1.6.0 (YYYY/11/04)
 
 - Add support for PyArrow 18.0 and Python 3.13.
 - Drop support for Python 3.8.
