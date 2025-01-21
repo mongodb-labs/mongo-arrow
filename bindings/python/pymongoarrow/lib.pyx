@@ -187,12 +187,12 @@ cdef class BuilderManager:
                 raise ValueError("Could not append raw value to", full_key.decode('utf8'))
 
             # Recurse into documents.
-            if value_t == BSON_TYPE_DOCUMENT:
+            if value_t == BSON_TYPE_DOCUMENT and builder.type_marker == BSON_TYPE_DOCUMENT:
                 bson_iter_recurse(doc_iter, &child_iter)
                 self.parse_document(&child_iter, full_key, BSON_TYPE_DOCUMENT)
 
             # Recurse into arrays.
-            if value_t == BSON_TYPE_ARRAY:
+            if value_t == BSON_TYPE_ARRAY and builder.type_marker == BSON_TYPE_ARRAY:
                 bson_iter_recurse(doc_iter, &child_iter)
                 self.parse_document(&child_iter, full_key, BSON_TYPE_ARRAY)
 

@@ -492,6 +492,12 @@ class ArrowApiTestMixin:
             out = func(self.coll, {} if func == find_arrow_all else [], schema=schema).drop(["_id"])
             self.assertEqual(out["list_field"].to_pylist(), expected)
 
+    def test_schema_incorrect_data_type(self):
+        self.coll.delete_many({})
+        self.coll.insert_one({"x": {"y": 1}})
+        out = find_arrow_all(self.coll, {}, schema=Schema({"x": str}))
+        assert out.to_pylist() == [{"x": None}]
+
     def test_auto_schema_nested(self):
         # Create table with random data of various types.
         _, data = self._create_nested_data()
