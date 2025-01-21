@@ -3,6 +3,10 @@
 
 ---
 
+# Changes in Version 1.6.2 (2024/12/18)
+
+- Fix macos wheel build for Python 3.9, which prevented the release of 1.6.1.
+
 # Changes in Version 1.6.1 (2024/12/18)
 
 - Fix handling of missing document fields.
