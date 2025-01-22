@@ -59,6 +59,8 @@ cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? N
 cdef class BuilderManager:
     cdef:
         dict builder_map
+        dict parent_types
+        dict parent_names
         uint64_t count
         bint has_schema
         object tzinfo
@@ -69,6 +71,8 @@ cdef class BuilderManager:
         self.tzinfo = tzinfo
         self.count = 0
         self.builder_map = {}
+        self.parent_names = {}
+        self.parent_types = {}
         self.pool = default_memory_pool()
         # Unpack the schema map.
         for fname, (ftype, arrow_type) in schema_map.items():
@@ -146,6 +150,7 @@ cdef class BuilderManager:
         cdef bson_iter_t child_iter
         cdef uint64_t count = self.count
         cdef _ArrayBuilderBase builder = None
+        cdef _ArrayBuilderBase parent_builder = None
 
         while bson_iter_next(doc_iter):
             # Get the key and and value.
@@ -156,12 +161,15 @@ cdef class BuilderManager:
             if parent_type == BSON_TYPE_ARRAY:
                 full_key = base_key
                 full_key.append(b"[]")
+                self.parent_types[full_key] = BSON_TYPE_ARRAY
 
             elif parent_type == BSON_TYPE_DOCUMENT:
                 full_key = base_key
                 full_key.append(b".")
                 full_key.append(key)
                 (<DocumentBuilder>self.builder_map[base_key]).add_field(key)
+                self.parent_types[full_key] = BSON_TYPE_DOCUMENT
+                self.parent_names[full_key] = base_key
 
             else:
                 full_key = key
@@ -174,8 +182,13 @@ cdef class BuilderManager:
                 continue
 
             # Append nulls to catch up.
-            # For lists, the nulls are stored in the parent.
+            # For list children, the nulls are stored in the parent.
             if parent_type != BSON_TYPE_ARRAY:
+                # For document children, catch up with the parent doc.
+                # Root fields will use the base document count
+                if parent_type == BSON_TYPE_DOCUMENT:
+                    parent_builder = <_ArrayBuilderBase>self.builder_map.get(base_key, None)
+                    count = parent_builder.length() - 1
                 if count > builder.length():
                     status = builder.append_nulls_raw(count - builder.length())
                     if not status.ok():
@@ -222,12 +235,14 @@ cdef class BuilderManager:
         cdef dict return_map = {}
         cdef bytes key
         cdef str field
+        cdef uint64_t count
         cdef CStatus status
-        cdef _ArrayBuilderBase value
+        cdef _ArrayBuilderBase builder
+        cdef _ArrayBuilderBase parent_builder
 
         # Move the builders to a new dict with string keys.
-        for key, value in self.builder_map.items():
-            return_map[key.decode('utf-8')] = value
+        for key, builder in self.builder_map.items():
+            return_map[key.decode('utf-8')] = builder
 
         # Insert null fields.
         for field in list(return_map):
@@ -235,14 +250,21 @@ cdef class BuilderManager:
                 return_map[field] = NullBuilder(memory_pool=self.pool)
 
         # Pad fields as needed.
-        for field, value in return_map.items():
-            # If it isn't a list item, append nulls as needed.
-            # For lists, the nulls are stored in the parent.
-            if not field.endswith('[]'):
-                if value.length() < self.count:
-                    status = value.append_nulls_raw(self.count - value.length())
-                    if not status.ok():
-                        raise ValueError("Failed to append nulls to", field)
+        for field, builder in return_map.items():
+            # For list children, the nulls are stored in the parent.
+            key = field.encode('utf-8')
+            parent_type = self.parent_types.get(key, None)
+            if parent_type == BSON_TYPE_ARRAY:
+                continue
+            if parent_type == BSON_TYPE_DOCUMENT:
+                parent_builder = self.builder_map[self.parent_names[key]]
+                count = parent_builder.length()
+            else:
+                count = self.count
+            if builder.length() < count:
+                status = builder.append_nulls_raw(count - builder.length())
+                if not status.ok():
+                    raise ValueError("Failed to append nulls to", field)
 
         return return_map
 
@@ -688,13 +710,15 @@ cdef class ListBuilder(_ArrayBuilderBase):
         self.type_marker = BSON_TYPE_ARRAY
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
+        if value_t == BSON_TYPE_NULL:
+            return self.append_null_raw()
         return self.builder.get().Append(self.count)
 
     cpdef void append_count(self):
         self.count += 1
 
     cdef CStatus append_null_raw(self):
-        return self.builder.get().Append(self.count)
+        return self.builder.get().AppendNull()
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder

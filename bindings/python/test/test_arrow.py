@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import tempfile
 import unittest
 import unittest.mock as mock
 from datetime import date, datetime
+from pathlib import Path
 from test import client_context
 from test.utils import AllowListEventListener, NullsTestMixin
 
@@ -55,6 +57,8 @@ from pymongoarrow.types import (
     Decimal128Type,
     ObjectIdType,
 )
+
+HERE = Path(__file__).absolute().parent
 
 
 class ArrowApiTestMixin:
@@ -493,10 +497,41 @@ class ArrowApiTestMixin:
             self.assertEqual(out["list_field"].to_pylist(), expected)
 
     def test_schema_incorrect_data_type(self):
+        # From https://github.com/mongodb-labs/mongo-arrow/issues/260.
         self.coll.delete_many({})
         self.coll.insert_one({"x": {"y": 1}})
         out = find_arrow_all(self.coll, {}, schema=Schema({"x": str}))
         assert out.to_pylist() == [{"x": None}]
+
+    def test_schema_arrays_of_documents(self):
+        # From https://github.com/mongodb-labs/mongo-arrow/issues/258.
+        coll = self.coll
+        coll.delete_many({})
+        coll.insert_one({"list1": [{"field1": 13.2, "field2": 13.2}, {"field1": 41.6}]})
+        coll.insert_one({"list1": [{"field1": 1.6}]})
+        schema = Schema(
+            {"col": pa.list_(pa.struct({"field1": pa.float64(), "field2": pa.float64()}))}
+        )
+        df = aggregate_arrow_all(coll, [{"$project": {"col": "$list1"}}], schema=schema)
+        assert df.to_pylist() == [
+            {"col": [{"field1": 13.2, "field2": 13.2}, {"field1": 41.6, "field2": None}]},
+            {"col": [{"field1": 1.6, "field2": None}]},
+        ]
+
+    def test_schema_arrays_of_documents_with_nulls(self):
+        # From https://github.com/mongodb-labs/mongo-arrow/issues/257.
+        coll = self.coll
+        coll.delete_many({})
+        with (HERE / "nested_data_in.json").open() as fid:
+            coll.insert_many(json.load(fid))
+        df = aggregate_arrow_all(
+            coll,
+            [{"$project": {"col": "$object1.object11.object111.list1111"}}],
+            schema=Schema({"col": pa.list_(pa.struct({"field11111": pa.float64()}))}),
+        )
+        with (HERE / "nested_data_out.json").open() as fid:
+            expected = json.load(fid)
+        assert df.to_pylist() == expected
 
     def test_auto_schema_nested(self):
         # Create table with random data of various types.
@@ -558,7 +593,7 @@ class ArrowApiTestMixin:
         ]
         expected = pa.Table.from_pylist(
             [
-                {"a": []},
+                {"a": None},
                 {"a": ["str"]},
                 {"a": []},
             ]
@@ -588,7 +623,7 @@ class ArrowApiTestMixin:
         ]
         expected = pa.Table.from_pylist(
             [
-                {"a": []},
+                {"a": None},
                 {"a": ["str"]},  # Inferred schema should use the first non-null element.
                 {"a": []},
             ]
@@ -603,7 +638,7 @@ class ArrowApiTestMixin:
         ]
         expected = pa.Table.from_pylist(
             [
-                {"a": {"b": []}},
+                {"a": {"b": None}},
                 {"a": {"b": ["str"]}},
                 {"a": {"b": []}},
             ]
