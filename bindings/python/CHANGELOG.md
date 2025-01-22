@@ -3,6 +3,10 @@
 
 ---
 
+# Changes in Version 1.6.3 (2025/01/22)
+
+- Further fixes for handling of missing data in nested documents and arrays.
+
 # Changes in Version 1.6.2 (2024/12/18)
 
 - Fix macos wheel build for Python 3.9, which prevented the release of 1.6.1.
