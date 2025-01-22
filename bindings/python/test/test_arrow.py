@@ -593,7 +593,7 @@ class ArrowApiTestMixin:
         ]
         expected = pa.Table.from_pylist(
             [
-                {"a": []},
+                {"a": None},
                 {"a": ["str"]},
                 {"a": []},
             ]
@@ -623,7 +623,7 @@ class ArrowApiTestMixin:
         ]
         expected = pa.Table.from_pylist(
             [
-                {"a": []},
+                {"a": None},
                 {"a": ["str"]},  # Inferred schema should use the first non-null element.
                 {"a": []},
             ]
@@ -638,7 +638,7 @@ class ArrowApiTestMixin:
         ]
         expected = pa.Table.from_pylist(
             [
-                {"a": {"b": []}},
+                {"a": {"b": None}},
                 {"a": {"b": ["str"]}},
                 {"a": {"b": []}},
             ]

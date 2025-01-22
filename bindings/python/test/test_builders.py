@@ -177,7 +177,7 @@ class TestListBuilder(TestCase):
         builder.append_count()
         builder.append_null()
         arr = builder.finish()
-        assert arr.to_pylist() == [0, 2, 2, 5, 5]
+        assert arr.to_pylist() == [0, None, 2, None, 5]
 
 
 class TestBuilderManager(TestCase):
@@ -227,7 +227,7 @@ class TestBuilderManager(TestCase):
         assert array_map["c.c"].to_pylist() == [None, None, None, None, 1.0]
         assert array_map["f"].to_pylist() == [None, None, None, None, None]
         # List with a null in the middle.
-        assert array_map["c.d"].to_pylist() == [0, 1, 2, 3, 3, 4]
+        assert array_map["c.d"].to_pylist() == [0, 1, 2, None, 3, 4]
         assert array_map["c.d[]"].to_pylist() == [1.4, 1.4, 1.4, 1.4]
         # Regular item with a null in the middle.
         assert array_map["c.b"].to_pylist() == ["1", "1", "1", None, "1"]
@@ -235,7 +235,7 @@ class TestBuilderManager(TestCase):
         obj = array_map["c.e"].to_pylist()[0]
         assert isinstance(obj, ObjectId)
         # Lists can contain objects.
-        assert array_map["g[].a"].to_pylist() == [1, 1, 1, None, None]
+        assert array_map["g[].a"].to_pylist() == [1, 1, 1]
 
 
 class TestBinaryBuilder(TestCase):
