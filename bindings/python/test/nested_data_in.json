@@ -1,0 +1,173 @@
+[{
+    "object1": {
+      "object11": {
+        "object111": {}
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {
+          "list1111": [
+            {"field11111": 13.2},
+            {"field11111": 41.6}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {
+          "list1111": [
+            {"field11111": 3.9},
+            {"field11111": 69.5}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {
+          "list1111": [
+            {"field11111": 147.2}
+          ],
+          "list1112": [
+            {"field11121": "Barrier"},
+            {"field11121": "Barrier"},
+            {"field11121": "Barrier"},
+            {"field11121": "Barrier"}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {}
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {
+          "list1111": [
+            {"field11111": 90.4}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {
+          "list1111": [
+            {"field11111": 1.7},
+            {"field11111": 53.9}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {
+          "list1111": [
+            {"field11111": 15.6}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {}
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {
+          "list1111": [
+            {"field11111": 6.7},
+            {"field11111": 12.3}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {
+          "list1111": [
+            {"field11111": 57.1}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {
+          "list1111": [
+            {"field11111": 60.5}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {
+          "list1111": [
+            {"field11111": 1.2}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {
+          "list1111": [
+            {"field11111": 14.9}
+          ]
+        }
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {}
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {}
+      }
+    }
+  },
+  {
+    "object1": {
+      "object11": {
+        "object111": {}
+      }
+    }
+  }]
