@@ -254,6 +254,12 @@ cdef class BuilderManager:
             # For list children, the nulls are stored in the parent.
             key = field.encode('utf-8')
             parent_type = self.parent_types.get(key, None)
+            # Check if the item was in our schema but never seen, and should have a parent.
+            if parent_type is None and "." in field:
+                parent_key, _, _ = field.rpartition('.')
+                self.parent_names[key] = parent_key.encode('utf-8')
+                parent_type = BSON_TYPE_DOCUMENT
+            # Add nulls according to parent type.
             if parent_type == BSON_TYPE_ARRAY:
                 continue
             if parent_type == BSON_TYPE_DOCUMENT:
