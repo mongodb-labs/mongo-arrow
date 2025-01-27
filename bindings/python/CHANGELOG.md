@@ -3,6 +3,10 @@
 
 ---
 
+# Changes in Version 1.6.4 (2025/01/27)
+
+- Another fix for handling of missing data in nested documents.
+
 # Changes in Version 1.6.3 (2025/01/22)
 
 - Further fixes for handling of missing data in nested documents and arrays.
