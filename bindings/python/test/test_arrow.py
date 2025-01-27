@@ -533,6 +533,49 @@ class ArrowApiTestMixin:
             expected = json.load(fid)
         assert df.to_pylist() == expected
 
+    def test_schema_arrays_of_documents_orphaned_null(self):
+        # From https://github.com/mongodb-labs/mongo-arrow/issues/265.
+        col = self.coll
+        col.delete_many({})
+        schema = Schema(
+            {
+                "_id": ObjectId,
+                "test_list_struct": [
+                    {
+                        "field1": {
+                            "sub_field1": pa.string(),
+                            "sub_field2": pa.string(),
+                        }
+                    }
+                ],
+            }
+        )
+
+        col.insert_one(
+            {
+                "_id": ObjectId("000000000000000000000001"),
+                "test_list_struct": [
+                    {
+                        "field1": {
+                            "sub_field1": "test_data",
+                        }
+                    },
+                    {
+                        "field1": "test_data",
+                    },
+                ],
+            }
+        )
+        df = aggregate_arrow_all(col, schema=schema, pipeline=[])
+        doc = df.to_pylist()[0]
+        del doc["_id"]
+        assert doc == {
+            "test_list_struct": [
+                {"field1": {"sub_field1": "test_data", "sub_field2": None}},
+                {"field1": {"sub_field1": None, "sub_field2": None}},
+            ]
+        }
+
     def test_auto_schema_nested(self):
         # Create table with random data of various types.
         _, data = self._create_nested_data()
