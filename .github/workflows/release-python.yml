@@ -46,7 +46,6 @@ jobs:
       - name: Checkout pymongoarrow
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up python version
@@ -95,7 +94,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           persist-credentials: false
 
       - uses: actions/setup-python@v5
