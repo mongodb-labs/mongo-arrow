@@ -31,7 +31,7 @@ jobs:
         # https://github.com/github/feedback/discussions/7835#discussioncomment-1769026
         buildplat:
         - [ubuntu-20.04, manylinux_x86_64]
-        - [ubuntu-24.04-arm, manylinux_aarch64]
+        - [ubuntu-20.04, manylinux_aarch64]
         - [macos-14, macosx_*]
         - [windows-2019, win_amd64]
         python: ["cp39", "cp310", "cp311", "cp312", "cp313"]
@@ -59,6 +59,16 @@ jobs:
           cache: 'pip'
           cache-dependency-path: 'bindings/python/pyproject.toml'
           allow-prereleases: true
+
+      - name: Set up QEMU
+        if: matrix.buildplat[1] == 'manylinux_aarch64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          # setup-qemu-action by default uses `tonistiigi/binfmt:latest` image,
+          # which is out of date. This causes seg faults during build.
+          # Here we manually fix the version.
+          image: tonistiigi/binfmt:qemu-v8.1.5
+          platforms: arm64
 
       - name: Install pkg-config on MacOS
         if: runner.os == 'macOS'
