@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import warnings
+from decimal import Decimal
 
 import numpy as np
 import pandas as pd
@@ -25,6 +26,7 @@ import pyarrow as pa
 import pymongo.errors
 from bson import encode
 from bson.codec_options import TypeEncoder, TypeRegistry
+from bson.decimal128 import Decimal128
 from bson.raw_bson import RawBSONDocument
 from numpy import ndarray
 from pyarrow import Schema as ArrowSchema
@@ -416,6 +418,18 @@ class _PandasNACodec(TypeEncoder):
         return
 
 
+class _DecimalCodec(TypeEncoder):
+    """A custom type codec for Decimal objects."""
+
+    @property
+    def python_type(self):
+        return Decimal
+
+    def transform_python(self, value):
+        """Transform an Decimal object into a BSON Decimal128 object"""
+        return Decimal128(value)
+
+
 def write(collection, tabular, *, exclude_none: bool = False):
     """Write data from `tabular` into the given MongoDB `collection`.
 
@@ -471,7 +485,7 @@ def write(collection, tabular, *, exclude_none: bool = False):
 
     # Handle Pandas NA objects.
     codec_options = collection.codec_options
-    type_registry = TypeRegistry([_PandasNACodec()])
+    type_registry = TypeRegistry([_PandasNACodec(), _DecimalCodec()])
     codec_options = codec_options.with_options(type_registry=type_registry)
 
     while cur_offset < tab_size:

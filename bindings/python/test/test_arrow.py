@@ -966,6 +966,17 @@ class ArrowApiTestMixin:
         col_data = list(self.coll.find({}))
         assert "b" not in col_data[2]
 
+    def test_decimal128(self):
+        import decimal
+
+        a = decimal.Decimal("123.45")
+        arr = pa.array([a], pa.decimal128(5, 2))
+        data = Table.from_arrays([arr], names=["data"])
+        self.coll.drop()
+        write(self.coll, data)
+        coll_data = list(self.coll.find({}))
+        assert coll_data[0]["data"] == Decimal128(a)
+
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):
     def run_find(self, *args, **kwargs):

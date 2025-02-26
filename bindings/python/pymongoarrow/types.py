@@ -277,6 +277,7 @@ _TYPE_CHECKER_TO_INTERNAL_TYPE = {
     _atypes.is_date64: _BsonArrowTypes.date64.value,
     _atypes.is_large_string: _BsonArrowTypes.string.value,
     _atypes.is_large_list: _BsonArrowTypes.array.value,
+    _atypes.is_decimal128: _BsonArrowTypes.decimal128.value,
 }
 
 
