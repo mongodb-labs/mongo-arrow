@@ -483,7 +483,7 @@ def write(collection, tabular, *, exclude_none: bool = False):
 
     tabular_gen = _tabular_generator(tabular, exclude_none=exclude_none)
 
-    # Handle Pandas NA objects.
+    # Add handling for special case types.
     codec_options = collection.codec_options
     type_registry = TypeRegistry([_PandasNACodec(), _DecimalCodec()])
     codec_options = codec_options.with_options(type_registry=type_registry)
