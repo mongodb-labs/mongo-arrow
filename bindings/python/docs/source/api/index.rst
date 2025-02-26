@@ -13,3 +13,5 @@ Sub-modules:
 
    api
    monkey
+   pandas_types
+   types
