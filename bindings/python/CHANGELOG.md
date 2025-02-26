@@ -3,6 +3,11 @@
 
 ---
 
+# Changes in Version 1.7.0 (2025/02/276)
+
+- Add support for PyArrow 19.0.
+- Add support for `pyarrow.decimal128` types.
+
 # Changes in Version 1.6.4 (2025/01/27)
 
 - Another fix for handling of missing data in nested documents.
