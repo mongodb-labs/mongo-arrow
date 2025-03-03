@@ -30,8 +30,8 @@ jobs:
         # Github Actions doesn't support pairing matrix values together, let's improvise
         # https://github.com/github/feedback/discussions/7835#discussioncomment-1769026
         buildplat:
-        - [ubuntu-20.04, manylinux_x86_64]
-        - [ubuntu-20.04, manylinux_aarch64]
+        - [ubuntu-24.04, manylinux_x86_64]
+        - [ubuntu-24.04, manylinux_aarch64]
         - [macos-14, macosx_*]
         - [windows-2019, win_amd64]
         python: ["cp39", "cp310", "cp311", "cp312", "cp313"]
@@ -156,7 +156,7 @@ jobs:
   publish:
     # https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/#publishing-the-distribution-to-pypi
     needs: [collect_dist]
-    if: github.repository_owner == 'mongodb-labs' || github.event_name == 'workflow_dispatch'
+    if: (github.repository_owner == 'mongodb-labs' != github.event_name == 'pull_request')  || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: release
     permissions:
