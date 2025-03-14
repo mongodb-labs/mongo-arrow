@@ -84,8 +84,9 @@ class Schema:
             for nested_ftype in ftype:
                 fname, ftype, projection = self._get_field_projection_value(fname + "." + nested_ftype.name, nested_ftype.type)
             return fname, ftype, projection
-        return fname, ftype, projection.update({fname: True})
-
+        projection[fname] = value
+        return fname, ftype, projection
+        
     def __eq__(self, other):
         if isinstance(other, type(self)):
             return self.typemap == other.typemap
