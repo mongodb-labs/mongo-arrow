@@ -82,7 +82,7 @@ class Schema:
             return fname, ftype, projection
         if isinstance(ftype, pa.StructType):
             for nested_ftype in ftype:
-                fname, ftype, projection = self._get_field_projection_value(fname + "." + nested_ftype.name, nested_ftype.type)
+                fname, ftype, projection = self._get_field_projection_value(fname + "." + nested_ftype.name, nested_ftype.type, projection)
             return fname, ftype, projection
         projection[fname] = value
         return fname, ftype, projection
