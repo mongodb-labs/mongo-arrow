@@ -68,11 +68,7 @@ class Schema:
     def _get_projection(self):
         projection = {"_id": False}
         for fname, ftype in self.typemap.items():
-            fname, ftype, projection = self._get_field_projection_value(fname, ftype, projection)
-            # if isinstance(value, bool):
-            #     projection[fname] = value
-            # else:
-            #     projection.update(value)
+            projection = self._get_field_projection_value(fname, ftype, projection)
         return projection
 
     def _get_field_projection_value(self, fname, ftype, projection):
