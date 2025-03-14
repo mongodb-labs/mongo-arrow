@@ -70,7 +70,7 @@ class Schema:
         for fname, ftype in self.typemap.items():
             value = self._get_field_projection_value(fname, ftype)
             if isinstance(value, bool):
-                projection[updated_name] = value
+                projection[fname] = value
             else:
                 projection.update(value)
         return projection
