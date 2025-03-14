@@ -78,14 +78,12 @@ class Schema:
     def _get_field_projection_value(self, fname, ftype, projection):
         value = True
         if isinstance(ftype, pa.ListType):
-            fname, ftype, projection = self._get_field_projection_value(fname, ftype.value_field.type, projection)
-            return fname, ftype, projection
+            return self._get_field_projection_value(fname, ftype.value_field.type, projection)
         if isinstance(ftype, pa.StructType):
             for nested_ftype in ftype:
-                fname, ftype, projection = self._get_field_projection_value(fname + "." + nested_ftype.name, nested_ftype.type, projection)
-            return fname, ftype, projection
+                return self._get_field_projection_value(fname + "." + nested_ftype.name, nested_ftype.type, projection)
         projection[fname] = value
-        return fname, ftype, projection
+        return projection
         
     def __eq__(self, other):
         if isinstance(other, type(self)):
