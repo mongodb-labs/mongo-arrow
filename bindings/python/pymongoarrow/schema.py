@@ -74,7 +74,11 @@ class Schema:
     def _get_field_projection_value(self, ftype):
         value = True
         if isinstance(ftype, pa.ListType):
-            return self._get_field_projection_value(ftype.value_field.type)
+            #list-of-struct is not implemented in pymongo, the mongo client reads the projection value as a query
+            if isinstance(ftype.value_field.type, pa.StructType):
+                return value
+            else:
+                return self._get_field_projection_value(ftype.value_field.type)
         if isinstance(ftype, pa.StructType):
             projection = {}
             for nested_ftype in ftype:
