@@ -73,7 +73,7 @@ class Schema:
                     projection[fname+"."+nested_ftype.name] = self._get_field_projection_value(nested_ftype.type)
             else:
                 projection[fname] = self._get_field_projection_value(ftype)
-            return projection
+        return projection
 
     def _get_field_projection_value(self, ftype):
         value = True
