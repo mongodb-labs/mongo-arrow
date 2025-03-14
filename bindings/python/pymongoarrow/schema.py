@@ -71,7 +71,7 @@ class Schema:
             value = self._get_field_projection_value(fname, ftype)
             if isinstance(value, bool):
                 projection[updated_name] = value
-            elif isinstance(value, dict[str,bool]):
+            else:
                 projection.update(value)
         return projection
 
