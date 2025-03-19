@@ -88,7 +88,7 @@ manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 repair-wheel-command = [
     "pip install \"auditwheel>=6,<7\"",
-    "auditwheel repair --exclude libarrow* {wheel} {dest_dir}"
+    "auditwheel repair --exclude libarrow* {wheel}"
 ]
 
 [tool.cibuildwheel.macos]
