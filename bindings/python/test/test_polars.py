@@ -255,17 +255,17 @@ class TestExplicitPolarsApi(PolarsTestBase):
         Tracks future changes in any packages.
         """
 
-        # Series:  PyMongoError does not support
+        # Series: PyMongoError does not support.
         with self.assertRaises(ValueError) as exc:
             pls = pl.Series(values=range(2))
             write(self.coll, pls)
         self.assertTrue("Invalid tabular data object" in exc.exception.args[0])
 
-        # Polars has an Object Type, similar in concept to Pandas
+        # Polars has an Object Type, similar in concept to Pandas. PyMongoError does not support them.
         class MyObject:
             pass
 
-        with self.assertRaises(pl.exceptions.PanicException) as exc:
+        with self.assertRaises(ValueError) as exc:
             df_in = pl.DataFrame(data=[MyObject()] * 2)
             write(self.coll, df_in)
 

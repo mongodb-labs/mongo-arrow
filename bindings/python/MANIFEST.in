@@ -1,0 +1,27 @@
+include README.md
+include CHANGELOG.md
+include CONTRIBUTING.md
+include LICENSE
+include THIRD-PARTY-NOTICES
+include *.sh
+include pyproject.toml
+include tox.ini
+
+exclude RELEASE.md
+exclude asv.conf.json
+
+graft pymongoarrow
+
+recursive-include test *
+recursive-exclude docs *
+recursive-exclude benchmarks *
+
+global-exclude *.cpp
+global-exclude *.dylib
+global-exclude *.so.*
+global-exclude *.so
+global-exclude *.dll
+global-exclude *.pyd
+global-exclude *.pyc
+global-exclude .git*
+global-exclude .DS_Store
