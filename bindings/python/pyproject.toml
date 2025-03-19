@@ -88,7 +88,7 @@ manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 repair-wheel-command = [
     "pip install \"auditwheel>=6,<7\"",
-    "python addtags.py {wheel} {dest_dir}"
+    "auditwheel repair -w {dest_dir} --exclude libarrow* {wheel}"
 ]
 
 [tool.cibuildwheel.macos]
@@ -142,7 +142,6 @@ exclude = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"addtags.py" = ["T201", "PTH"]
 "setup.py" = ["PTH", "EM", "B", "S", "E501"]
 "docs/source/conf.py" = ["E501", "S", "PTH"]
 "benchmarks.py" = ["T201", "E501", "C4"]
