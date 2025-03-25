@@ -333,6 +333,8 @@ class ArrowApiTestMixin:
         with self.assertRaises(ValueError):
             self.round_trip(data, Schema(schema))
 
+
+
     def test_date_types(self):
         schema, data = self._create_data()
         self.round_trip(data, Schema(schema))
@@ -414,6 +416,10 @@ class ArrowApiTestMixin:
             raw_data["list"] = [[nested_elem] for _ in range(3)]
         raw_data["nested"] = [inner(i) for i in range(3)]
         return schema, Table.from_pydict(raw_data, ArrowSchema(schema))
+
+    def test_write_nested_schema_validation(self):
+        schema, data = self._create_nested_data(nested_elem=True)
+        self.round_trip(data, Schema(schema))
 
     def test_parquet(self):
         schema, data = self._create_nested_data()
