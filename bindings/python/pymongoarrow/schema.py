@@ -68,19 +68,21 @@ class Schema:
     def _get_projection(self):
         projection = {"_id": False}
         for fname, ftype in self.typemap.items():
-            projection[fname] = self._get_field_projection_value(ftype)
+            projection = self._get_field_projection_value(fname, ftype, projection)
         return projection
 
-    def _get_field_projection_value(self, ftype):
+    def _get_field_projection_value(self, fname, ftype, projection):
         value = True
         if isinstance(ftype, pa.ListType):
-            return self._get_field_projection_value(ftype.value_field.type)
+            return self._get_field_projection_value(fname, ftype.value_field.type, projection)
         if isinstance(ftype, pa.StructType):
-            projection = {}
             for nested_ftype in ftype:
-                projection[nested_ftype.name] = True
-            value = projection
-        return value
+                projection = self._get_field_projection_value(
+                    fname + "." + nested_ftype.name, nested_ftype.type, projection
+                )
+            return projection
+        projection[fname] = value
+        return projection
 
     def __eq__(self, other):
         if isinstance(other, type(self)):

@@ -32,6 +32,7 @@ from pyarrow import (
     date64,
     decimal256,
     field,
+    float64,
     int32,
     int64,
     large_list,
@@ -414,6 +415,49 @@ class ArrowApiTestMixin:
             raw_data["list"] = [[nested_elem] for _ in range(3)]
         raw_data["nested"] = [inner(i) for i in range(3)]
         return schema, Table.from_pydict(raw_data, ArrowSchema(schema))
+
+    def test_write_nested_schema_validation(self):
+        raw_data = {
+            "_id": [1, 2],
+            "top": [
+                {
+                    "middle": {
+                        "value": "string_1",
+                        "bottom": [
+                            {"event": datetime(2012, 1, 1), "value": 1.1},
+                            {"event": datetime(2014, 1, 1), "value": 1.2},
+                        ],
+                    }
+                },
+                {
+                    "middle": {
+                        "value": "string_2",
+                        "bottom": [
+                            {"event": datetime(2013, 1, 1), "value": 1.2},
+                            {"event": datetime(2019, 1, 1), "value": 1.5},
+                        ],
+                    }
+                },
+            ],
+        }
+
+        schema = {
+            "_id": int64(),
+            "top": struct(
+                {
+                    "middle": struct(
+                        {
+                            "value": string(),
+                            "bottom": list_(struct({"event": timestamp("ms"), "value": float64()})),
+                        }
+                    )
+                }
+            ),
+        }
+
+        data = Table.from_pydict(raw_data, ArrowSchema(schema))
+
+        self.round_trip(data, Schema(schema))
 
     def test_parquet(self):
         schema, data = self._create_nested_data()
