@@ -3,7 +3,11 @@
 
 ---
 
-# Changes in Version 1.7.0 (2025/02/276)
+# Changes in Version 1.7.1 (2025/03/26)
+
+- Fix projection handling when reading list-of-struct data structures.
+
+# Changes in Version 1.7.0 (2025/02/27)
 
 - Add support for PyArrow 19.0.
 - Add support for `pyarrow.decimal128` types.
