@@ -76,7 +76,7 @@ class TestSchema(TestCase):
 
     def test_nested_projection(self):
         schema = Schema({"_id": int64(), "obj": {"a": int64(), "b": int64()}})
-        self.assertEqual(schema._get_projection(), {"_id": True, "obj": {"a": True, "b": True}})
+        self.assertEqual(schema._get_projection(), {"_id": True, "obj.a": True, "obj.b": True})
 
     def test_list_projection(self):
         schema = Schema(
@@ -85,7 +85,7 @@ class TestSchema(TestCase):
                 "list": list_(struct([field("a", int64()), field("b", int64())])),
             }
         )
-        self.assertEqual(schema._get_projection(), {"_id": True, "list": {"a": True, "b": True}})
+        self.assertEqual(schema._get_projection(), {"_id": True, "list.a": True, "list.b": True})
 
     def test_list_of_list_projection(self):
         schema = Schema(
@@ -94,14 +94,14 @@ class TestSchema(TestCase):
                 "list": list_(list_(struct([field("a", int64()), field("b", int64())]))),
             }
         )
-        self.assertEqual(schema._get_projection(), {"_id": True, "list": {"a": True, "b": True}})
+        self.assertEqual(schema._get_projection(), {"_id": True, "list.a": True, "list.b": True})
 
     def test_py_list_projection(self):
         schema = Schema(
             {"_id": ObjectId, "list": [(struct([field("a", int64()), field("b", float64())]))]}
         )
 
-        self.assertEqual(schema._get_projection(), {"_id": True, "list": {"a": True, "b": True}})
+        self.assertEqual(schema._get_projection(), {"_id": True, "list.a": True, "list.b": True})
 
     def test_py_list_with_multiple_fields_raises(self):
         with pytest.raises(
