@@ -156,7 +156,7 @@ jobs:
   publish:
     # https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/#publishing-the-distribution-to-pypi
     needs: [collect_dist]
-    if: (github.repository_owner == 'mongodb-labs' != github.event_name == 'pull_request')  || github.event_name == 'workflow_dispatch'
+    if: (github.repository_owner == 'mongodb-labs' && github.event_name != 'pull_request')  || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: release
     permissions:
