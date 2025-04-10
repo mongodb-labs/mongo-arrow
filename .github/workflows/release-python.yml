@@ -60,7 +60,7 @@ jobs:
           set -ex
           export LIBBSON_INSTALL_DIR="$(pwd)/libbson"
           tox -e build-libbson
-          export "LIBBSON_INSTALL_DIR=$LIBBSON_INSTALL_DIR" >> $GITHUB_ENV
+          echo "LIBBSON_INSTALL_DIR=$LIBBSON_INSTALL_DIR" >> $GITHUB_ENV
       - uses: blink1073/drivers-github-tools/python-labs/pre-publish@python-labs
         id: pre-publish
         with:
