@@ -61,7 +61,7 @@ jobs:
           export LIBBSON_INSTALL_DIR="$(pwd)/libbson"
           tox -e build-libbson
           echo "LIBBSON_INSTALL_DIR=$LIBBSON_INSTALL_DIR" >> $GITHUB_ENV
-      - uses: blink1073/drivers-github-tools/python-labs/pre-publish@python-labs
+      - uses: mongodb-labs/drivers-github-tools/python-labs/pre-publish@v2
         id: pre-publish
         with:
           dry_run: ${{ env.DRY_RUN }}
@@ -117,7 +117,7 @@ jobs:
           aws_region_name: ${{ vars.AWS_REGION_NAME }}
           aws_secret_id: ${{ secrets.AWS_SECRET_ID }}
           artifactory_username: ${{ vars.ARTIFACTORY_USERNAME }}
-      - uses: blink1073/drivers-github-tools/python-labs/post-publish@python-labs
+      - uses: mongodb-labs/drivers-github-tools/python-labs/post-publish@v2
         with:
           following_version: ${{ env.FOLLOWING_VERSION }}
           product_name: ${{ env.PRODUCT_NAME }}
