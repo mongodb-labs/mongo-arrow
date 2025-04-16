@@ -26,7 +26,7 @@ new version number.
 
 3.  Add release notes to `bindings/python/CHANGELOG.md`. Generally just
     summarize/clarify the git log, but you might add some more long form
-    notes for big changes.  Replace the `devN` version number w/ the new version
+    notes for big changes.  Replace the `devN` version number with the new version
     number (see  note above in [Versioning](#versioning)). Make sure version number
     is updated in `pymongoarrow/version.py`. Create a PR with the changelog and version
     update.
