@@ -1,14 +1,25 @@
-name: Python Wheels
+name: Release
 
 on:
-  push:
-    branches: ["main"]
-    tags:
-      - "**"
-  pull_request:
   workflow_dispatch:
+    inputs:
+      following_version:
+        description: "The post (dev) version to set"
+      dry_run:
+        description: "Dry Run?"
+        default: false
+        type: boolean
   schedule:
     - cron:  '30 5 * * *'
+
+env:
+  # Changes per repo
+  PRODUCT_NAME: PyMongoArrow
+  # Constant
+  # inputs will be empty on a scheduled run.  so, we only set dry_run
+  # to 'false' when the input is set to 'false'.
+  DRY_RUN: ${{ ! contains(inputs.dry_run, 'false') }}
+  FOLLOWING_VERSION: ${{ inputs.following_version || '' }}
 
 concurrency:
   group: wheels-${{ github.ref }}
@@ -20,142 +31,51 @@ defaults:
     shell: bash -eux {0}
 
 jobs:
-  build_wheels:
-    name: Build wheel for ${{ matrix.python }}-${{ matrix.buildplat[1] }}
-    runs-on: ${{ matrix.buildplat[0] }}
-    strategy:
-      # Ensure that a wheel builder finishes even if another fails
-      fail-fast: false
-      matrix:
-        # Github Actions doesn't support pairing matrix values together, let's improvise
-        # https://github.com/github/feedback/discussions/7835#discussioncomment-1769026
-        buildplat:
-        - [ubuntu-24.04, manylinux_x86_64]
-        - [ubuntu-24.04, manylinux_aarch64]
-        - [macos-14, macosx_*]
-        - [windows-2019, win_amd64]
-        python: ["cp39", "cp310", "cp311", "cp312", "cp313"]
-        exclude:
-          - buildplat: [macos-14, macosx_*]
-            python: "cp39"
-        include:
-          - buildplat: [macos-13, macosx_*]
-            python: "cp39"
-
+  pre-publish:
+    environment: release
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'mongodb' || github.event_name == 'workflow_dispatch'
+    permissions:
+      id-token: write
+      contents: write
+    outputs:
+      version: ${{ steps.pre-publish.outputs.version }}
     steps:
-      - name: Checkout pymongoarrow
-        uses: actions/checkout@v4
+      - uses: mongodb-labs/drivers-github-tools/secure-checkout@v2
         with:
-          persist-credentials: false
-
-      - name: Set up python version
-        run: |
-          export PYTHON_VERSION=$(sed 's/^cp3/3./' <<< ${{ matrix.python }} )
-          echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
-
-      - uses: actions/setup-python@v5
+          app_id: ${{ vars.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+      - uses: mongodb-labs/drivers-github-tools/setup@v2
         with:
-          python-version: ${{env.PYTHON_VERSION}}
-          cache: 'pip'
-          cache-dependency-path: 'bindings/python/pyproject.toml'
-          allow-prereleases: true
-
-      - name: Set up QEMU
-        if: matrix.buildplat[1] == 'manylinux_aarch64'
-        uses: docker/setup-qemu-action@v3
-        with:
-          # setup-qemu-action by default uses `tonistiigi/binfmt:latest` image,
-          # which is out of date. This causes seg faults during build.
-          # Here we manually fix the version.
-          image: tonistiigi/binfmt:qemu-v8.1.5
-          platforms: arm64
-
-      - name: Install pkg-config on MacOS
-        if: runner.os == 'macOS'
-        run: brew install pkg-config
-
-      - name: Install cibuildwheel
-        run: python -m pip install "cibuildwheel>=2.4,<3"
-
-      - name: Build MacOS Py39 Wheels
-        if: ${{ matrix.python == 'cp39' && matrix.buildplat[0] == 'macos-11' }}
-        env:
-          MACOS_TEST_SKIP: "*arm64"
-          CIBW_BUILD: cp39-macosx_*
-          MACOSX_DEPLOYMENT_TARGET: "10.14"
-        run: python -m cibuildwheel --output-dir wheelhouse
-
-      - name: Build wheels
-        if: ${{ matrix.buildplat[0] != 'macos-11' }}
-        env:
-          CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
-          MACOSX_DEPLOYMENT_TARGET: "12.0"
-        run: python -m cibuildwheel --output-dir wheelhouse
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.python }}-${{ startsWith(matrix.buildplat[1], 'macosx') && 'macosx' || matrix.buildplat[1] }}
-          path: ./bindings/python/wheelhouse/*.whl
-          if-no-files-found: error
-
-  make_sdist:
-    name: Make SDist
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@v5
-        with:
-          # Build sdist on lowest supported Python
-          python-version: '3.9'
-
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region_name: ${{ vars.AWS_REGION_NAME }}
+          aws_secret_id: ${{ secrets.AWS_SECRET_ID }}
+          artifactory_username: ${{ vars.ARTIFACTORY_USERNAME }}
       - name: Install tox
         run: |
           python -m pip install tox
-
-      - name: Build SDist
+      - name: Build Libbson
         working-directory: ./bindings/python
         run: |
           set -ex
           export LIBBSON_INSTALL_DIR="$(pwd)/libbson"
           tox -e build-libbson
-          tox -e build-dist -- --sdist
-
-      - name: Test Sdist
-        working-directory: ./bindings/python
-        run: |
-          export LIBBSON_INSTALL_DIR="$(pwd)/libbson"
-          python -m pip install dist/*.gz
-          cd ..
-          python -c "from pymongoarrow.lib import libbson_version"
-
-      - uses: actions/upload-artifact@v4
+          echo "LIBBSON_INSTALL_DIR=$LIBBSON_INSTALL_DIR" >> $GITHUB_ENV
+      - uses: mongodb-labs/drivers-github-tools/python-labs/pre-publish@v2
+        id: pre-publish
         with:
-          name: "sdist"
-          path: ./bindings/python/dist/*.tar.gz
+          dry_run: ${{ env.DRY_RUN }}
+          working_directory: ./bindings/python
 
-  collect_dist:
-    runs-on: ubuntu-latest
-    needs: [build_wheels, make_sdist]
-    name: Download Wheels
-    steps:
-      - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v4
-      - name: Flatten directory
-        working-directory: .
-        run: |
-          find . -mindepth 2 -type f -exec mv {} . \;
-          find . -type d -empty -delete
-      - uses: actions/upload-artifact@v4
-        with:
-          name: all-dist-${{ github.run_id }}
-          path: "./*"
+  build-dist:
+    needs: [pre-publish]
+    uses: ./.github/workflows/dist-python.yml
+    with:
+      ref: ${{ needs.pre-publish.outputs.version }}
 
   publish:
     # https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/#publishing-the-distribution-to-pypi
-    needs: [collect_dist]
+    needs: [build-dist]
     if: (github.repository_owner == 'mongodb-labs' && github.event_name != 'pull_request')  || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: release
@@ -176,3 +96,31 @@ jobs:
     - name: Publish distribution 📦 to PyPI
       if: startsWith(github.ref, 'refs/tags/')
       uses: pypa/gh-action-pypi-publish@release/v1
+
+  post-publish:
+    needs: [publish]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: write
+      attestations: write
+      security-events: write
+    steps:
+      - uses: mongodb-labs/drivers-github-tools/secure-checkout@v2
+        with:
+          app_id: ${{ vars.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+      - uses: mongodb-labs/drivers-github-tools/setup@v2
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region_name: ${{ vars.AWS_REGION_NAME }}
+          aws_secret_id: ${{ secrets.AWS_SECRET_ID }}
+          artifactory_username: ${{ vars.ARTIFACTORY_USERNAME }}
+      - uses: mongodb-labs/drivers-github-tools/python-labs/post-publish@v2
+        with:
+          following_version: ${{ env.FOLLOWING_VERSION }}
+          product_name: ${{ env.PRODUCT_NAME }}
+          token: ${{ github.token }}
+          dry_run: ${{ env.DRY_RUN }}
+          working_directory: ./bindings/python

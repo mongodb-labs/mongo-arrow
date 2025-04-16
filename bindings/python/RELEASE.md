@@ -26,27 +26,12 @@ new version number.
 
 3.  Add release notes to `bindings/python/CHANGELOG.md`. Generally just
     summarize/clarify the git log, but you might add some more long form
-    notes for big changes.
+    notes for big changes.  Replace the `devN` version number with the new version
+    number (see  note above in [Versioning](#versioning)). Make sure version number
+    is updated in `pymongoarrow/version.py`. Create a PR with the changelog and version
+    update.
 
-4.  Replace the `devN` version number w/ the new version number (see
-    note above in [Versioning](#versioning)). Make sure version number
-    is updated in `pymongoarrow/version.py`. Commit the change and tag
-    the release. Immediately bump the version number to `dev0` in a new
-    commit:
-
-        $ # Bump to release version number
-        $ git commit -a -m "BUMP <release version number>"
-        $ git tag -a "<release version number>" -m "BUMP <release version number>"
-        $ # Bump to dev version number
-        $ git commit -a -m "BUMP <dev version number>"
-        $ git push
-        $ git push --tags
-
-5.  Pushing a tag will trigger the release process on GitHub Actions
-    that will require a member of the team to authorize the deployment.
-    Navigate to
-    <https://github.com/mongodb-labs/mongo-arrow/actions/workflows/release-python.yml>
-    and wait for the publish to complete.
+5.  Run the release workflow: https://github.com/mongodb-labs/mongo-arrow/actions/workflows/release-python.yml.
 
 6.  Make sure the new version appears on
     <https://mongo-arrow.readthedocs.io/en/stable/>. If the new version
@@ -58,8 +43,7 @@ new version number.
 8.  Announce the release on:
     <https://www.mongodb.com/community/forums/c/announcements/driver-releases>
 
-9.  Create a GitHub Release for the tag using
-    <https://github.com/mongodb/mongo-arrow/releases/new>. The title
+9.  Publish the draft GitHub Release for the tag. The title
     should be "PyMongoArrow X.Y.Z", and the description should contain a
     link to the release notes on the the community forum, e.g. "Release
     notes:
