@@ -28,17 +28,17 @@ test *args:
 
 lint:
     uv sync --no-install-project --dev
-    uv run --no-build pre-commit run --hook-stage manual --all-files
-    uv run --no-build  check-manifest -v
+    uv run --no-project pre-commit run --hook-stage manual --all-files
+    uv run --no-project  check-manifest -v
 
 docs:
     uv sync --no-install-project --group docs
-    uv run --no-build sphinx-build -T -b html {{sphinx_opts}} {{docs_build}}/html
+    uv run --no-project sphinx-build -T -b html {{sphinx_opts}} {{docs_build}}/html
 
 docs-serve:
     uv sync --no-install-project --group docs --group dev
-    urn run --no-build sphinx-autobuild --watch ./pymongoarrow docs {{docs_build}}/html
+    urn run --no-project sphinx-autobuild --watch ./pymongoarrow docs {{docs_build}}/html
 
 docs-linkcheck *args:
     uv sync --no-install-project --group docs
-    PYTHONHASHSEED=0 uv run --no-build python -m sphinx -q -b linkcheck docs {{docs_build}}/linkcheck {{args}}
+    PYTHONHASHSEED=0 uv run --no-project python -m sphinx -q -b linkcheck docs {{docs_build}}/linkcheck {{args}}

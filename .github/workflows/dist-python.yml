@@ -121,6 +121,7 @@ jobs:
       - name: Build SDist
         working-directory: ./bindings/python
         run: |
+          export LIBBSON_INSTALL_DIR=$(pwd)/libbson
           just build-libbson
           python -m build --sdist .
 
