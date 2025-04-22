@@ -60,7 +60,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{env.PYTHON_VERSION}}
+          python-version: "3.11"
           allow-prereleases: true
 
       - name: Set up QEMU
