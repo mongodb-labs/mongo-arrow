@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import atexit
 
 import pymongo
 
@@ -41,8 +40,6 @@ class ClientContext:
 
         if self.connected:
             self.client = self.get_client()
-            atexit.register(self.client.close)
 
 
 client_context = ClientContext()
-client_context.init()
