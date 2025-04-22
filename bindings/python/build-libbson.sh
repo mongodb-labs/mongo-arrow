@@ -37,7 +37,7 @@ echo "CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
 echo "LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR}"
 
 # Activate the virtualenv for the cmake build.
-if [ -d $(pwd)/.venv/Scripts ]; then
+if [ -d "$(pwd)/.venv/Scripts" ]; then
   . "$(pwd)/.venv/Scripts/activate"
 else
   . "$(pwd)/.venv/bin/activate"

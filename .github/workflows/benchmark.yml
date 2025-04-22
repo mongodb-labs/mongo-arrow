@@ -45,9 +45,6 @@ jobs:
         run: |
           set -eux
           run_asv () {
-              if [ ! -e "justfile" ] ; then
-                  git checkout refs/bm/pr justfile
-              fi
               git show --no-patch --format="%H (%s)"
               export LIBBSON_INSTALL_DIR=$(pwd)/libbson
               just benchmark --set-commit-hash $(git rev-parse HEAD)
