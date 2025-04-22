@@ -1,4 +1,4 @@
-# Copyright 2023-present MongoDB, Inc.
+# Copyright 2025-present MongoDB, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,59 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import numpy as np
-import pandas as pd
+from test import client_context
+
 import pytest
 
-# Fixtures for use with Pandas extension types.
+pytest_plugins = [
+    "pandas.tests.extension.conftest",
+]
 
 
-@pytest.fixture
-def data_for_twos(dtype):
-    return pd.array(np.ones(100), dtype=dtype)
-
-
-@pytest.fixture
-def na_value():
-    return np.nan
-
-
-@pytest.fixture
-def na_cmp():
-    def cmp(a, b):
-        return np.isnan(a) and np.isnan(b)
-
-    return cmp
-
-
-@pytest.fixture(params=[True, False])
-def box_in_series(request):
-    """Whether to box the data in a Series"""
-    return request.param
-
-
-@pytest.fixture(params=[True, False])
-def as_array(request):
-    """
-    Boolean fixture to support ExtensionDtype _from_sequence method testing.
-    """
-    return request.param
-
-
-@pytest.fixture(params=["ffill", "bfill"])
-def fillna_method(request):
-    """
-    Parametrized fixture giving method parameters 'ffill' and 'bfill' for
-    Series.fillna(method=<method>) testing.
-    """
-    return request.param
-
-
-@pytest.fixture
-def invalid_scalar(data):
-    """
-    A scalar that *cannot* be held by this ExtensionArray.
-    The default should work for most subclasses, but is not guaranteed.
-    If the array can hold any item (i.e. object dtype), then use pytest.skip.
-    """
-    return object.__new__(object)
+@pytest.fixture(autouse=True, scope="session")
+def client():
+    client_context.init()
+    yield
+    if client_context.client:
+        client_context.client.close()

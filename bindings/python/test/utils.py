@@ -144,6 +144,10 @@ class NullsTestMixin:
         self.cmd_listener.reset()
         self.getmore_listener.reset()
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.close()
+
     def assertType(self, obj1, arrow_type):
         if isinstance(obj1, pa.ChunkedArray):
             if "storage_type" in dir(arrow_type) and obj1.type != arrow_type:
