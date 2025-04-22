@@ -16,7 +16,7 @@ defaults:
 
 jobs:
 
-  pre-commit:
+  lint:
     name: pre-commit
     runs-on: ubuntu-latest
 
@@ -25,9 +25,11 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions/setup-python@v5
-      - uses: pre-commit/action@v3.0.1
-        with:
-          extra_args: --all-files --hook-stage=manual
+      - name: Install Deps
+        run: |
+          python -m pip install rust-just uv
+      - name: Run linter
+        run: just lint
 
   build:
     # supercharge/mongodb-github-action requires containers so we don't test other platforms
@@ -76,22 +78,15 @@ jobs:
           mongod --remove
           mongod --install --dbpath=$(pwd)/data --logpath=$PWD/mongo.log
           net start MongoDB
-      - name: Install tox
+      - name: Install Deps
         run: |
-          python -m pip install tox
+          python -m pip install rust-just uv
       - name: Install libbson
-        run: |
-          tox -e build-libbson
+        run: just build-libbson
       - name: Ensure imports with no test deps
-        run: |
-          echo "LIBBSON_INSTALL_DIR=$LIBBSON_INSTALL_DIR"
-          tox -e import-check
+        run: just import-check
       - name: Run the tests
-        run: |
-          tox -e test
-      - name: Check the manifest
-        run: |
-          tox -e manifest
+        run: just test
 
   docs:
     runs-on: ubuntu-latest
@@ -105,14 +100,10 @@ jobs:
           python-version: 3.9
           cache: 'pip'
           cache-dependency-path: '**/pyproject.toml'
-      - name: Install tox
+      - name: Install Deps
         run: |
-          python -m pip install tox
+          python -m pip install rust-just uv
       - name: Build docs
-        shell: bash -l {0}
-        run: |
-          NO_EXT=1 tox -e docs
+        run: just docs
       - name: Run linkcheck
-        shell: bash -l {0}
-        run: |
-          NO_EXT=1 tox -e linkcheck
+        run: just docs-linkcheck

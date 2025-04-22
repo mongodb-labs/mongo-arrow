@@ -51,15 +51,13 @@ jobs:
           aws_region_name: ${{ vars.AWS_REGION_NAME }}
           aws_secret_id: ${{ secrets.AWS_SECRET_ID }}
           artifactory_username: ${{ vars.ARTIFACTORY_USERNAME }}
-      - name: Install tox
+      - name: Install Deps
         run: |
-          python -m pip install tox
+          python -m pip install rust-just uv
       - name: Build Libbson
         working-directory: ./bindings/python
         run: |
-          set -ex
-          export LIBBSON_INSTALL_DIR="$(pwd)/libbson"
-          tox -e build-libbson
+          just build-libbson
           echo "LIBBSON_INSTALL_DIR=$LIBBSON_INSTALL_DIR" >> $GITHUB_ENV
       - uses: mongodb-labs/drivers-github-tools/python-labs/pre-publish@v2
         id: pre-publish

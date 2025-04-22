@@ -25,7 +25,7 @@ PyMongoArrow uses [Ruff](https://docs.astral.sh/ruff/) for formatting and lintin
 -   Avoid backward breaking changes if at all possible.
 -   Write inline documentation for new classes and methods.
 -   Write tests and make sure they pass (make sure you have a mongod
-    running on the default port, then execute `tox -e test` from the cmd
+    running on the default port, then execute `just test` from the cmd
     line to run the test suite).
 -   Add yourself to doc/contributors.rst `:)`
 
@@ -144,18 +144,16 @@ Windows is not yet supported.
 
 First, clone the mongo-arrow git repository:
 
-``` bash
-$ git clone https://github.com/mongodb-labs/mongo-arrow.git
-$ cd mongo-arrow/bindings/python
+```bash
+git clone https://github.com/mongodb-labs/mongo-arrow.git
+cd mongo-arrow/bindings/python
 ```
 
-Additionally, create a virtualenv in which to install `pymongoarrow`
-from sources:
+Ensure you have [just](https://just.systems/man/en/introduction.html) and [uv](https://docs.astral.sh/uv/getting-started/installation/) installed.
+Then run:
 
-``` bash
-$ virtualenv pymongoarrow
-$ source ./pymongoarrow/bin/activate
-$ pip install tox
+```bash
+just install
 ```
 
 ### libbson
@@ -170,7 +168,7 @@ properly configured for use with `pkg-config`, or use the provided
 `build-libbson.sh` script to build it:
 
 ``` bash
-$ LIBBSON_INSTALL_DIR=$(pwd)/libbson tox -e build-libbson
+just build-libbson
 ```
 
 On macOS, users can install the latest `libbson` using Homebrew:
@@ -190,14 +188,14 @@ you try to build with a lower version a `ValueError` will be raised.
 
 ## Build
 
-Typically we will use the provided `tox` scripts and will not build
+Typically we will use the provided `just` scripts and will not build
 directly, but you can build and test in the created virtualenv.
 
 In the previously created virtualenv, to install PyMongoArrow and its
 test dependencies in editable mode:
 
-``` bash
-(pymongoarrow) $ pip install -v -e ".[test]"
+```bash
+pip install -v -e ".[test]"
 ```
 
 If you built libbson using the `build-libbson` script then use the same
@@ -211,11 +209,11 @@ If you built libbson using the `build-libbson` script then use the same
 To run the test suite, you will need a MongoDB instance running on
 `localhost` using port `27017`. To run the entire test suite, do:
 
-``` bash
-(pymongoarrow) $ tox -e test
+```bash
+just test
 ```
 
-or, if not using `tox`:
+or, if not using `just`:
 
 > (pymongoarrow) \$ pytest
 
@@ -228,15 +226,14 @@ consistent code style within the codebase.
 
 To set up `pre-commit` locally, run:
 
-``` bash
-(pymongoarrow) $ pip install pre-commit
-(pymongoarrow) $ pre-commit install
+```bash
+just install
 ```
 
 To run `pre-commit` manually, run:
 
-``` bash
-(pymongoarrow) $ tox -e lint
+```bash
+just lint
 ```
 
 ## Running Benchmarks
@@ -246,12 +243,12 @@ To run `pre-commit` manually, run:
 To run the benchmarks, you need the [asv](https://pypi.org/project/asv/)
 package, which can then be invoked like so:
 
-``` bash
+```bash
 asv run --strict --python=`which python`
 ```
 
-or you can run with tox as:
+or you can run with just as:
 
-``` bash
-tox -e benchmarks
+```bash
+just benchmark
 ```
