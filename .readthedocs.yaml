@@ -12,4 +12,4 @@ build:
         - cd bindings/python && uv sync --no-install-project --group docs
     build:
         html:
-          - cd bindings/python && uv run sphinx-build -c docs/source -T -b html docs $READTHEDOCS_OUTPUT/html
+          - cd bindings/python && uv run --no-project sphinx-build -c docs/source -T -b html docs $READTHEDOCS_OUTPUT/html
