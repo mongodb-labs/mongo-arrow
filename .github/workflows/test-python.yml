@@ -17,7 +17,7 @@ defaults:
 jobs:
 
   lint:
-    name: pre-commit
+    name: lint
     runs-on: ubuntu-latest
 
     steps:
