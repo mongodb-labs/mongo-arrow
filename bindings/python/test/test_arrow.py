@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import io
 import json
 import tempfile
 import unittest
@@ -22,8 +23,9 @@ from test import client_context
 from test.utils import AllowListEventListener, NullsTestMixin
 
 import pyarrow as pa
+import pyarrow.json
 import pymongo
-from bson import Binary, Code, CodecOptions, Decimal128, ObjectId
+from bson import Binary, Code, CodecOptions, Decimal128, ObjectId, json_util
 from pyarrow import (
     Table,
     bool_,
@@ -1020,6 +1022,35 @@ class ArrowApiTestMixin:
         write(self.coll, data)
         coll_data = list(self.coll.find({}))
         assert coll_data[0]["data"] == Decimal128(a)
+
+    def test_empty_embedded_array(self):
+        # From INTPYTHON-575.
+        self.coll.drop()
+
+        self.coll.insert_many(
+            [{"_id": 1, "foo": {"bar": ["1", "2"]}}, {"_id": 2, "foo": {"bar": []}}]
+        )
+
+        # get document out of mongo, put it in a file and read it with pyarrow and write it to parquet.
+        doc1 = self.coll.find_one({"_id": 1})
+        string1 = json_util.dumps(doc1, indent=2)
+        file1 = io.BytesIO(bytes(string1, encoding="utf-8"))
+        papatable1 = pyarrow.json.read_json(file1)
+        write_table(papatable1, io.BytesIO())
+
+        # read document with pymongoarrow and write it to parquet.
+        pmapatable1 = find_arrow_all(self.coll, {"_id": {"$eq": 1}})
+        write_table(pmapatable1, io.BytesIO())
+
+        doc2 = self.coll.find_one({"_id": 2})
+        string2 = json_util.dumps(doc2, indent=2)
+        file2 = io.BytesIO(bytes(string2, encoding="utf-8"))
+        papatable2 = pyarrow.json.read_json(file2)
+        write_table(papatable2, io.BytesIO())
+
+        pmapatable2 = find_arrow_all(self.coll, {"_id": {"$eq": 2}})
+        assert pmapatable2.to_pylist()[0] == doc2
+        write_table(pmapatable2, io.BytesIO())
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):

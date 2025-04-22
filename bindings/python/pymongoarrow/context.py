@@ -75,7 +75,7 @@ def _parse_builder_map(builder_map):
         elif value.type_marker == _BsonArrowTypes.array.value:
             child_name = key + "[]"
             to_remove.append(child_name)
-            child = builder_map[child_name]
+            child = builder_map.get(child_name, [])
             builder_map[key] = ListArray.from_arrays(value.finish(), child)
         else:
             builder_map[key] = value.finish()
