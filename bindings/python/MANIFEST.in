@@ -9,6 +9,7 @@ include pyproject.toml
 exclude RELEASE.md
 exclude asv.conf.json
 exclude uv.lock
+exclude justfile
 
 graft pymongoarrow
 
