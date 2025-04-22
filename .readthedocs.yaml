@@ -9,7 +9,7 @@ build:
         - asdf install uv latest
         - asdf global uv latest
     install:
-        - uv sync --no-install-project --group docs
+        - cd bindings/python && uv sync --no-install-project --group docs
     build:
         html:
-          - uv run sphinx-build -c docs/source -T -b html docs $READTHEDOCS_OUTPUT/html
+          - cd bindings/python && uv run sphinx-build -c docs/source -T -b html docs $READTHEDOCS_OUTPUT/html

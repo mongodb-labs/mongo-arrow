@@ -50,7 +50,7 @@ jobs:
               fi
               git show --no-patch --format="%H (%s)"
               export LIBBSON_INSTALL_DIR=$(pwd)/libbson
-              just benchmark -- --set-commit-hash $(git rev-parse HEAD)
+              just benchmark --set-commit-hash $(git rev-parse HEAD)
           }
 
           pip install asv virtualenv

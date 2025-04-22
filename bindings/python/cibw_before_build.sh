@@ -22,8 +22,8 @@ then
   pip install --platform $platform --upgrade --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
 fi
 
-# Install just, needed for the build command.
-pip install rust-just
+# Install just uv, needed for the build command.
+pip install rust-just uv
 
 # Build libbson with the appropriate arch.
 CMAKE_BUILD_TYPE=Release just build-libbson

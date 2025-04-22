@@ -128,6 +128,7 @@ jobs:
       - name: Test Sdist
         working-directory: ./bindings/python
         run: |
+          export LIBBSON_INSTALL_DIR=$(pwd)/libbson
           python -m pip install dist/*.gz
           cd ..
           python -c "from pymongoarrow.lib import libbson_version"
