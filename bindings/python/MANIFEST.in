@@ -5,10 +5,11 @@ include LICENSE
 include THIRD-PARTY-NOTICES
 include *.sh
 include pyproject.toml
-include tox.ini
 
 exclude RELEASE.md
 exclude asv.conf.json
+exclude uv.lock
+exclude justfile
 
 graft pymongoarrow
 

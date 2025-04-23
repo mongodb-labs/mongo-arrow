@@ -22,8 +22,8 @@ then
   pip install --platform $platform --upgrade --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
 fi
 
-# Install tox, needed for the build command.
-pip install tox
+# Install just uv, needed for the build command.
+pip install rust-just uv
 
 # Build libbson with the appropriate arch.
-CMAKE_BUILD_TYPE=Release tox -e build-libbson
+CMAKE_BUILD_TYPE=Release just build-libbson

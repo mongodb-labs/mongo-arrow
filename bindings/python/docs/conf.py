@@ -10,19 +10,20 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os.path as p
+from pathlib import Path
 
 # -- Project information -----------------------------------------------------
 
 project = "PyMongoArrow"
-copyright = "MongoDB, Inc. 2021-present. MongoDB, Mongo, and the leaf logo are registered trademarks of MongoDB, Inc"
+copyright = "MongoDB, Inc. 2021-present. MongoDB, Mongo, and the leaf logo are registered trademarks of MongoDB, Inc"  # noqa:E501
 author = "Prashant Mital"
 html_show_sphinx = False
 
-version_file = p.abspath(p.join("../../", "pymongoarrow/version.py"))
+HERE = Path(__file__).absolute().parent
+version_file = HERE / "../pymongoarrow/version.py"
 version_data = {}
-with open(version_file) as vf:
-    exec(vf.read(), {}, version_data)
+with version_file.open() as vf:
+    exec(vf.read(), {}, version_data)  # noqa:S102
 version = version_data["__version__"]
 release = version
 
@@ -102,10 +103,10 @@ html_js_files = [
 # Output file base name for HTML help builder.
 htmlhelp_basename = "PyMongoArrow" + release.replace(".", "_")
 
-intersphinx_mapping = {
-    "pyarrow": ("https://arrow.apache.org/docs/", None),
-    "pandas": ("https://pandas.pydata.org/docs/", None),
-    "numpy": ("https://numpy.org/doc/1.20/", None),
-    "pymongo": ("https://pymongo.readthedocs.io/en/stable/", None),
-    "bson": ("https://pymongo.readthedocs.io/en/stable/", None),
-}
+# intersphinx_mapping = {
+#     "pyarrow": ("https://arrow.apache.org/docs/", None),
+#     "pandas": ("https://pandas.pydata.org/docs/", None),
+#     "numpy": ("https://numpy.org/doc/1.20/", None),
+#     "pymongo": ("https://pymongo.readthedocs.io/en/stable/", None),
+#     "bson": ("https://pymongo.readthedocs.io/en/stable/", None),
+# }

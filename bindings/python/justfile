@@ -1,0 +1,44 @@
+docs_build := "docs/_build"
+sphinx_opts:= "-d " + docs_build + "/doctrees docs"
+
+# Default target executed when no arguments are given.
+[private]
+default:
+  @just --list
+
+build-libbson:
+    uv sync --no-install-project --dev
+    bash build-libbson.sh
+
+import-check:
+    uv run python -c "from pymongoarrow.lib import libbson_version"
+
+benchmark *args:
+    uv sync --dev --extra test
+    uv run asv run -e --python=$(uv run python -c "import sys;print(sys.executable)") {{args}}
+
+install:
+    just build-libbson
+    uv sync --dev --refresh-package pymongoarrow
+    uv run pre-commit install
+
+test *args:
+    uv sync --extra test
+    uv run pytest {{args}}
+
+lint:
+    uv sync --no-install-project --dev
+    uv run --no-project pre-commit run --hook-stage manual --all-files
+    uv run --no-project  check-manifest -v
+
+docs:
+    uv sync --no-install-project --group docs
+    uv run --no-project sphinx-build -T -b html {{sphinx_opts}} {{docs_build}}/html
+
+docs-serve:
+    uv sync --no-install-project --group docs --group dev
+    urn run --no-project sphinx-autobuild --watch ./pymongoarrow docs {{docs_build}}/html
+
+docs-linkcheck *args:
+    uv sync --no-install-project --group docs
+    PYTHONHASHSEED=0 uv run --no-project python -m sphinx -q -b linkcheck docs {{docs_build}}/linkcheck {{args}}
