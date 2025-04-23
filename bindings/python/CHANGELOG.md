@@ -3,6 +3,10 @@
 
 ---
 
+# Changes in Version 1.7.2 (2025/04/23)
+
+- Fix handling of empty embedded arrays.
+
 # Changes in Version 1.7.1 (2025/03/26)
 
 - Fix projection handling when reading list-of-struct data structures.
