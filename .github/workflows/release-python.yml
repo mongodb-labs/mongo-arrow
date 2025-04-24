@@ -120,7 +120,7 @@ jobs:
       - uses: mongodb-labs/drivers-github-tools/python-labs/post-publish@v2
         with:
           following_version: ${{ env.FOLLOWING_VERSION }}
-          version_bump_script: ./../../.github/scripts/bump-version.sh
+          version_bump_script: "bash ./../../.github/scripts/bump-version.sh"
           product_name: ${{ env.PRODUCT_NAME }}
           token: ${{ github.token }}
           dry_run: ${{ env.DRY_RUN }}
