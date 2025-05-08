@@ -67,10 +67,10 @@ class _BsonArrowTypes(enum.Enum):
 
 
 class BSONExtensionScalar(ExtensionScalar):
-    def as_py(self):
+    def as_py(self, *args, **kwargs):
         if self.value is None:
             return None
-        return self._bson_class(self.value.as_py())
+        return self._bson_class(self.value.as_py(*args, **kwargs))
 
 
 class ObjectIdScalar(BSONExtensionScalar):
@@ -101,10 +101,10 @@ class ObjectIdType(ExtensionType):
 
 
 class Decimal128Scalar(ExtensionScalar):
-    def as_py(self):
+    def as_py(self, *args, **kwargs):
         if self.value is None:
             return None
-        return Decimal128.from_bid(self.value.as_py())
+        return Decimal128.from_bid(self.value.as_py(*args, **kwargs))
 
 
 class Decimal128Type(ExtensionType):
@@ -131,11 +131,11 @@ class Decimal128Type(ExtensionType):
 
 
 class BinaryScalar(ExtensionScalar):
-    def as_py(self):
+    def as_py(self, *args, **kwargs):
         value = self.value
         if value is None:
             return None
-        return Binary(self.value.as_py(), self.type.subtype)
+        return Binary(self.value.as_py(*args, **kwargs), self.type.subtype)
 
 
 class BinaryType(ExtensionType):
