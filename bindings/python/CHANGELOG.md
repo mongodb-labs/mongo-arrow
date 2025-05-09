@@ -3,6 +3,10 @@
 
 ---
 
+# Changes in Version 1.8.0 (2025/MM/YY)
+
+- Add support for PyArrow 20.0.
+
 # Changes in Version 1.7.2 (2025/04/23)
 
 - Fix handling of empty embedded arrays.
