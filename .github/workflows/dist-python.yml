@@ -43,9 +43,12 @@ jobs:
         exclude:
           - buildplat: [macos-14, macosx_*]
             python: "cp39"
+          - buildplat: [windows-2019, win_amd64]
+            python: "cp313t"
         include:
           - buildplat: [macos-13, macosx_*]
             python: "cp39"
+
 
     steps:
       - name: Checkout pymongoarrow

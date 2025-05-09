@@ -38,6 +38,9 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.13t"]
+        exclude:
+          - os: "windows-latest"
+            python: "3.13t"
       fail-fast: false
     name: CPython ${{ matrix.python-version }}-${{ matrix.os }}
     steps:

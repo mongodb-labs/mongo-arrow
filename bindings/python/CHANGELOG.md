@@ -6,7 +6,7 @@
 # Changes in Version 1.8.0 (2025/MM/YY)
 
 - Add support for PyArrow 20.0.
-- Add support for free-threaded python.
+- Add support for free-threaded python on Linux and MacOS.
 
 # Changes in Version 1.7.2 (2025/04/23)
 
