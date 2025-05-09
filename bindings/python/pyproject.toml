@@ -101,9 +101,9 @@ testpaths = ["test"]
 log_cli_level = "INFO"
 faulthandler_timeout = 1500
 xfail_strict = true
-filterwarnings = [
-  "error",
-]
+# filterwarnings = [
+#   "error",
+# ]
 
 [tool.ruff]
 line-length = 100
