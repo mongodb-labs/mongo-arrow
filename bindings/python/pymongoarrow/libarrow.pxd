@@ -15,6 +15,7 @@
 # Cython compiler directives
 # cython: language_level=3
 # distutils: language=c++
+# cython: freethreading_compatible = True
 from libcpp.vector cimport vector
 from libc.stdint cimport int32_t, uint8_t
 from pyarrow.lib cimport *
