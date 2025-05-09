@@ -89,6 +89,8 @@ jobs:
       - name: Ensure imports with no test deps
         run: just import-check
       - name: Run the tests
+        env:
+          UV_PYTHON: ${{matrix.python-version}}
         run: just test
 
   docs:
