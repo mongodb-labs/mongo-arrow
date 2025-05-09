@@ -104,6 +104,7 @@ faulthandler_timeout = 1500
 xfail_strict = true
 filterwarnings = [
   "error",
+  "module:The global interpreter lock:RuntimeWarning", # from pandas
 ]
 
 [tool.ruff]
