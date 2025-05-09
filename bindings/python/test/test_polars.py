@@ -22,9 +22,8 @@ from test import client_context
 from test.utils import AllowListEventListener
 
 import bson
-import polars as pl
 import pyarrow as pa
-from polars.testing import assert_frame_equal
+import pytest
 from pyarrow import int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
@@ -39,6 +38,15 @@ from pymongoarrow.types import (
     Decimal128Type,
     ObjectIdType,
 )
+
+try:
+    import polars as pl
+    from polars.testing import assert_frame_equal
+except ImportError:
+    pl = None
+
+if pl is None:
+    pytest.skip("Requires polars.", allow_module_level=True)
 
 
 class PolarsTestBase(unittest.TestCase):
