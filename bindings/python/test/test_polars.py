@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import concurrent.futures
+import threading
 import unittest
 import unittest.mock as mock
 import uuid
@@ -20,9 +22,8 @@ from test import client_context
 from test.utils import AllowListEventListener
 
 import bson
-import polars as pl
 import pyarrow as pa
-from polars.testing import assert_frame_equal
+import pytest
 from pyarrow import int32, int64
 from pymongo import DESCENDING, WriteConcern
 from pymongo.collection import Collection
@@ -37,6 +38,15 @@ from pymongoarrow.types import (
     Decimal128Type,
     ObjectIdType,
 )
+
+try:
+    import polars as pl
+    from polars.testing import assert_frame_equal
+except ImportError:
+    pl = None
+
+if pl is None:
+    pytest.skip("Requires polars.", allow_module_level=True)
 
 
 class PolarsTestBase(unittest.TestCase):
@@ -65,14 +75,13 @@ class TestExplicitPolarsApi(PolarsTestBase):
     def setUp(self):
         """Insert simple use case data."""
         self.coll.drop()
-        self.coll.insert_many(
-            [
-                {"_id": 1, "data": 10},
-                {"_id": 2, "data": 20},
-                {"_id": 3, "data": 30},
-                {"_id": 4},
-            ]
-        )
+        self.data = [
+            {"_id": 1, "data": 10},
+            {"_id": 2, "data": 20},
+            {"_id": 3, "data": 30},
+            {"_id": 4},
+        ]
+        self.coll.insert_many(self.data)
         self.cmd_listener.reset()
         self.getmore_listener.reset()
 
@@ -115,15 +124,17 @@ class TestExplicitPolarsApi(PolarsTestBase):
         self.assertEqual(find_cmd.command_name, "find")
         self.assertEqual(find_cmd.command["projection"], {"_id": True, "data": True})
 
-    def test_aggregate_simple(self):
+    def _check_aggregation_simple(self, coll):
         expected = pl.DataFrame(
             data={
                 "_id": pl.Series(values=[1, 2, 3, 4], dtype=pl.Int32),
                 "data": pl.Series(values=[20, 40, 60, None], dtype=pl.Int64),
             }
         )
+        coll.drop()
+        coll.insert_many(self.data)
         projection = {"_id": True, "data": {"$multiply": [2, "$data"]}}
-        table = aggregate_polars_all(self.coll, [{"$project": projection}], schema=self.schema)
+        table = aggregate_polars_all(coll, [{"$project": projection}], schema=self.schema)
         self.assertTrue(table.equals(expected))
 
         agg_cmd = self.cmd_listener.results["started"][-1]
@@ -131,6 +142,9 @@ class TestExplicitPolarsApi(PolarsTestBase):
         assert len(agg_cmd.command["pipeline"]) == 2
         self.assertEqual(agg_cmd.command["pipeline"][0]["$project"], projection)
         self.assertEqual(agg_cmd.command["pipeline"][1]["$project"], {"_id": True, "data": True})
+
+    def test_aggregate_simple(self):
+        self._check_aggregation_simple(self.coll)
 
     @mock.patch.object(Collection, "insert_many", side_effect=Collection.insert_many, autospec=True)
     def test_write_batching(self, mock):
@@ -395,3 +409,23 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 assert dfpl["value"].dtype == data_type["ptype"]
             except pl.exceptions.ComputeError:
                 assert isinstance(table["value"].type, pa.ExtensionType)
+
+    def test_threading(self):
+        def run_test():
+            client = client_context.get_client(
+                event_listeners=[self.getmore_listener, self.cmd_listener]
+            )
+            name = f"test-{threading.current_thread().name}"
+            coll = client.pymongoarrow_test.get_collection(
+                name, write_concern=WriteConcern(w="majority")
+            )
+            self._check_aggregation_simple(coll)
+            client.close()
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for i in range(5):
+                futures.append(executor.submit(run_test))
+            concurrent.futures.wait(futures)
+            for future in futures:
+                future.result()

@@ -14,7 +14,7 @@ import-check:
     uv run python -c "from pymongoarrow.lib import libbson_version"
 
 benchmark *args:
-    uv sync --dev --extra test
+    uv sync --dev --extra test --extra test-polars
     uv run asv run -e --python=$(uv run python -c "import sys;print(sys.executable)") {{args}}
 
 install:
@@ -23,7 +23,7 @@ install:
     uv run pre-commit install
 
 test *args:
-    uv sync --extra test
+    uv sync --extra test --extra test-polars || uv sync --extra test
     uv run pytest {{args}}
 
 lint:

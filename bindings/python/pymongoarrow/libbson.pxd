@@ -15,6 +15,7 @@
 # Cython compiler directives
 # cython: language_level=3
 # distutils: language=c
+# cython: freethreading_compatible = True
 from libc.stdint cimport int32_t, int64_t, uint8_t, uint32_t, uint64_t
 
 

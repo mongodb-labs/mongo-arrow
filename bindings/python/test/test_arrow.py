@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import concurrent.futures
 import io
 import json
 import tempfile
+import threading
 import unittest
 import unittest.mock as mock
 from datetime import date, datetime
@@ -244,8 +246,8 @@ class ArrowApiTestMixin:
     def round_trip(self, data, schema, coll=None):
         if coll is None:
             coll = self.coll
-        self.coll.drop()
-        res = write(self.coll, data)
+        coll.drop()
+        res = write(coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
         self.assertEqual(data, find_arrow_all(coll, {}, schema=schema))
         return res
@@ -1051,6 +1053,29 @@ class ArrowApiTestMixin:
         pmapatable2 = find_arrow_all(self.coll, {"_id": {"$eq": 2}})
         assert pmapatable2.to_pylist()[0] == doc2
         write_table(pmapatable2, io.BytesIO())
+
+    def test_threading(self):
+        schema, data = self._create_data()
+
+        def run_test():
+            client = client_context.get_client(
+                event_listeners=[self.getmore_listener, self.cmd_listener]
+            )
+            name = f"test-{threading.current_thread().name}"
+            coll = client.pymongoarrow_test.get_collection(
+                name, write_concern=WriteConcern(w="majority")
+            )
+            coll.drop()
+            self.round_trip(data, Schema(schema), coll=coll)
+            client.close()
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for i in range(5):
+                futures.append(executor.submit(run_test))
+            concurrent.futures.wait(futures)
+            for future in futures:
+                future.result()
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):

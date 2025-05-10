@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from datetime import datetime, timedelta
+import concurrent.futures
 import datetime
 import tempfile
+import threading
 import unittest
 import unittest.mock as mock
 import warnings
@@ -266,18 +268,22 @@ class TestExplicitPandasApi(PandasTestBase):
         raw_data["nested"] = [inner(i) for i in range(3)]
         return pd.DataFrame(data=raw_data).astype(schema)
 
-    def test_auto_schema(self):
+    def _check_auto_schema(self, coll):
+        coll.drop()
         data = self._create_nested_data()
-        self.coll.drop()
-        res = write(self.coll, data)
+        res = write(coll, data)
         self.assertEqual(len(data), res.raw_result["insertedCount"])
         for func in [find_pandas_all, aggregate_pandas_all]:
-            out = func(self.coll, {} if func == find_pandas_all else []).drop(columns=["_id"])
+            out = func(coll, {} if func == find_pandas_all else []).drop(columns=["_id"])
             for name in data.columns:
                 val = out[name]
                 if str(val.dtype) == "object":
                     val = val.astype(data[name].dtype)
                 pd.testing.assert_series_equal(data[name], val)
+        coll.drop()
+
+    def test_auto_schema(self):
+        self._check_auto_schema(self.coll)
 
     def test_auto_schema_heterogeneous(self):
         vals = [1, "2", True, 4]
@@ -344,6 +350,26 @@ class TestExplicitPandasApi(PandasTestBase):
         write(self.coll, df, exclude_none=True)
         col_data = list(self.coll.find({}))
         assert "b" not in col_data[3]
+
+    def test_threading(self):
+        def run_test():
+            client = client_context.get_client(
+                event_listeners=[self.getmore_listener, self.cmd_listener]
+            )
+            name = f"test-{threading.current_thread().name}"
+            coll = client.pymongoarrow_test.get_collection(
+                name, write_concern=WriteConcern(w="majority")
+            )
+            self._check_auto_schema(coll)
+            client.close()
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for i in range(5):
+                futures.append(executor.submit(run_test))
+            concurrent.futures.wait(futures)
+            for future in futures:
+                future.result()
 
 
 class TestBSONTypes(PandasTestBase):

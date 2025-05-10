@@ -15,6 +15,7 @@
 # Cython compiler directives
 # distutils: language=c++
 # cython: language_level=3
+# cython: freethreading_compatible = True
 
 # Stdlib imports
 import sys

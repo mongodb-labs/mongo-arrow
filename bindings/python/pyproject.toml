@@ -51,7 +51,8 @@ Source = "https://github.com/mongodb-labs/mongo-arrow/tree/main/bindings/python"
 Tracker = "https://jira.mongodb.org/projects/INTPYTHON/issues"
 
 [project.optional-dependencies]
-test = ["pytz", "pytest", "polars"]
+test = ["pytz", "pytest"]
+test-polars = ["polars"]
 
 [tool.setuptools]
 zip-safe = false
@@ -103,6 +104,7 @@ faulthandler_timeout = 1500
 xfail_strict = true
 filterwarnings = [
   "error",
+  "module:The global interpreter lock:RuntimeWarning", # from pandas
 ]
 
 [tool.ruff]
