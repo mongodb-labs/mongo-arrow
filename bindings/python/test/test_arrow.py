@@ -544,12 +544,21 @@ class ArrowApiTestMixin:
             out = func(self.coll, {} if func == find_arrow_all else [], schema=schema).drop(["_id"])
             self.assertEqual(out["list_field"].to_pylist(), expected)
 
+    def test_schema_incorrect_data_type_allow_invalid(self):
+        # From https://github.com/mongodb-labs/mongo-arrow/issues/260.
+        self.coll.delete_many({})
+        self.coll.insert_one({"x": {"y": 1}})
+        out = find_arrow_all(self.coll, {}, schema=Schema({"x": str}), allow_invalid=True)
+        assert out.to_pylist() == [{"x": None}]
+
     def test_schema_incorrect_data_type(self):
         # From https://github.com/mongodb-labs/mongo-arrow/issues/260.
         self.coll.delete_many({})
         self.coll.insert_one({"x": {"y": 1}})
-        out = find_arrow_all(self.coll, {}, schema=Schema({"x": str}))
-        assert out.to_pylist() == [{"x": None}]
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `document` instead of expected type `string`"
+        ):
+            find_arrow_all(self.coll, {}, schema=Schema({"x": str}))
 
     def test_schema_arrays_of_documents(self):
         # From https://github.com/mongodb-labs/mongo-arrow/issues/258.
@@ -824,7 +833,7 @@ class ArrowApiTestMixin:
         data = Table.from_pydict(raw_data, ArrowSchema(schema))
         self.round_trip(data, Schema(schema))
 
-    def test_malformed_embedded_documents(self):
+    def test_malformed_embedded_documents_allow_invalid(self):
         schema = Schema({"data": struct([field("a", int32()), field("b", bool_())])})
         data = [
             dict(data=dict(a=1, b=True)),
@@ -834,7 +843,7 @@ class ArrowApiTestMixin:
         ]
         self.coll.drop()
         self.coll.insert_many(data)
-        res = find_arrow_all(self.coll, {}, schema=schema)["data"].to_pylist()
+        res = find_arrow_all(self.coll, {}, schema=schema, allow_invalid=True)["data"].to_pylist()
         self.assertEqual(
             res,
             [
@@ -845,6 +854,32 @@ class ArrowApiTestMixin:
             ],
         )
 
+    def test_malformed_embedded_documents(self):
+        schema = Schema({"data": struct([field("a", int32()), field("b", bool_())])})
+        data = [
+            dict(data=dict(a=1, b=True)),
+            dict(data=dict(a=1, b=True, c="bar")),
+            dict(data=dict(a=1)),
+            dict(data=dict(a="str", b=False)),
+        ]
+        self.coll.drop()
+        self.coll.insert_many(data)
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `string` instead of expected type `int32`"
+        ):
+            find_arrow_all(self.coll, {}, schema=schema)["data"].to_pylist()
+
+    def test_mixed_subtype_allow_invalid(self):
+        schema = Schema({"data": BinaryType(10)})
+        coll = self.client.pymongoarrow_test.get_collection(
+            "test", write_concern=WriteConcern(w="majority")
+        )
+
+        coll.drop()
+        coll.insert_many([{"data": Binary(b"1", 10)}, {"data": Binary(b"2", 20)}])
+        res = find_arrow_all(coll, {}, schema=schema, allow_invalid=True)
+        self.assertEqual(res["data"].to_pylist(), [Binary(b"1", 10), None])
+
     def test_mixed_subtype(self):
         schema = Schema({"data": BinaryType(10)})
         coll = self.client.pymongoarrow_test.get_collection(
@@ -853,8 +888,10 @@ class ArrowApiTestMixin:
 
         coll.drop()
         coll.insert_many([{"data": Binary(b"1", 10)}, {"data": Binary(b"2", 20)}])
-        res = find_arrow_all(coll, {}, schema=schema)
-        self.assertEqual(res["data"].to_pylist(), [Binary(b"1", 10), None])
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected subtype `20` instead of expected subtype `10`"
+        ):
+            find_arrow_all(coll, {}, schema=schema)
 
     def _test_mixed_types_int(self, inttype):
         docs = [
@@ -869,7 +906,15 @@ class ArrowApiTestMixin:
         ]
         self.coll.delete_many({})
         self.coll.insert_many(docs)
-        table = find_arrow_all(self.coll, {}, projection={"_id": 0}, schema=Schema({"a": inttype}))
+        # Test with strict schema
+        with self.assertRaisesRegex(
+            TypeError, f"Got unexpected type `string` instead of expected type `{inttype}`"
+        ):
+            find_arrow_all(self.coll, {}, projection={"_id": 0}, schema=Schema({"a": inttype}))
+        # Test with allow_invalid
+        table = find_arrow_all(
+            self.coll, {}, projection={"_id": 0}, schema=Schema({"a": inttype}), allow_invalid=True
+        )
         expected = Table.from_pylist(
             [
                 {"a": 1},
@@ -891,12 +936,24 @@ class ArrowApiTestMixin:
         self.coll.delete_many({})
         self.coll.insert_one({"a": 2 << 34})
         with self.assertRaises(OverflowError):
-            find_arrow_all(self.coll, {}, projection={"_id": 0}, schema=Schema({"a": int32()}))
+            find_arrow_all(
+                self.coll,
+                {},
+                projection={"_id": 0},
+                schema=Schema({"a": int32()}),
+                allow_invalid=True,
+            )
         # Test double overflowing int32
         self.coll.delete_many({})
         self.coll.insert_one({"a": float(2 << 34)})
         with self.assertRaises(OverflowError):
-            find_arrow_all(self.coll, {}, projection={"_id": 0}, schema=Schema({"a": int32()}))
+            find_arrow_all(
+                self.coll,
+                {},
+                projection={"_id": 0},
+                schema=Schema({"a": int32()}),
+                allow_invalid=True,
+            )
 
     def test_mixed_types_int64(self):
         self._test_mixed_types_int(int64())

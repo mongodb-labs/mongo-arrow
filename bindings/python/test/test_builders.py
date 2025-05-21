@@ -182,7 +182,7 @@ class TestListBuilder(TestCase):
 
 class TestBuilderManager(TestCase):
     def test_simple(self):
-        manager = BuilderManager({}, False, None)
+        manager = BuilderManager({}, False, None, None)
         data = b"".join(encode(d) for d in [dict(a=1), dict(a=2), dict(a=None), dict(a=4)])
         manager.process_bson_stream(data, len(data))
         array_map = manager.finish()
@@ -200,7 +200,7 @@ class TestBuilderManager(TestCase):
         inner = inner_values[0].copy()
         inner["c"] = 1.0
         values.append(dict(c=inner, e=ObjectId(), f=None, g=[]))
-        manager = BuilderManager({}, False, None)
+        manager = BuilderManager({}, False, None, None)
         data = b"".join(encode(v) for v in values)
         manager.process_bson_stream(data, len(data))
         array_map = manager.finish()

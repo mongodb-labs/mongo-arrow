@@ -72,7 +72,7 @@ _MAX_MESSAGE_SIZE = 48000000 - 16 * 1024
 _MAX_WRITE_BATCH_SIZE = max(100000, MAX_WRITE_BATCH_SIZE)
 
 
-def find_arrow_all(collection, query, *, schema=None, **kwargs):
+def find_arrow_all(collection, query, *, schema=None, allow_invalid=False, **kwargs):
     """Method that returns the results of a find query as a
     :class:`pyarrow.Table` instance.
 
@@ -83,6 +83,8 @@ def find_arrow_all(collection, query, *, schema=None, **kwargs):
       - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
         If the schema is not given, it will be inferred using the data in the
         result set.
+      - `allow_invalid` (optional): If set to ``True``,
+        results will have all fields that do not conform to the schema silently converted to NaN.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -90,7 +92,9 @@ def find_arrow_all(collection, query, *, schema=None, **kwargs):
     :Returns:
       An instance of class:`pyarrow.Table`.
     """
-    context = PyMongoArrowContext(schema, codec_options=collection.codec_options)
+    context = PyMongoArrowContext(
+        schema, codec_options=collection.codec_options, allow_invalid=allow_invalid
+    )
 
     for opt in ("cursor_type",):
         if kwargs.pop(opt, None):
@@ -110,7 +114,7 @@ def find_arrow_all(collection, query, *, schema=None, **kwargs):
     return context.finish()
 
 
-def aggregate_arrow_all(collection, pipeline, *, schema=None, **kwargs):
+def aggregate_arrow_all(collection, pipeline, *, schema=None, allow_invalid=False, **kwargs):
     """Method that returns the results of an aggregation pipeline as a
     :class:`pyarrow.Table` instance.
 
@@ -128,7 +132,9 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, **kwargs):
     :Returns:
       An instance of class:`pyarrow.Table`.
     """
-    context = PyMongoArrowContext(schema, codec_options=collection.codec_options)
+    context = PyMongoArrowContext(
+        schema, codec_options=collection.codec_options, allow_invalid=allow_invalid
+    )
 
     if pipeline and ("$out" in pipeline[-1] or "$merge" in pipeline[-1]):
         msg = (
@@ -165,7 +171,7 @@ def _arrow_to_pandas(arrow_table):
     return arrow_table.to_pandas(split_blocks=True, self_destruct=True)
 
 
-def find_pandas_all(collection, query, *, schema=None, **kwargs):
+def find_pandas_all(collection, query, *, schema=None, allow_invalid=False, **kwargs):
     """Method that returns the results of a find query as a
     :class:`pandas.DataFrame` instance.
 
@@ -183,10 +189,12 @@ def find_pandas_all(collection, query, *, schema=None, **kwargs):
     :Returns:
       An instance of class:`pandas.DataFrame`.
     """
-    return _arrow_to_pandas(find_arrow_all(collection, query, schema=schema, **kwargs))
+    return _arrow_to_pandas(
+        find_arrow_all(collection, query, schema=schema, allow_invalid=allow_invalid, **kwargs)
+    )
 
 
-def aggregate_pandas_all(collection, pipeline, *, schema=None, **kwargs):
+def aggregate_pandas_all(collection, pipeline, *, schema=None, allow_invalid=False, **kwargs):
     """Method that returns the results of an aggregation pipeline as a
     :class:`pandas.DataFrame` instance.
 
@@ -204,7 +212,11 @@ def aggregate_pandas_all(collection, pipeline, *, schema=None, **kwargs):
     :Returns:
       An instance of class:`pandas.DataFrame`.
     """
-    return _arrow_to_pandas(aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs))
+    return _arrow_to_pandas(
+        aggregate_arrow_all(
+            collection, pipeline, schema=schema, allow_invalid=allow_invalid, **kwargs
+        )
+    )
 
 
 def _arrow_to_numpy(arrow_table, schema=None):
@@ -227,7 +239,7 @@ def _arrow_to_numpy(arrow_table, schema=None):
     return container
 
 
-def find_numpy_all(collection, query, *, schema=None, **kwargs):
+def find_numpy_all(collection, query, *, schema=None, allow_invalid=False, **kwargs):
     """Method that returns the results of a find query as a
     :class:`dict` instance whose keys are field names and values are
     :class:`~numpy.ndarray` instances bearing the appropriate dtype.
@@ -255,10 +267,13 @@ def find_numpy_all(collection, query, *, schema=None, **kwargs):
     :Returns:
       An instance of :class:`dict`.
     """
-    return _arrow_to_numpy(find_arrow_all(collection, query, schema=schema, **kwargs), schema)
+    return _arrow_to_numpy(
+        find_arrow_all(collection, query, schema=schema, allow_invalid=allow_invalid, **kwargs),
+        schema,
+    )
 
 
-def aggregate_numpy_all(collection, pipeline, *, schema=None, **kwargs):
+def aggregate_numpy_all(collection, pipeline, *, schema=None, allow_invalid=False, **kwargs):
     """Method that returns the results of an aggregation pipeline as a
     :class:`dict` instance whose keys are field names and values are
     :class:`~numpy.ndarray` instances bearing the appropriate dtype.
@@ -287,7 +302,10 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, **kwargs):
       An instance of :class:`dict`.
     """
     return _arrow_to_numpy(
-        aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs), schema
+        aggregate_arrow_all(
+            collection, pipeline, schema=schema, allow_invalid=allow_invalid, **kwargs
+        ),
+        schema,
     )
 
 
@@ -326,7 +344,7 @@ def _arrow_to_polars(arrow_table: pa.Table):
     return pl.from_arrow(arrow_table_without_extensions)
 
 
-def find_polars_all(collection, query, *, schema=None, **kwargs):
+def find_polars_all(collection, query, *, schema=None, allow_invalid=False, **kwargs):
     """Method that returns the results of a find query as a
     :class:`polars.DataFrame` instance.
 
@@ -346,10 +364,12 @@ def find_polars_all(collection, query, *, schema=None, **kwargs):
 
     .. versionadded:: 1.3
     """
-    return _arrow_to_polars(find_arrow_all(collection, query, schema=schema, **kwargs))
+    return _arrow_to_polars(
+        find_arrow_all(collection, query, schema=schema, allow_invalid=allow_invalid, **kwargs)
+    )
 
 
-def aggregate_polars_all(collection, pipeline, *, schema=None, **kwargs):
+def aggregate_polars_all(collection, pipeline, *, schema=None, allow_invalid=False, **kwargs):
     """Method that returns the results of an aggregation pipeline as a
     :class:`polars.DataFrame` instance.
 
@@ -367,7 +387,11 @@ def aggregate_polars_all(collection, pipeline, *, schema=None, **kwargs):
     :Returns:
       An instance of class:`polars.DataFrame`.
     """
-    return _arrow_to_polars(aggregate_arrow_all(collection, pipeline, schema=schema, **kwargs))
+    return _arrow_to_polars(
+        aggregate_arrow_all(
+            collection, pipeline, schema=schema, allow_invalid=allow_invalid, **kwargs
+        )
+    )
 
 
 def _transform_bwe(bwe, offset):

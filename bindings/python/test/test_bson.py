@@ -21,6 +21,7 @@ from pymongoarrow.schema import Schema
 from pymongoarrow.types import ObjectId, ObjectIdType, int64, string
 
 
+# TODO: MAKE THIS BASE CLASS SUPPORT ALLOW_INVALID
 class TestBsonToArrowConversionBase(TestCase):
     def setUp(self):
         self.schema = Schema({"_id": ObjectId, "data": int64(), "title": string()})
@@ -166,6 +167,18 @@ class TestBooleanType(TestBsonToArrowConversionBase):
     def setUp(self):
         self.schema = Schema({"data": bool})
         self.context = PyMongoArrowContext(self.schema)
+
+    def test_simple_allow_invalid(self):
+        docs = [
+            {"data": True},
+            {"data": False},
+            {"data": 19},
+            {"data": "string"},
+            {"data": False},
+            {"data": True},
+        ]
+        as_dict = {"data": [True, False, None, None, False, True]}
+        self._run_test(docs, as_dict, allow_invalid)
 
     def test_simple(self):
         docs = [
