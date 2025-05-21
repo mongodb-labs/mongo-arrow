@@ -39,6 +39,8 @@ from pyarrow.lib cimport *
 from pymongoarrow.libarrow cimport *
 from pymongoarrow.libbson cimport *
 
+from pymongoarrow.types import _BsonArrowTypes
+
 # Placeholder numbers for the date types.
 # Keep in sync with _BsonArrowTypes in types.py.
 cdef uint8_t ARROW_TYPE_DATE32 = 100
@@ -78,6 +80,7 @@ cdef class BuilderManager:
         # Unpack the schema map.
         for fname, (ftype, arrow_type) in schema_map.items():
             name = fname.encode('utf-8')
+            type_name = str(arrow_type)
             # special-case initializing builders for parameterized types
             if ftype == BSON_TYPE_DATE_TIME:
                 if tzinfo is not None and arrow_type.tz is None:
@@ -87,9 +90,9 @@ cdef class BuilderManager:
                 self.builder_map[name] = BinaryBuilder(arrow_type.subtype, memory_pool=self.pool)
             else:
                 # We only use the doc_iter for binary arrays, which are handled already.
-                self.get_builder(name, ftype, <bson_iter_t *>nullptr)
+                self.get_builder(name, ftype, <bson_iter_t *>nullptr, type_name)
 
-    cdef _ArrayBuilderBase get_builder(self, cstring key, bson_type_t value_t, bson_iter_t * doc_iter):
+    cdef _ArrayBuilderBase get_builder(self, cstring key, bson_type_t value_t, bson_iter_t * doc_iter, str type_name):
         cdef _ArrayBuilderBase builder = None
         cdef bson_subtype_t subtype
         cdef const uint8_t *val_buf = NULL
@@ -119,27 +122,27 @@ cdef class BuilderManager:
                 raise ValueError('Did not pass a doc_iter!')
             bson_iter_binary (doc_iter, &subtype,
                 &val_buf_len, &val_buf)
-            builder = BinaryBuilder(subtype, memory_pool=self.pool)
+            builder = BinaryBuilder(subtype, memory_pool=self.pool, type_name=type_name)
         elif value_t == ARROW_TYPE_DATE32:
-            builder = Date32Builder(memory_pool=self.pool)
+            builder = Date32Builder(memory_pool=self.pool, type_name=type_name)
         elif value_t == ARROW_TYPE_DATE64:
-            builder = Date64Builder(memory_pool=self.pool)
+            builder = Date64Builder(memory_pool=self.pool, type_name=type_name)
         elif value_t == BSON_TYPE_INT32:
-            builder = Int32Builder(memory_pool=self.pool)
+            builder = Int32Builder(memory_pool=self.pool, type_name=type_name)
         elif value_t == BSON_TYPE_INT64:
-            builder = Int64Builder(memory_pool=self.pool)
+            builder = Int64Builder(memory_pool=self.pool, type_name=type_name)
         elif value_t == BSON_TYPE_DOUBLE:
-            builder = DoubleBuilder(memory_pool=self.pool)
+            builder = DoubleBuilder(memory_pool=self.pool, type_name=type_name)
         elif value_t == BSON_TYPE_OID:
-            builder = ObjectIdBuilder(memory_pool=self.pool)
+            builder = ObjectIdBuilder(memory_pool=self.pool, type_name=type_name)
         elif value_t == BSON_TYPE_UTF8:
-            builder = StringBuilder(memory_pool=self.pool)
+            builder = StringBuilder(memory_pool=self.pool, type_name=type_name)
         elif value_t == BSON_TYPE_BOOL:
-            builder = BoolBuilder(memory_pool=self.pool)
+            builder = BoolBuilder(memory_pool=self.pool, type_name=type_name)
         elif value_t == BSON_TYPE_DECIMAL128:
-            builder = Decimal128Builder(memory_pool=self.pool)
+            builder = Decimal128Builder(memory_pool=self.pool, type_name=type_name)
         elif value_t == BSON_TYPE_CODE:
-            builder = CodeBuilder(memory_pool=self.pool)
+            builder = CodeBuilder(memory_pool=self.pool, type_name=type_name)
 
         self.builder_map[key] = builder
         return builder
@@ -178,7 +181,7 @@ cdef class BuilderManager:
             # Get the builder.
             builder = <_ArrayBuilderBase>self.builder_map.get(full_key, None)
             if builder is None and not self.has_schema:
-                builder = self.get_builder(full_key, value_t, doc_iter)
+                builder = self.get_builder(full_key, value_t, doc_iter, None)
             if builder is None:
                 continue
 
@@ -279,6 +282,7 @@ cdef class BuilderManager:
 cdef class _ArrayBuilderBase:
     cdef:
         public uint8_t type_marker
+        public str type_name
 
     def append_values(self, values):
         for value in values:
@@ -450,10 +454,11 @@ cdef class Int32Builder(_ArrayBuilderBase):
 cdef class Int64Builder(_ArrayBuilderBase):
     cdef shared_ptr[CInt64Builder] builder
 
-    def __cinit__(self, MemoryPool memory_pool=None):
+    def __cinit__(self, MemoryPool memory_pool=None, str type_name=None):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CInt64Builder(pool))
         self.type_marker = BSON_TYPE_INT64
+        self.type_name = type_name
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef double dvalue
@@ -466,9 +471,9 @@ cdef class Int64Builder(_ArrayBuilderBase):
             # Treat nan as null.
             dvalue = bson_iter_as_double(doc_iter)
             if isnan(dvalue):
-                return self.builder.get().AppendNull()
+                raise TypeError(f"Got unexpected type null instead of {self.type_name}")
             return self.builder.get().Append(bson_iter_as_int64(doc_iter))
-        return self.builder.get().AppendNull()
+        raise TypeError(f"Got unexpected type `{_BsonArrowTypes(value_t).name}` instead of expected type `{self.type_name}`")
 
     cdef shared_ptr[CArrayBuilder] get_builder(self):
         return <shared_ptr[CArrayBuilder]>self.builder
