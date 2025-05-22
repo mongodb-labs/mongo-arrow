@@ -618,7 +618,7 @@ cdef class Date64Builder(_ArrayBuilderBase):
         if value_t == BSON_TYPE_DATE_TIME:
             return self.builder.get().Append(bson_iter_date_time(doc_iter))
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `date64`")
         else:
             return self.builder.get().AppendNull()
 
@@ -651,7 +651,7 @@ cdef class Date32Builder(_ArrayBuilderBase):
             seconds_val = value // 86400000
             return self.builder.get().Append(seconds_val)
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `date32`")
         else:
             return self.builder.get().AppendNull()
 
