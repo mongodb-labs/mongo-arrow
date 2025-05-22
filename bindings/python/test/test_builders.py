@@ -161,7 +161,7 @@ class TestObjectIdBuilder(TestCase):
         self.assertEqual(arr.to_pylist(), ids + [None, None])
 
     def test_simple(self):
-        ids = [ObjectId() for i in range(5)]
+        ids = [ObjectId() for _ in range(5)]
         builder = ObjectIdBuilder()
         builder.append(ids[0])
         builder.append_values(ids[1:])
@@ -295,11 +295,10 @@ class TestBuilderManager(TestCase):
 class TestBinaryBuilder(TestCase):
     def test_simple_allow_invalid(self):
         data = [Binary(bytes(i), 10) for i in range(5)]
-        # Assuming subtype is passed as first arg and allow_invalid is a kwarg
         builder = BinaryBuilder(10, allow_invalid=True)
         builder.append(data[0])
         builder.append_values(data[1:])
-        builder.append(1)  # Invalid type (int) for Binary
+        builder.append(1)
         builder.append_null()
         arr = builder.finish()
 
@@ -310,7 +309,6 @@ class TestBinaryBuilder(TestCase):
 
     def test_simple(self):
         data = [Binary(bytes(i), 10) for i in range(5)]
-        # Assuming subtype is passed as first arg, allow_invalid=False by default
         builder = BinaryBuilder(10)
         builder.append(data[0])
         builder.append_values(data[1:])
