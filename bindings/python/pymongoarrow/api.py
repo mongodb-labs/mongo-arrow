@@ -125,6 +125,8 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, allow_invalid=Fals
       - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
         If the schema is not given, it will be inferred using the data in the
         result set.
+      - `allow_invalid` (optional): If set to ``True``,
+        results will have all fields that do not conform to the schema silently converted to NaN.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -182,6 +184,8 @@ def find_pandas_all(collection, query, *, schema=None, allow_invalid=False, **kw
       - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
         If the schema is not given, it will be inferred using the data in the
         result set.
+      - `allow_invalid` (optional): If set to ``True``,
+        results will have all fields that do not conform to the schema silently converted to NaN.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -205,6 +209,8 @@ def aggregate_pandas_all(collection, pipeline, *, schema=None, allow_invalid=Fal
       - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
         If the schema is not given, it will be inferred using the data in the
         result set.
+      - `allow_invalid` (optional): If set to ``True``,
+        results will have all fields that do not conform to the schema silently converted to NaN.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -251,6 +257,8 @@ def find_numpy_all(collection, query, *, schema=None, allow_invalid=False, **kwa
       - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
         If the schema is not given, it will be inferred using the data in the
         result set.
+      - `allow_invalid` (optional): If set to ``True``,
+        results will have all fields that do not conform to the schema silently converted to NaN.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -285,6 +293,8 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, allow_invalid=Fals
       - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
         If the schema is not given, it will be inferred using the data in the
         result set.
+      - `allow_invalid` (optional): If set to ``True``,
+        results will have all fields that do not conform to the schema silently converted to NaN.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -355,6 +365,8 @@ def find_polars_all(collection, query, *, schema=None, allow_invalid=False, **kw
       - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
         If the schema is not given, it will be inferred using the data in the
         result set.
+      - `allow_invalid` (optional): If set to ``True``,
+        results will have all fields that do not conform to the schema silently converted to NaN.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -380,6 +392,8 @@ def aggregate_polars_all(collection, pipeline, *, schema=None, allow_invalid=Fal
       - `schema` (optional): Instance of :class:`~pymongoarrow.schema.Schema`.
         If the schema is not given, it will be inferred using the data in the
         result set.
+      - `allow_invalid` (optional): If set to ``True``,
+        results will have all fields that do not conform to the schema silently converted to NaN.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
