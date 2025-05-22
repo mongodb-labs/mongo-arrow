@@ -229,7 +229,7 @@ cdef class BuilderManager:
             # Get the builder.
             builder = <_ArrayBuilderBase>self.builder_map.get(full_key, None)
             if builder is None and not self.has_schema:
-                builder = self.get_builder(full_key, value_t, doc_iter, None)
+                builder = self.get_builder(full_key, value_t, doc_iter, False)
             if builder is None:
                 continue
 
