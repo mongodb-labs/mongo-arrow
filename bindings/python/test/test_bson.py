@@ -21,7 +21,6 @@ from pymongoarrow.schema import Schema
 from pymongoarrow.types import ObjectId, ObjectIdType, int64, string
 
 
-# TODO: MAKE THIS BASE CLASS SUPPORT ALLOW_INVALID
 class TestBsonToArrowConversionBase(TestCase):
     def setUp(self):
         self.schema = Schema({"_id": ObjectId, "data": int64(), "title": string()})

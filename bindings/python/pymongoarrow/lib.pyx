@@ -129,29 +129,18 @@ cdef class BuilderManager:
         # Unpack the schema map.
         for fname, (ftype, arrow_type) in schema_map.items():
             name = fname.encode('utf-8')
-            type_name = str(arrow_type)
             # special-case initializing builders for parameterized types
             if ftype == BSON_TYPE_DATE_TIME:
                 if tzinfo is not None and arrow_type.tz is None:
                     arrow_type = timestamp(arrow_type.unit, tz=tzinfo)  # noqa: PLW2901
-                if self.has_schema and not allow_invalid:
-                    self.builder_map[name] = DatetimeBuilder(dtype=arrow_type, memory_pool=self.pool, type_name=type_name)
-                else:
-                    self.builder_map[name] = DatetimeBuilder(arrow_type.subtype, memory_pool=self.pool, type_name=None)
-
+                self.builder_map[name] = DatetimeBuilder(dtype=arrow_type, memory_pool=self.pool, allow_invalid=allow_invalid)
             elif ftype == BSON_TYPE_BINARY:
-                if self.has_schema and not allow_invalid:
-                    self.builder_map[name] = BinaryBuilder(arrow_type.subtype, memory_pool=self.pool, type_name=type_name)
-                else:
-                    self.builder_map[name] = BinaryBuilder(arrow_type.subtype, memory_pool=self.pool, type_name=None)
+                self.builder_map[name] = BinaryBuilder(arrow_type.subtype, memory_pool=self.pool, allow_invalid=allow_invalid)
             else:
                 # We only use the doc_iter for binary arrays, which are handled already.
-                if self.has_schema and not allow_invalid:
-                    self.get_builder(name, ftype, <bson_iter_t *>nullptr, type_name)
-                else:
-                    self.get_builder(name, ftype, <bson_iter_t *> nullptr, None)
+                self.get_builder(name, ftype, <bson_iter_t *>nullptr, allow_invalid=allow_invalid)
 
-    cdef _ArrayBuilderBase get_builder(self, cstring key, bson_type_t value_t, bson_iter_t * doc_iter, str type_name):
+    cdef _ArrayBuilderBase get_builder(self, cstring key, bson_type_t value_t, bson_iter_t * doc_iter, bint allow_invalid):
         cdef _ArrayBuilderBase builder = None
         cdef bson_subtype_t subtype
         cdef const uint8_t *val_buf = NULL
@@ -181,27 +170,27 @@ cdef class BuilderManager:
                 raise ValueError('Did not pass a doc_iter!')
             bson_iter_binary (doc_iter, &subtype,
                 &val_buf_len, &val_buf)
-            builder = BinaryBuilder(subtype, memory_pool=self.pool, type_name=type_name)
+            builder = BinaryBuilder(subtype, memory_pool=self.pool, allow_invalid=allow_invalid)
         elif value_t == ARROW_TYPE_DATE32:
-            builder = Date32Builder(memory_pool=self.pool, type_name=type_name)
+            builder = Date32Builder(memory_pool=self.pool, allow_invalid=allow_invalid)
         elif value_t == ARROW_TYPE_DATE64:
-            builder = Date64Builder(memory_pool=self.pool, type_name=type_name)
+            builder = Date64Builder(memory_pool=self.pool, allow_invalid=allow_invalid)
         elif value_t == BSON_TYPE_INT32:
-            builder = Int32Builder(memory_pool=self.pool, type_name=type_name)
+            builder = Int32Builder(memory_pool=self.pool, allow_invalid=allow_invalid)
         elif value_t == BSON_TYPE_INT64:
-            builder = Int64Builder(memory_pool=self.pool, type_name=type_name)
+            builder = Int64Builder(memory_pool=self.pool, allow_invalid=allow_invalid)
         elif value_t == BSON_TYPE_DOUBLE:
-            builder = DoubleBuilder(memory_pool=self.pool, type_name=type_name)
+            builder = DoubleBuilder(memory_pool=self.pool, allow_invalid=allow_invalid)
         elif value_t == BSON_TYPE_OID:
-            builder = ObjectIdBuilder(memory_pool=self.pool, type_name=type_name)
+            builder = ObjectIdBuilder(memory_pool=self.pool, allow_invalid=allow_invalid)
         elif value_t == BSON_TYPE_UTF8:
-            builder = StringBuilder(memory_pool=self.pool, type_name=type_name)
+            builder = StringBuilder(memory_pool=self.pool, allow_invalid=allow_invalid)
         elif value_t == BSON_TYPE_BOOL:
-            builder = BoolBuilder(memory_pool=self.pool, type_name=type_name)
+            builder = BoolBuilder(memory_pool=self.pool, allow_invalid=allow_invalid)
         elif value_t == BSON_TYPE_DECIMAL128:
-            builder = Decimal128Builder(memory_pool=self.pool, type_name=type_name)
+            builder = Decimal128Builder(memory_pool=self.pool, allow_invalid=allow_invalid)
         elif value_t == BSON_TYPE_CODE:
-            builder = CodeBuilder(memory_pool=self.pool, type_name=type_name)
+            builder = CodeBuilder(memory_pool=self.pool, allow_invalid=allow_invalid)
 
         self.builder_map[key] = builder
         return builder
@@ -341,7 +330,7 @@ cdef class BuilderManager:
 cdef class _ArrayBuilderBase:
     cdef:
         public uint8_t type_marker
-        public str type_name
+        public bint allow_invalid
 
     def append_values(self, values):
         for value in values:
@@ -417,11 +406,11 @@ cdef class StringBuilder(_ArrayBuilderBase):
     cdef:
         shared_ptr[CStringBuilder] builder
 
-    def __cinit__(self, MemoryPool memory_pool=None, str type_name=None):
+    def __cinit__(self, MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CStringBuilder(pool))
         self.type_marker = BSON_TYPE_UTF8
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef const char* value
@@ -429,8 +418,8 @@ cdef class StringBuilder(_ArrayBuilderBase):
         if value_t == BSON_TYPE_UTF8:
             value = bson_iter_utf8(doc_iter, &str_len)
             return self.builder.get().Append(value, str_len)
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -439,11 +428,11 @@ cdef class StringBuilder(_ArrayBuilderBase):
 
 
 cdef class CodeBuilder(StringBuilder):
-    def __cinit__(self, MemoryPool memory_pool=None, str type_name=None):
+    def __cinit__(self, MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CStringBuilder(pool))
         self.type_marker = BSON_TYPE_CODE
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef const char * bson_str
@@ -451,8 +440,8 @@ cdef class CodeBuilder(StringBuilder):
         if value_t == BSON_TYPE_CODE:
             bson_str = bson_iter_code(doc_iter, &str_len)
             return self.builder.get().Append(bson_str, str_len)
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -466,18 +455,18 @@ cdef class CodeBuilder(StringBuilder):
 cdef class ObjectIdBuilder(_ArrayBuilderBase):
     cdef shared_ptr[CFixedSizeBinaryBuilder] builder
 
-    def __cinit__(self, MemoryPool memory_pool=None, str type_name=None):
+    def __cinit__(self, MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef shared_ptr[CDataType] dtype = fixed_size_binary(12)
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CFixedSizeBinaryBuilder(dtype, pool))
         self.type_marker = BSON_TYPE_OID
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         if value_t == BSON_TYPE_OID:
             return self.builder.get().Append(bson_iter_oid(doc_iter).bytes)
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -491,11 +480,11 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
 cdef class Int32Builder(_ArrayBuilderBase):
     cdef shared_ptr[CInt32Builder] builder
 
-    def __cinit__(self, MemoryPool memory_pool=None, str type_name=None):
+    def __cinit__(self, MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CInt32Builder(pool))
         self.type_marker = BSON_TYPE_INT32
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t) except *:
         cdef double dvalue
@@ -517,8 +506,8 @@ cdef class Int32Builder(_ArrayBuilderBase):
             if ivalue > INT_MAX or ivalue < INT_MIN:
                 raise OverflowError("Overflowed Int32 value")
             return self.builder.get().Append(ivalue)
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -529,11 +518,11 @@ cdef class Int32Builder(_ArrayBuilderBase):
 cdef class Int64Builder(_ArrayBuilderBase):
     cdef shared_ptr[CInt64Builder] builder
 
-    def __cinit__(self, MemoryPool memory_pool=None, str type_name=None):
+    def __cinit__(self, MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CInt64Builder(pool))
         self.type_marker = BSON_TYPE_INT64
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef double dvalue
@@ -548,8 +537,8 @@ cdef class Int64Builder(_ArrayBuilderBase):
             if isnan(dvalue):
                 return self.builder.get().AppendNull()
             return self.builder.get().Append(bson_iter_as_int64(doc_iter))
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -560,11 +549,11 @@ cdef class Int64Builder(_ArrayBuilderBase):
 cdef class DoubleBuilder(_ArrayBuilderBase):
     cdef shared_ptr[CDoubleBuilder] builder
 
-    def __cinit__(self, MemoryPool memory_pool=None, str type_name=None):
+    def __cinit__(self, MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CDoubleBuilder(pool))
         self.type_marker = BSON_TYPE_DOUBLE
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         if (value_t == BSON_TYPE_DOUBLE or
@@ -572,8 +561,8 @@ cdef class DoubleBuilder(_ArrayBuilderBase):
                     value_t == BSON_TYPE_INT32 or
                     value_t == BSON_TYPE_INT64):
             return self.builder.get().Append(bson_iter_as_double(doc_iter))
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -587,7 +576,7 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
         shared_ptr[CTimestampBuilder] builder
 
     def __cinit__(self, TimestampType dtype=timestamp('ms'),
-                  MemoryPool memory_pool=None, str type_name=None):
+                  MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         if dtype.unit != 'ms':
             raise TypeError("PyMongoArrow only supports millisecond "
@@ -597,7 +586,7 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
         self.builder.reset(new CTimestampBuilder(
             pyarrow_unwrap_data_type(self.dtype), pool))
         self.type_marker = BSON_TYPE_DATE_TIME
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     @property
     def unit(self):
@@ -606,8 +595,8 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         if value_t == BSON_TYPE_DATE_TIME:
             return self.builder.get().Append(bson_iter_date_time(doc_iter))
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -619,17 +608,17 @@ cdef class Date64Builder(_ArrayBuilderBase):
         DataType dtype
         shared_ptr[CDate64Builder] builder
 
-    def __cinit__(self, MemoryPool memory_pool=None, str type_name=None):
+    def __cinit__(self, MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CDate64Builder(pool))
         self.type_marker = ARROW_TYPE_DATE64
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         if value_t == BSON_TYPE_DATE_TIME:
             return self.builder.get().Append(bson_iter_date_time(doc_iter))
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -646,11 +635,11 @@ cdef class Date32Builder(_ArrayBuilderBase):
         DataType dtype
         shared_ptr[CDate32Builder] builder
 
-    def __cinit__(self, MemoryPool memory_pool=None, str type_name=None):
+    def __cinit__(self, MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CDate32Builder(pool))
         self.type_marker = ARROW_TYPE_DATE32
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef int64_t value
@@ -661,8 +650,8 @@ cdef class Date32Builder(_ArrayBuilderBase):
             # Convert from milliseconds to days (1000*60*60*24)
             seconds_val = value // 86400000
             return self.builder.get().Append(seconds_val)
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -691,17 +680,17 @@ cdef class NullBuilder(_ArrayBuilderBase):
 cdef class BoolBuilder(_ArrayBuilderBase):
     cdef shared_ptr[CBooleanBuilder] builder
 
-    def __cinit__(self, MemoryPool memory_pool=None, str type_name=None):
+    def __cinit__(self, MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CBooleanBuilder(pool))
         self.type_marker = BSON_TYPE_BOOL
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         if value_t == BSON_TYPE_BOOL:
             return self.builder.get().Append(bson_iter_bool(doc_iter))
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -712,7 +701,7 @@ cdef class Decimal128Builder(_ArrayBuilderBase):
     cdef shared_ptr[CFixedSizeBinaryBuilder] builder
     cdef uint8_t supported
 
-    def __cinit__(self, MemoryPool memory_pool=None, str type_name=None):
+    def __cinit__(self, MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef shared_ptr[CDataType] dtype = fixed_size_binary(16)
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self.builder.reset(new CFixedSizeBinaryBuilder(dtype, pool))
@@ -721,7 +710,7 @@ cdef class Decimal128Builder(_ArrayBuilderBase):
             self.supported = 1
         else:
             self.supported = 0
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         cdef uint8_t dec128_buf[16]
@@ -729,15 +718,15 @@ cdef class Decimal128Builder(_ArrayBuilderBase):
 
         if self.supported == 0:
             # We do not support big-endian systems.
-            raise TypeError(f"Big-endian systems are not supported for `{self.type_name}`")
+            raise TypeError(f"Big-endian systems are not supported for `{_get_human_readable_bson_type_t(self.type_marker)}`")
 
         if value_t == BSON_TYPE_DECIMAL128:
             bson_iter_decimal128(doc_iter, &dec128)
             memcpy(dec128_buf, &dec128.low, 8);
             memcpy(dec128_buf + 8, &dec128.high, 8)
             return self.builder.get().Append(dec128_buf)
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -753,12 +742,12 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
         uint8_t _subtype
         shared_ptr[CStringBuilder] builder
 
-    def __cinit__(self, uint8_t subtype, MemoryPool memory_pool=None, str type_name=None):
+    def __cinit__(self, uint8_t subtype, MemoryPool memory_pool=None, bint allow_invalid=False):
         cdef CMemoryPool* pool = maybe_unbox_memory_pool(memory_pool)
         self._subtype = subtype
         self.builder.reset(new CStringBuilder(pool))
         self.type_marker = BSON_TYPE_BINARY
-        self.type_name = type_name
+        self.allow_invalid = allow_invalid
 
     @property
     def subtype(self):
@@ -772,14 +761,14 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
         if value_t == BSON_TYPE_BINARY:
             bson_iter_binary(doc_iter, &subtype, &val_buf_len, <const uint8_t **>&val_buf)
             if subtype != self._subtype:
-                if self.type_name is not None:
+                if not self.allow_invalid:
                     raise TypeError(
                         f"Got unexpected subtype `{subtype}` instead of expected subtype `{self._subtype}`")
                 else:
                     return self.builder.get().AppendNull()
             return self.builder.get().Append(val_buf, val_buf_len)
-        if self.type_name is not None and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{self.type_name}`")
+        if not self.allow_invalid and value_t != BSON_TYPE_NULL:
+            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 

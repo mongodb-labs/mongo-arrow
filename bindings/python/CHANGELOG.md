@@ -7,6 +7,7 @@
 
 - Providing a schema now enforces strict type adherence for data.
   If a result contains a field whose value does not match the schema's type for that field, a TypeError will be raised.
+  Note that ``NaN`` is a valid type for all fields.
   To suppress these errors and instead silently convert such mismatches to ``NaN``, pass the ``allow_invalid=True`` argument to your ``pymongoarrow`` API call.
   For example, a result with a field of type ``int`` but with a string value will now raise a TypeError,
   unless ``allow_invalid=True`` is passed, in which case the result's field will have a value of ``NaN``.
