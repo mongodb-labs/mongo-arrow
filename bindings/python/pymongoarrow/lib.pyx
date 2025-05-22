@@ -56,7 +56,7 @@ cdef const bson_t* bson_reader_read_safe(bson_reader_t* stream_reader) except? N
         raise InvalidBSON("Could not read BSON document stream")
     return doc
 
-cdef str _get_human_readable_bson_type_t(bson_type_t type_t):
+cdef str _bson_type_name(uint8_t type_t):
     if type_t == BSON_TYPE_EOD:
         result = "EOD"
     elif type_t == BSON_TYPE_UTF8:
@@ -101,6 +101,10 @@ cdef str _get_human_readable_bson_type_t(bson_type_t type_t):
         result = "maxkey"
     elif type_t == BSON_TYPE_MINKEY:
         result = "minkey"
+    elif type_t == ARROW_TYPE_DATE32:
+        result = "date32"
+    elif type_t == ARROW_TYPE_DATE64:
+        result = "date64"
     else:
         result = f"Unknown type: {str(type_t)}"
     return result
@@ -229,7 +233,7 @@ cdef class BuilderManager:
             # Get the builder.
             builder = <_ArrayBuilderBase>self.builder_map.get(full_key, None)
             if builder is None and not self.has_schema:
-                builder = self.get_builder(full_key, value_t, doc_iter, False)
+                builder = self.get_builder(full_key, value_t, doc_iter, True)
             if builder is None:
                 continue
 
@@ -419,7 +423,7 @@ cdef class StringBuilder(_ArrayBuilderBase):
             value = bson_iter_utf8(doc_iter, &str_len)
             return self.builder.get().Append(value, str_len)
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -441,7 +445,7 @@ cdef class CodeBuilder(StringBuilder):
             bson_str = bson_iter_code(doc_iter, &str_len)
             return self.builder.get().Append(bson_str, str_len)
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -466,7 +470,7 @@ cdef class ObjectIdBuilder(_ArrayBuilderBase):
         if value_t == BSON_TYPE_OID:
             return self.builder.get().Append(bson_iter_oid(doc_iter).bytes)
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -507,7 +511,7 @@ cdef class Int32Builder(_ArrayBuilderBase):
                 raise OverflowError("Overflowed Int32 value")
             return self.builder.get().Append(ivalue)
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -538,7 +542,7 @@ cdef class Int64Builder(_ArrayBuilderBase):
                 return self.builder.get().AppendNull()
             return self.builder.get().Append(bson_iter_as_int64(doc_iter))
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -562,7 +566,7 @@ cdef class DoubleBuilder(_ArrayBuilderBase):
                     value_t == BSON_TYPE_INT64):
             return self.builder.get().Append(bson_iter_as_double(doc_iter))
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -596,7 +600,7 @@ cdef class DatetimeBuilder(_ArrayBuilderBase):
         if value_t == BSON_TYPE_DATE_TIME:
             return self.builder.get().Append(bson_iter_date_time(doc_iter))
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -618,7 +622,7 @@ cdef class Date64Builder(_ArrayBuilderBase):
         if value_t == BSON_TYPE_DATE_TIME:
             return self.builder.get().Append(bson_iter_date_time(doc_iter))
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `date64`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(<uint8_t>self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -651,7 +655,7 @@ cdef class Date32Builder(_ArrayBuilderBase):
             seconds_val = value // 86400000
             return self.builder.get().Append(seconds_val)
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `date32`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(<uint8_t>self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -690,7 +694,7 @@ cdef class BoolBuilder(_ArrayBuilderBase):
         if value_t == BSON_TYPE_BOOL:
             return self.builder.get().Append(bson_iter_bool(doc_iter))
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -718,7 +722,7 @@ cdef class Decimal128Builder(_ArrayBuilderBase):
 
         if self.supported == 0:
             # We do not support big-endian systems.
-            raise TypeError(f"Big-endian systems are not supported for `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Big-endian systems are not supported for `{_bson_type_name(self.type_marker)}`")
 
         if value_t == BSON_TYPE_DECIMAL128:
             bson_iter_decimal128(doc_iter, &dec128)
@@ -726,7 +730,7 @@ cdef class Decimal128Builder(_ArrayBuilderBase):
             memcpy(dec128_buf + 8, &dec128.high, 8)
             return self.builder.get().Append(dec128_buf)
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 
@@ -768,7 +772,7 @@ cdef class BinaryBuilder(_ArrayBuilderBase):
                     return self.builder.get().AppendNull()
             return self.builder.get().Append(val_buf, val_buf_len)
         if not self.allow_invalid and value_t != BSON_TYPE_NULL:
-            raise TypeError(f"Got unexpected type `{_get_human_readable_bson_type_t(value_t)}` instead of expected type `{_get_human_readable_bson_type_t(self.type_marker)}`")
+            raise TypeError(f"Got unexpected type `{_bson_type_name(<uint8_t>value_t)}` instead of expected type `{_bson_type_name(self.type_marker)}`")
         else:
             return self.builder.get().AppendNull()
 

@@ -191,7 +191,7 @@ class TestBooleanType(TestBsonToArrowConversionBase):
         ]
         as_dict = {"data": [True, False, None, None, False, True]}
         with self.assertRaisesRegex(
-            TypeError, "Got unexpected type `int32` instead of expected type `bool`"
+            TypeError, "Got unexpected type `int32` instead of expected type `boolean`"
         ):
             self._run_test(docs, as_dict)
 
@@ -273,7 +273,7 @@ class TestSubdocumentType(TestBsonToArrowConversionBase):
             ]
         }
         with self.assertRaisesRegex(
-            TypeError, "Got unexpected type `int32` instead of expected type `bool`"
+            TypeError, "Got unexpected type `int32` instead of expected type `boolean`"
         ):
             self._run_test(docs, as_dict)
 
@@ -324,6 +324,6 @@ class TestSubdocumentType(TestBsonToArrowConversionBase):
             ]
         }
         with self.assertRaisesRegex(
-            TypeError, "Got unexpected type `int32` instead of expected type `bool`"
+            TypeError, "Got unexpected type `int32` instead of expected type `boolean`"
         ):
             self._run_test(docs, as_dict)

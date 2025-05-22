@@ -38,8 +38,8 @@ from pymongoarrow.lib import (
 
 
 class IntBuildersTestMixin:
-    def test_simple(self):
-        builder = self.builder_cls()
+    def test_simple_allow_invalid(self):
+        builder = self.builder_cls(allow_invalid=True)
         builder.append(0)
         builder.append_values([1, 2, 3, 4])
         builder.append("a")
@@ -51,6 +51,15 @@ class IntBuildersTestMixin:
         self.assertEqual(len(arr), 7)
         self.assertEqual(arr.to_pylist(), [0, 1, 2, 3, 4, None, None])
         self.assertEqual(arr.type, self.data_type)
+
+    def test_simple(self):
+        builder = self.builder_cls()
+        builder.append(0)
+        builder.append_values([1, 2, 3, 4])
+        with self.assertRaisesRegex(
+            TypeError, f"Got unexpected type `string` instead of expected type `{self.data_type}`"
+        ):
+            builder.append("a")
 
 
 class TestInt32Builder(TestCase, IntBuildersTestMixin):
@@ -71,10 +80,10 @@ class TestDatetimeBuilder(TestCase):
         builder = DatetimeBuilder()
         self.assertEqual(builder.unit, timestamp("ms"))
 
-    def test_simple(self):
+    def test_simple_allow_invalid(self):
         self.maxDiff = None
 
-        builder = DatetimeBuilder(dtype=timestamp("ms"))
+        builder = DatetimeBuilder(dtype=timestamp("ms"), allow_invalid=True)
         datetimes = [datetime.now(timezone.utc) + timedelta(days=k * 100) for k in range(5)]
         builder.append(datetimes[0])
         builder.append_values(datetimes[1:])
@@ -92,6 +101,18 @@ class TestDatetimeBuilder(TestCase):
                 self.assertIsNone(expected)
         self.assertEqual(arr.type, timestamp("ms"))
 
+    def test_simple(self):
+        self.maxDiff = None
+
+        builder = DatetimeBuilder(dtype=timestamp("ms"))
+        datetimes = [datetime.now(timezone.utc) + timedelta(days=k * 100) for k in range(5)]
+        builder.append(datetimes[0])
+        builder.append_values(datetimes[1:])
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `int32` instead of expected type `datetime`"
+        ):
+            builder.append(1)
+
     def test_unsupported_units(self):
         for unit in ("s", "us", "ns"):
             with self.assertRaises(TypeError):
@@ -99,8 +120,8 @@ class TestDatetimeBuilder(TestCase):
 
 
 class TestDoubleBuilder(TestCase):
-    def test_simple(self):
-        builder = DoubleBuilder()
+    def test_simple_allow_invalid(self):
+        builder = DoubleBuilder(allow_invalid=True)
         values = [0.123, 1.234, 2.345, 3.456, 4.567, 1]
         builder.append(values[0])
         builder.append_values(values[1:])
@@ -113,11 +134,21 @@ class TestDoubleBuilder(TestCase):
         self.assertEqual(len(arr), 8)
         self.assertEqual(arr.to_pylist(), values + [None, None])
 
+    def test_simple(self):
+        builder = DoubleBuilder()
+        values = [0.123, 1.234, 2.345, 3.456, 4.567, 1]
+        builder.append(values[0])
+        builder.append_values(values[1:])
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `string` instead of expected type `double`"
+        ):
+            builder.append("a")
+
 
 class TestObjectIdBuilder(TestCase):
-    def test_simple(self):
-        ids = [ObjectId() for i in range(5)]
-        builder = ObjectIdBuilder()
+    def test_simple_allow_invalid(self):
+        ids = [ObjectId() for _ in range(5)]
+        builder = ObjectIdBuilder(allow_invalid=True)
         builder.append(ids[0])
         builder.append_values(ids[1:])
         builder.append(b"123456789123")
@@ -129,14 +160,24 @@ class TestObjectIdBuilder(TestCase):
         self.assertEqual(len(arr), 7)
         self.assertEqual(arr.to_pylist(), ids + [None, None])
 
+    def test_simple(self):
+        ids = [ObjectId() for i in range(5)]
+        builder = ObjectIdBuilder()
+        builder.append(ids[0])
+        builder.append_values(ids[1:])
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `binary` instead of expected type `objectId`"
+        ):
+            builder.append(b"123456789123")
+
 
 class TestStringBuilder(TestCase):
-    def test_simple(self):
+    def test_simple_allow_invalid(self):
         # Greetings in various languages, from
         # https://www.w3.org/2001/06/utf-8-test/UTF-8-demo.html
         values = ["Hello world", "Καλημέρα κόσμε", "コンニチハ"]
         values += ["hello\u0000world"]
-        builder = StringBuilder()
+        builder = StringBuilder(allow_invalid=True)
         builder.append(values[0])
         builder.append_values(values[1:])
         builder.append(b"1")
@@ -147,6 +188,19 @@ class TestStringBuilder(TestCase):
         self.assertEqual(arr.null_count, 2)
         self.assertEqual(len(arr), 6)
         self.assertEqual(arr.to_pylist(), values + [None, None])
+
+    def test_simple(self):
+        # Greetings in various languages, from
+        # https://www.w3.org/2001/06/utf-8-test/UTF-8-demo.html
+        values = ["Hello world", "Καλημέρα κόσμε", "コンニチハ"]
+        values += ["hello\u0000world"]
+        builder = StringBuilder()
+        builder.append(values[0])
+        builder.append_values(values[1:])
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `binary` instead of expected type `string`"
+        ):
+            builder.append(b"1")
 
 
 class TestDocumentBuilder(TestCase):
@@ -239,9 +293,37 @@ class TestBuilderManager(TestCase):
 
 
 class TestBinaryBuilder(TestCase):
+    def test_simple_allow_invalid(self):
+        data = [Binary(bytes(i), 10) for i in range(5)]
+        # Assuming subtype is passed as first arg and allow_invalid is a kwarg
+        builder = BinaryBuilder(10, allow_invalid=True)
+        builder.append(data[0])
+        builder.append_values(data[1:])
+        builder.append(1)  # Invalid type (int) for Binary
+        builder.append_null()
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 7)
+        self.assertEqual(arr.to_pylist(), data + [None, None])
+
     def test_simple(self):
         data = [Binary(bytes(i), 10) for i in range(5)]
+        # Assuming subtype is passed as first arg, allow_invalid=False by default
         builder = BinaryBuilder(10)
+        builder.append(data[0])
+        builder.append_values(data[1:])
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `int32` instead of expected type `binary`"
+        ):
+            builder.append(1)
+
+
+class TestDecimal128Builder(TestCase):
+    def test_simple_allow_invalid(self):
+        data = [Decimal128([i, i]) for i in range(5)]
+        builder = Decimal128Builder(allow_invalid=True)
         builder.append(data[0])
         builder.append_values(data[1:])
         builder.append(1)
@@ -253,26 +335,20 @@ class TestBinaryBuilder(TestCase):
         self.assertEqual(len(arr), 7)
         self.assertEqual(arr.to_pylist(), data + [None, None])
 
-
-class TestDecimal128Builder(TestCase):
     def test_simple(self):
         data = [Decimal128([i, i]) for i in range(5)]
         builder = Decimal128Builder()
         builder.append(data[0])
         builder.append_values(data[1:])
-        builder.append(1)
-        builder.append_null()
-        arr = builder.finish()
-
-        self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 2)
-        self.assertEqual(len(arr), 7)
-        self.assertEqual(arr.to_pylist(), data + [None, None])
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `int32` instead of expected type `decimal128`"
+        ):
+            builder.append(1)
 
 
-class BoolBuilderTestMixin:
-    def test_simple(self):
-        builder = BoolBuilder()
+class TestBoolBuilder(TestCase):
+    def test_simple_allow_invalid(self):
+        builder = BoolBuilder(allow_invalid=True)
         builder.append(False)
         builder.append_values([True, False, True, False, True, False])
         builder.append(1)
@@ -285,22 +361,25 @@ class BoolBuilderTestMixin:
         self.assertEqual(
             arr.to_pylist(), [False, True, False, True, False, True, False, None, None]
         )
-        self.assertEqual(arr.type, self.data_type)
+        self.assertEqual(arr.type, bool_())
 
-
-class TestBoolBuilder(TestCase, BoolBuilderTestMixin):
-    def setUp(self):
-        self.builder_cls = BoolBuilder
-        self.data_type = bool_()
+    def test_simple(self):
+        builder = BoolBuilder()
+        builder.append(False)
+        builder.append_values([True, False, True, False, True, False])
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `int32` instead of expected type `boolean`"
+        ):
+            builder.append(1)
 
 
 class TestCodeBuilder(TestCase):
-    def test_simple(self):
+    def test_simple_allow_invalid(self):
         # Greetings in various languages, from
         # https://www.w3.org/2001/06/utf-8-test/UTF-8-demo.html
         values = ["Hello world", "Καλημέρα κόσμε", "コンニチハ"]
         values += ["hello\u0000world"]
-        builder = CodeBuilder()
+        builder = CodeBuilder(allow_invalid=True)
         builder.append(Code(values[0]))
         builder.append_values([Code(v) for v in values[1:]])
         builder.append("foo")
@@ -314,28 +393,51 @@ class TestCodeBuilder(TestCase):
         self.assertEqual(len(arr), 6)
         self.assertEqual(arr.to_pylist(), codes + [None, None])
 
+    def test_simple(self):
+        # Greetings in various languages, from
+        # https://www.w3.org/2001/06/utf-8-test/UTF-8-demo.html
+        values = ["Hello world", "Καλημέρα κόσμε", "コンニチハ"]
+        values += ["hello\u0000world"]
+        builder = CodeBuilder()
+        builder.append(Code(values[0]))
+        builder.append_values([Code(v) for v in values[1:]])
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `string` instead of expected type `code`"
+        ):
+            builder.append("foo")
+
 
 class TestDate32Builder(TestCase):
+    def test_simple_allow_invalid(self):
+        values = [datetime(1970 + i, 1, 1) for i in range(3)]
+        builder = Date32Builder(allow_invalid=True)
+        builder.append(values[0])
+        builder.append_values(values[1:])
+        builder.append(1)
+        builder.append_null()
+        arr = builder.finish()
+
+        self.assertIsInstance(arr, Array)
+        self.assertEqual(arr.null_count, 2)
+        self.assertEqual(len(arr), 5)
+        dates = [v.date() for v in values]
+        self.assertEqual(arr.to_pylist(), dates + [None, None])
+
     def test_simple(self):
         values = [datetime(1970 + i, 1, 1) for i in range(3)]
         builder = Date32Builder()
         builder.append(values[0])
         builder.append_values(values[1:])
-        builder.append(1)
-        builder.append_null()
-        arr = builder.finish()
-
-        self.assertIsInstance(arr, Array)
-        self.assertEqual(arr.null_count, 2)
-        self.assertEqual(len(arr), 5)
-        dates = [v.date() for v in values]
-        self.assertEqual(arr.to_pylist(), dates + [None, None])
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `int32` instead of expected type `date32`"
+        ):
+            builder.append(1)
 
 
 class TestDate64Builder(TestCase):
-    def test_simple(self):
+    def test_simple_allow_invalid(self):
         values = [datetime(1970 + i, 1, 1) for i in range(3)]
-        builder = Date64Builder()
+        builder = Date64Builder(allow_invalid=True)
         builder.append(values[0])
         builder.append_values(values[1:])
         builder.append(1)
@@ -347,3 +449,13 @@ class TestDate64Builder(TestCase):
         self.assertEqual(len(arr), 5)
         dates = [v.date() for v in values]
         self.assertEqual(arr.to_pylist(), dates + [None, None])
+
+    def test_simple(self):
+        values = [datetime(1970 + i, 1, 1) for i in range(3)]
+        builder = Date64Builder()
+        builder.append(values[0])
+        builder.append_values(values[1:])
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `int32` instead of expected type `date64`"
+        ):
+            builder.append(1)
