@@ -19,13 +19,15 @@ from pymongoarrow.types import _BsonArrowTypes, _get_internal_typemap
 class PyMongoArrowContext:
     """A context for converting BSON-formatted data to an Arrow Table."""
 
-    def __init__(self, schema, codec_options=None):
+    def __init__(self, schema, codec_options=None, allow_invalid=False):
         """Initialize the context.
 
         :Parameters:
           - `schema`: Instance of :class:`~pymongoarrow.schema.Schema`.
           - `builder_map`: Mapping of utf-8-encoded field names to
             :class:`~pymongoarrow.builders._BuilderBase` instances.
+          - `allow_invalid`: If set to ``True``,
+        results will have all fields that do not conform to the schema silently converted to NaN.
         """
         self.schema = schema
         if self.schema is None and codec_options is not None:
@@ -40,7 +42,9 @@ class PyMongoArrowContext:
         # Delayed import to prevent import errors for unbuilt library.
         from pymongoarrow.lib import BuilderManager
 
-        self.manager = BuilderManager(schema_map, self.schema is not None, self.tzinfo)
+        self.manager = BuilderManager(
+            schema_map, self.schema is not None, self.tzinfo, allow_invalid=allow_invalid
+        )
         self.schema_map = schema_map
 
     def process_bson_stream(self, stream):

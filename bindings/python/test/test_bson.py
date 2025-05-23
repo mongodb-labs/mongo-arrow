@@ -167,7 +167,8 @@ class TestBooleanType(TestBsonToArrowConversionBase):
         self.schema = Schema({"data": bool})
         self.context = PyMongoArrowContext(self.schema)
 
-    def test_simple(self):
+    def test_simple_allow_invalid(self):
+        self.context = PyMongoArrowContext(self.schema, allow_invalid=True)
         docs = [
             {"data": True},
             {"data": False},
@@ -178,6 +179,21 @@ class TestBooleanType(TestBsonToArrowConversionBase):
         ]
         as_dict = {"data": [True, False, None, None, False, True]}
         self._run_test(docs, as_dict)
+
+    def test_simple(self):
+        docs = [
+            {"data": True},
+            {"data": False},
+            {"data": 19},
+            {"data": "string"},
+            {"data": False},
+            {"data": True},
+        ]
+        as_dict = {"data": [True, False, None, None, False, True]}
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `int32` instead of expected type `boolean`"
+        ):
+            self._run_test(docs, as_dict)
 
 
 class TestStringType(TestBsonToArrowConversionBase):
@@ -214,6 +230,29 @@ class TestSubdocumentType(TestBsonToArrowConversionBase):
         self.schema = Schema({"data": dict(x=bool)})
         self.context = PyMongoArrowContext(self.schema)
 
+    def test_simple_allow_invalid(self):
+        self.context = PyMongoArrowContext(self.schema, allow_invalid=True)
+
+        docs = [
+            {"data": dict(x=True)},
+            {"data": dict(x=False)},
+            {"data": dict(x=19)},
+            {"data": dict(x="string")},
+            {"data": dict(x=False)},
+            {"data": dict(x=True)},
+        ]
+        as_dict = {
+            "data": [
+                dict(x=True),
+                dict(x=False),
+                dict(x=None),
+                dict(x=None),
+                dict(x=False),
+                dict(x=True),
+            ]
+        }
+        self._run_test(docs, as_dict)
+
     def test_simple(self):
         docs = [
             {"data": dict(x=True)},
@@ -231,6 +270,33 @@ class TestSubdocumentType(TestBsonToArrowConversionBase):
                 dict(x=None),
                 dict(x=False),
                 dict(x=True),
+            ]
+        }
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `int32` instead of expected type `boolean`"
+        ):
+            self._run_test(docs, as_dict)
+
+    def test_nested_allow_invalid(self):
+        self.schema = Schema({"data": dict(x=bool, y=dict(a=int))})
+        self.context = PyMongoArrowContext(self.schema, allow_invalid=True)
+
+        docs = [
+            {"data": dict(x=True, y=dict(a=1))},
+            {"data": dict(x=False, y=dict(a=1))},
+            {"data": dict(x=19, y=dict(a=1))},
+            {"data": dict(x="string", y=dict(a=1))},
+            {"data": dict(x=False, y=dict(a=1))},
+            {"data": dict(x=True, y=dict(a=1))},
+        ]
+        as_dict = {
+            "data": [
+                dict(x=True, y=dict(a=1)),
+                dict(x=False, y=dict(a=1)),
+                dict(x=None, y=dict(a=1)),
+                dict(x=None, y=dict(a=1)),
+                dict(x=False, y=dict(a=1)),
+                dict(x=True, y=dict(a=1)),
             ]
         }
         self._run_test(docs, as_dict)
@@ -257,4 +323,7 @@ class TestSubdocumentType(TestBsonToArrowConversionBase):
                 dict(x=True, y=dict(a=1)),
             ]
         }
-        self._run_test(docs, as_dict)
+        with self.assertRaisesRegex(
+            TypeError, "Got unexpected type `int32` instead of expected type `boolean`"
+        ):
+            self._run_test(docs, as_dict)
