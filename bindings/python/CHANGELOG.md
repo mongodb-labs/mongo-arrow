@@ -3,7 +3,7 @@
 
 ---
 
-# Changes in Version 1.9.0 (2025/XX/XX)
+# Changes in Version 1.9.0 (2025/05/27)
 
 - Providing a schema now enforces strict type adherence for data.
   If a result contains a field whose value does not match the schema's type for that field, a TypeError will be raised.
