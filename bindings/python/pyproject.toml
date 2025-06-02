@@ -1,7 +1,7 @@
 [build-system]
 requires = [
     # ARROW-248, pin to less than 72.2.
-    "setuptools>=70,<72.2",
+    "setuptools>=70,<80.10",
     "cython>=3.0",
     # Needed for numpy headers.
     "numpy>=2.0",
