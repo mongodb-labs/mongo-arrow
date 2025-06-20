@@ -15,9 +15,14 @@ from test import client_context
 
 import pytest
 
-pytest_plugins = [
-    "pandas.tests.extension.conftest",
-]
+try:
+    import pandas as pd  # noqa: F401
+
+    pytest_plugins = [
+        "pandas.tests.extension.conftest",
+    ]
+except ImportError:
+    pass
 
 
 @pytest.fixture(autouse=True, scope="session")

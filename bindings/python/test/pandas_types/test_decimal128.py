@@ -14,9 +14,14 @@
 import numpy as np
 import pytest
 from bson import Decimal128
-from pandas.tests.extension import base
 
 from pymongoarrow.pandas_types import PandasDecimal128, PandasDecimal128Array
+
+try:
+    from pandas.tests.extension import base
+except ImportError:
+    pytest.skip("skipping pandas tests", allow_module_level=True)
+
 
 try:
     base.BaseIndexTests

@@ -14,7 +14,7 @@
 import unittest
 from test import client_context
 
-from pymongoarrow.api import find_arrow_all
+from pymongoarrow.api import find_arrow_all, find_pandas_all, find_polars_all
 from pymongoarrow.schema import Schema
 from pymongoarrow.version import __version__
 
@@ -33,6 +33,35 @@ class TestPyMongoArrow(unittest.TestCase):
     def test_version(self):
         self.assertIsNotNone(__version__)
         self.assertIsInstance(__version__, str)
+
+    def test_no_pandas(self):
+        try:
+            import pandas as pd  # noqa: F401
+
+            self.skipTest("Requires no pandas")
+        except ImportError:
+            pass
+        self.client.test.drop_collection("test")
+        schema = Schema({"data": bool})
+        data = [{"data": False} for _ in range(1000)]
+        self.client.test.test.insert_many(data)
+
+        with self.assertRaises(ValueError):
+            find_pandas_all(self.client.test.test, {}, schema=schema)
+
+    def test_no_polars(self):
+        try:
+            import polars as pl  # noqa: F401
+
+            self.skipTest("Requires no polars")
+        except ImportError:
+            pass
+        self.client.test.drop_collection("test")
+        schema = Schema({"data": bool})
+        data = [{"data": False} for _ in range(1000)]
+        self.client.test.test.insert_many(data)
+        with self.assertRaises(ValueError):
+            find_polars_all(self.client.test.test, {}, schema=schema)
 
     def test_capped_collection(self):
         self.client.test.drop_collection("test")

@@ -38,9 +38,6 @@ jobs:
       matrix:
         os: ["ubuntu-latest", "macos-latest", "windows-latest"]
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.13t"]
-        exclude:
-          - os: "windows-latest"
-            python-version: "3.13t"
       fail-fast: false
     name: CPython ${{ matrix.python-version }}-${{ matrix.os }}
     steps:
@@ -89,10 +86,14 @@ jobs:
       - name: Ensure imports with no test deps
         run: just import-check
       - name: Run the tests
+        if: ${{ ! endsWith(matrix.python-version, 't') }}
         env:
           UV_PYTHON: ${{matrix.python-version}}
         run: just test
-
+      - name: Run the tests with no optional deps
+        env:
+          UV_PYTHON: ${{matrix.python-version}}
+        run: just test-no-optional
   docs:
     runs-on: ubuntu-latest
     steps:
