@@ -14,9 +14,13 @@
 import numpy as np
 import pytest
 from bson import Binary
-from pandas.tests.extension import base
 
 from pymongoarrow.pandas_types import PandasBinary, PandasBinaryArray
+
+try:
+    from pandas.tests.extension import base
+except ImportError:
+    pytest.skip("skipping pandas tests", allow_module_level=True)
 
 try:
     base.BaseIndexTests

@@ -14,9 +14,14 @@
 import numpy as np
 import pytest
 from bson import Code
-from pandas.tests.extension import base
 
 from pymongoarrow.pandas_types import PandasCode, PandasCodeArray
+
+try:
+    from pandas.tests.extension import base
+except ImportError:
+    pytest.skip("skipping pandas tests", allow_module_level=True)
+
 
 try:
     base.BaseIndexTests

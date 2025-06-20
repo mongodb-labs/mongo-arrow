@@ -19,7 +19,6 @@ from test import client_context
 import numpy as np
 import pyarrow as pa
 from bson import Decimal128, ObjectId
-from pandas import isna
 from pyarrow import bool_, float64, int64, string, timestamp
 from pymongo import WriteConcern, monitoring
 
@@ -31,6 +30,24 @@ from pymongoarrow.types import (
     ObjectIdType,
     _in_type_map,
 )
+
+
+def isnan(inp):
+    if isinstance(inp, (pa.Array, pa.ChunkedArray)):
+        inp = inp.to_pylist()
+
+    def isnan_inner(value):
+        if value is None:
+            return True
+        # pandas na values
+        if str(value) in ["<NA>", "NaT"]:
+            return True
+        try:
+            return np.isnan(value)
+        except TypeError:
+            return False
+
+    return [isnan_inner(v) for v in inp]
 
 
 class EventListener(monitoring.CommandListener):
@@ -176,7 +193,7 @@ class NullsTestMixin:
         self.assertType(table["int64"], atype)
 
         # Does it contain NAs where we expect?
-        self.assertTrue(np.all(np.equal(isna(int64_arr), isna(table["int64"]))))
+        self.assertTrue(np.all(np.equal(isnan(int64_arr), isnan(table["int64"]))))
 
         # Write
         self.coll.drop()
@@ -217,7 +234,7 @@ class NullsTestMixin:
             self.assertType(table["other"], con_type)
             self.assertEqual(
                 self.na_safe(con_type),
-                np.all(np.equal(isna(others), isna(table["other"]))),
+                np.all(np.equal(isnan(others), isnan(table["other"]))),
             )
 
             def writeback():
@@ -262,4 +279,4 @@ class NullsTestMixin:
         self.assertType(table["bool_"], atype)
 
         # Does it contain Nones where expected?
-        self.assertTrue(np.all(np.equal(isna(bools), isna(table["bool_"]))))
+        self.assertTrue(np.all(np.equal(isnan(bools), isnan(table["bool_"]))))

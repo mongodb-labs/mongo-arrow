@@ -3,6 +3,11 @@
 
 ---
 
+# Changes in Version 1.10.0 (2025/xx/yy)
+
+- Make `pandas` an optional dependency.
+- Add support for free-threaded python on Windows.
+
 # Changes in Version 1.9.0 (2025/05/27)
 
 - Providing a schema now enforces strict type adherence for data.

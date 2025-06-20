@@ -15,7 +15,11 @@ import warnings
 from decimal import Decimal
 
 import numpy as np
-import pandas as pd
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 try:
     import polars as pl
@@ -170,6 +174,9 @@ def _arrow_to_pandas(arrow_table):
     See https://arrow.apache.org/docs/python/pandas.html#reducing-memory-use-in-table-to-pandas
     for details.
     """
+    if pd is None:
+        msg = "pandas is not installed. Try pip install pandas."
+        raise ValueError(msg)
     return arrow_table.to_pandas(split_blocks=True, self_destruct=True)
 
 
@@ -238,10 +245,10 @@ def _arrow_to_numpy(arrow_table, schema=None):
 
     for fname in schema:
         dtype = get_numpy_type(schema[fname])
+        container[fname] = arrow_table[fname].to_numpy()
         if dtype == np.str_:
-            container[fname] = arrow_table[fname].to_pandas().to_numpy(dtype=dtype)
-        else:
-            container[fname] = arrow_table[fname].to_numpy()
+            container[fname] = container[fname].astype(np.str_)
+
     return container
 
 
@@ -427,7 +434,7 @@ def _tabular_generator(tabular, *, exclude_none=False):
                     yield {k: v for k, v in row.items() if v is not None}
                 else:
                     yield row
-    elif isinstance(tabular, pd.DataFrame):
+    elif pd is not None and isinstance(tabular, pd.DataFrame):
         for row in tabular.to_dict("records"):
             if exclude_none:
                 yield {k: v for k, v in row.items() if not np.isnan(v)}
@@ -498,7 +505,7 @@ def write(collection, tabular, *, exclude_none: bool = False):
             cols = [tabular.column(i).cast(new_types[i]) for i in range(tabular.num_columns)]
             tabular = Table.from_arrays(cols, names=tabular.column_names)
         _validate_schema(tabular.schema.types)
-    elif isinstance(tabular, pd.DataFrame):
+    elif pd is not None and isinstance(tabular, pd.DataFrame):
         _validate_schema(ArrowSchema.from_pandas(tabular).types)
     elif pl is not None and isinstance(tabular, pl.DataFrame):
         tabular = tabular.to_arrow()  # zero-copy in most cases and done in tabular_gen anyway
@@ -523,7 +530,10 @@ def write(collection, tabular, *, exclude_none: bool = False):
 
     # Add handling for special case types.
     codec_options = collection.codec_options
-    type_registry = TypeRegistry([_PandasNACodec(), _DecimalCodec()])
+    if pd is not None:
+        type_registry = TypeRegistry([_PandasNACodec(), _DecimalCodec()])
+    else:
+        type_registry = TypeRegistry([_DecimalCodec()])
     codec_options = codec_options.with_options(type_registry=type_registry)
 
     while cur_offset < tab_size:

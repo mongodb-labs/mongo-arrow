@@ -23,9 +23,8 @@ from test import client_context
 from test.utils import AllowListEventListener, NullsTestMixin
 
 import numpy as np
-import pandas as pd
-import pandas.testing
 import pyarrow as pa
+import pytest
 from bson import Binary, Code, CodecOptions, Decimal128, ObjectId
 from pyarrow import decimal256, int32, int64
 from pymongo import DESCENDING, WriteConcern
@@ -36,6 +35,12 @@ from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, writ
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.pandas_types import PandasBSONDtype, PandasDecimal128, PandasObjectId
 from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
+
+try:
+    import pandas as pd
+    import pandas.testing
+except ImportError:
+    pytest.skip("skipping pandas tests", allow_module_level=True)
 
 
 class PandasTestBase(unittest.TestCase):

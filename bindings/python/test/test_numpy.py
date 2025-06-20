@@ -154,6 +154,10 @@ class TestExplicitNumPyApi(NumpyTestBase):
                 raise awe
 
     def test_write_schema_validation(self):
+        try:
+            import pandas as pd  # noqa: F401
+        except ImportError:
+            self.skipTest("Test requires pandas")
         arrow_schema = {k.__name__: v(True) for k, v in _TYPE_NORMALIZER_FACTORY.items()}
         schema = {k: v.to_pandas_dtype() for k, v in arrow_schema.items()}
         schema["str"] = "str"

@@ -19,14 +19,22 @@ import numbers
 import re
 
 import numpy as np
-import pandas as pd
 import pyarrow as pa
 from bson import Binary, Code, Decimal128, ObjectId
-from pandas.api.extensions import (
-    ExtensionArray,
-    ExtensionDtype,
-    register_extension_dtype,
-)
+
+try:
+    import pandas as pd
+    from pandas.api.extensions import (
+        ExtensionArray,
+        ExtensionDtype,
+        register_extension_dtype,
+    )
+except ImportError:
+    ExtensionDtype = object
+    ExtensionArray = object
+
+    def register_extension_dtype(func):
+        return func
 
 
 class PandasBSONDtype(ExtensionDtype):
