@@ -23,11 +23,11 @@ install:
     uv run pre-commit install
 
 test *args:
-    uv sync --extra test --extra test-polars --extra test-pandas || uv sync --extra test
+    uv sync --no-install-project --dev --extra test --extra test-polars --extra test-pandas || uv sync --extra test
     uv run pytest {{args}}
 
 test-no-optional *args:
-    uv sync --extra test
+    uv sync --no-install-project --dev --extra test
     uv run pytest {{args}}
 
 lint:
