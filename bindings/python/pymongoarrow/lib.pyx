@@ -248,12 +248,12 @@ cdef class BuilderManager:
                 if count > builder.length():
                     status = builder.append_nulls_raw(count - builder.length())
                     if not status.ok():
-                        raise ValueError("Failed to append nulls to", full_key.decode('utf8'))
+                        raise ValueError("Failed to append nulls to", full_key.decode('utf8'), ":", status.message().decode('utf8'))
 
             # Append the next value.
             status = builder.append_raw(doc_iter, value_t)
             if not status.ok():
-                raise ValueError("Could not append raw value to", full_key.decode('utf8'))
+                raise ValueError("Could not append raw value to", full_key.decode('utf8'), ":", status.message().decode('utf8'))
 
             # Recurse into documents.
             if value_t == BSON_TYPE_DOCUMENT and builder.type_marker == BSON_TYPE_DOCUMENT:
@@ -326,7 +326,7 @@ cdef class BuilderManager:
             if builder.length() < count:
                 status = builder.append_nulls_raw(count - builder.length())
                 if not status.ok():
-                    raise ValueError("Failed to append nulls to", field)
+                    raise ValueError("Failed to append nulls to", field, ":", status.message().decode("utf8"))
 
         return return_map
 
@@ -362,7 +362,7 @@ cdef class _ArrayBuilderBase:
             value_t = bson_iter_type(&doc_iter)
             status = self.append_raw(&doc_iter, value_t)
             if not status.ok():
-                raise ValueError("Could not append raw value of type", value_t)
+                raise ValueError("Could not append raw value of type", value_t, ":", status.message().decode("utf8"))
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         pass
@@ -376,7 +376,7 @@ cdef class _ArrayBuilderBase:
     cpdef append_null(self):
         cdef CStatus status = self.append_null_raw()
         if not status.ok():
-            raise ValueError("Could not append null value")
+            raise ValueError("Could not append null value:", status.message().decode("utf8"))
 
     cpdef void append_nulls(self, uint64_t count):
         for _ in range(count):
@@ -402,7 +402,7 @@ cdef class _ArrayBuilderBase:
         with nogil:
             status = builder.get().Finish(&out)
         if not status.ok():
-            raise ValueError("Failed to convert value to array")
+            raise ValueError("Failed to convert value to array:", status.message().decode("utf8"))
         return pyarrow_wrap_array(out)
 
 
