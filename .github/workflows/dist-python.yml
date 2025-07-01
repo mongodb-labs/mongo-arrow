@@ -38,12 +38,12 @@ jobs:
         - [ubuntu-24.04, manylinux_x86_64]
         - [ubuntu-24.04, manylinux_aarch64]
         - [macos-14, macosx_*]
-        - [windows-2019, win_amd64]
+        - [windows-2022, win_amd64]
         python: ["cp39", "cp310", "cp311", "cp312", "cp313", "cp313t"]
         exclude:
           - buildplat: [macos-14, macosx_*]
             python: "cp39"
-          - buildplat: [windows-2019, win_amd64]
+          - buildplat: [windows-2022, win_amd64]
             python: "cp313t"
         include:
           - buildplat: [macos-13, macosx_*]
