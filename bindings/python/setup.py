@@ -88,7 +88,7 @@ def append_libbson_flags(module):
                 lib_path = os.path.join(lib_dir, bson_lib).replace(os.sep, "/")
                 if os.path.exists(lib_path):
                     module.extra_link_args = [lib_path]
-                    include_path = bson_lib.replace(".lib", "")
+                    include_path = "libbson-1.0" if BSON_MAJOR_VERSION == 1 else "bson2"
                     include_dir = os.path.join(install_dir, "include", include_path).replace(
                         os.sep, "/"
                     )
