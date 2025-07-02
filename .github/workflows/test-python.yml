@@ -94,6 +94,36 @@ jobs:
         env:
           UV_PYTHON: ${{matrix.python-version}}
         run: just test-no-optional
+
+  bson2:
+    name: bson2
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+      - name: Install Deps
+        run: |
+          python -m pip install rust-just uv
+      - name: Set up env
+        run: |
+           echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
+           echo "LD_LIBRARY_PATH=$PWD/libbson/lib" >> $GITHUB_ENV
+           echo "LIBBSON_VERSION=2.0.1" >> $GITHUB_ENV
+      - name: Install libbson
+        run: just build-libbson
+      - name: Ensure imports with no test deps
+        run: just import-check
+      - name: Start MongoDB
+        if: ${{ startsWith(runner.os, 'Linux') }}
+        uses: supercharge/mongodb-github-action@90004df786821b6308fb02299e5835d0dae05d0d # 1.12.0
+        with:
+          mongodb-version: 4.4
+          mongodb-replica-set: test-rs
+      - name: Run the tests
+        run: just test
   docs:
     runs-on: ubuntu-latest
     steps:

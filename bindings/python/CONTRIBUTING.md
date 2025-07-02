@@ -186,6 +186,10 @@ $ conda install --channel conda-forge libbson pkg-config
 The minimum required version is listed in `pymongoarrow/version.py`. If
 you try to build with a lower version a `ValueError` will be raised.
 
+Our minimum supported major version is 1.x, and that is what we include in our wheels.
+In order to build with `bson2`, you can `export LIBBSON_VERSION=2.<minor>.<patch>` before
+running `just build-libbson` or building the library.
+
 ## Build
 
 Typically we will use the provided `just` scripts and will not build
