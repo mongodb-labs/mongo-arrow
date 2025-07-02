@@ -18,6 +18,8 @@ COPY_LIBBSON = not os.environ.get("MONGO_NO_COPY_LIBBSON", "")
 # Whether to create libarrow symlinks on posix systems.
 CREATE_LIBARROW_SYMLINKS = os.environ.get("MONGO_CREATE_LIBARROW_SYMLINKS", "1")
 
+LIBBSON_VERSION = os.environ.get("LIBBSON_VERSION", "1.0.0")
+
 # Set a default value for MACOSX_DEPLOYMENT_TARGET.
 os.environ.setdefault("MACOSX_DEPLOYMENT_TARGET", "10.15")
 
@@ -40,7 +42,8 @@ def get_min_libbson_version():
 
 
 def append_libbson_flags(module):
-    pc_path = "libbson-1.0"
+    BSON_MAJOR_VERSION = int(LIBBSON_VERSION[0])
+    pc_path = "libbson-1.0" if BSON_MAJOR_VERSION == 1 else "bson2"
     install_dir = os.environ.get("LIBBSON_INSTALL_DIR")
     if install_dir:
         install_dir = os.path.abspath(install_dir)
@@ -48,11 +51,11 @@ def append_libbson_flags(module):
         # Handle the copy-able library file if applicable.
         if COPY_LIBBSON:
             if platform == "darwin":
-                lib_file = "libbson-1.0.0.dylib"
+                lib_file = "libbson-1.0.0.dylib" if BSON_MAJOR_VERSION == 1 else "bson2.dylib"
             elif platform == "linux":
-                lib_file = "libbson-1.0.so.0"
+                lib_file = "libbson-1.0.so.0" if BSON_MAJOR_VERSION == 1 else "bson2.so.0"
             else:  # windows
-                lib_file = "bson-1.0.dll"
+                lib_file = "bson-1.0.dll" if BSON_MAJOR_VERSION == 1 else "bson2.dll"
             lib_dir = "bin" if IS_WIN else "lib*"
             lib_dir = glob.glob(os.path.join(install_dir, lib_dir))
             if lib_dir:
@@ -81,16 +84,18 @@ def append_libbson_flags(module):
             if IS_WIN:
                 # Note: we replace any forward slashes with backslashes so the path
                 # can be parsed by bash.
-                lib_path = os.path.join(lib_dir, "bson-1.0.lib").replace(os.sep, "/")
+                bson_lib = "bson-1.0.lib" if BSON_MAJOR_VERSION == 1 else "bson2.lib"
+                lib_path = os.path.join(lib_dir, bson_lib).replace(os.sep, "/")
                 if os.path.exists(lib_path):
                     module.extra_link_args = [lib_path]
-                    include_dir = os.path.join(install_dir, "include", "libbson-1.0").replace(
+                    include_path = "libbson-1.0" if BSON_MAJOR_VERSION == 1 else "bson2"
+                    include_dir = os.path.join(install_dir, "include", include_path).replace(
                         os.sep, "/"
                     )
                     module.include_dirs.append(include_dir)
                 else:
                     raise ValueError(f"Could not find the compiled libbson in {install_dir}")
-            pc_path = os.path.join(install_dir, lib_dir, "pkgconfig", "libbson-1.0.pc")
+            pc_path = os.path.join(install_dir, lib_dir, "pkgconfig", f"{pc_path}.pc")
 
     elif IS_WIN:
         raise ValueError("We require a LIBBSON_INSTALL_DIR with a compiled library on Windows")
