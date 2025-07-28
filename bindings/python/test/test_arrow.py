@@ -27,6 +27,7 @@ from test.utils import AllowListEventListener, NullsTestMixin
 import pyarrow as pa
 import pyarrow.json
 import pymongo
+import pytest
 from bson import Binary, Code, CodecOptions, Decimal128, ObjectId, json_util
 from pyarrow import (
     Table,
@@ -62,6 +63,11 @@ from pymongoarrow.types import (
     Decimal128Type,
     ObjectIdType,
 )
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 HERE = Path(__file__).absolute().parent
 
@@ -1145,7 +1151,6 @@ class ArrowApiTestMixin:
         import decimal
 
         import numpy as np
-        import pandas as pd
 
         assert len(mongo_data) == len(arrow_table), "MongoDB data length mismatch with Arrow Table."
 
@@ -1185,6 +1190,8 @@ class ArrowApiTestMixin:
         """
         Test the conversion of all standard data types from Parquet → PyArrow → Python → BSON.
         """
+        if pd is None:
+            pytest.skip("Requires pandas.", allow_module_level=True)
         df = self.alltypes_sample(size=100, seed=42, categorical=True)
         arrow_table = pa.Table.from_pandas(df)
         arrow_table = self.convert_categorical_columns_to_string(arrow_table)
