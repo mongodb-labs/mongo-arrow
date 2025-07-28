@@ -19,7 +19,7 @@ import tempfile
 import threading
 import unittest
 import unittest.mock as mock
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from test import client_context
 from test.utils import AllowListEventListener, NullsTestMixin
@@ -1095,22 +1095,22 @@ class ArrowApiTestMixin:
 
         np.random.seed(seed)
         arrays = {
-            "uint8": pa.array(np.arange(size, dtype=np.uint8), type=pa.int32()),
-            "uint16": pa.array(np.arange(size, dtype=np.uint16), type=pa.int32()),
-            "uint32": pa.array(np.arange(size, dtype=np.uint32), type=pa.int64()),
-            "uint64": pa.array(np.arange(size, dtype=np.uint64), type=pa.int64()),
-            "int8": pa.array(np.arange(size, dtype=np.int8), type=pa.int32()),
-            "int16": pa.array(np.arange(size, dtype=np.int16), type=pa.int32()),
+            "uint8": np.arange(size, dtype=np.uint8),
+            "uint16": np.arange(size, dtype=np.uint16),
+            "uint32": np.arange(size, dtype=np.uint32),
+            "uint64": np.arange(size, dtype=np.uint64),
+            "int8": np.arange(size, dtype=np.int8),
+            "int16": np.arange(size, dtype=np.int16),
             "int32": np.arange(size, dtype=np.int32),
             "int64": np.arange(size, dtype=np.int64),
-            "float16": pa.array(np.arange(size, dtype=np.float16), type=pa.float64()),
-            "float32": pa.array(np.arange(size, dtype=np.float32), type=pa.float64()),
-            "float64": pa.array(np.arange(size, dtype=np.float64), type=pa.float64()),
+            "float16": np.arange(size, dtype=np.float16),
+            "float32": np.arange(size, dtype=np.float32),
+            "float64": np.arange(size, dtype=np.float64),
             "bool": np.random.randn(size) > 0,
             "datetime_ms": np.arange("2016-01-01T00:00:00.001", size, dtype="datetime64[ms]"),
             "datetime_us": np.arange("2016-01-01T00:00:00.000001", size, dtype="datetime64[us]"),
             "datetime_ns": np.arange("2016-01-01T00:00:00.000000001", size, dtype="datetime64[ns]"),
-            "timedelta": pa.array(np.arange(size, dtype="timedelta64[s]"), type=pa.int64()),
+            "timedelta": np.arange(size, dtype="timedelta64[s]"),
             "str": pd.Series([str(x) for x in range(size)]),
             "empty_str": [""] * size,
             "str_with_nulls": [None] + [str(x) for x in range(size - 2)] + [None],
@@ -1181,6 +1181,10 @@ class ArrowApiTestMixin:
                     assert (
                         arrow_value == mongo_value
                     ), f"List mismatch in field '{column_name}' for row {row_idx}. Expected {arrow_value}, got {mongo_value}."
+                elif isinstance(arrow_value, timedelta):
+                    assert (
+                        arrow_value == timedelta(seconds=mongo_value)
+                    ), f"Timedelta mismatch in field '{column_name}' for row {row_idx}. Expected {arrow_value}, got {mongo_value}."
                 else:
                     assert (
                         arrow_value == mongo_value
