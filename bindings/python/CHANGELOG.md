@@ -3,10 +3,14 @@
 
 ---
 
-# Changes in Version 1.10.0 (2025/xx/yy)
+# Changes in Version 1.10.0 (2025/08/05)
 
+- Add support for PyArrow 21.0.
+- Add support for conversion of unsupported Arrow data types in `write()`
+  function with `auto_convert` parameter.
 - Make `pandas` an optional dependency.
-- Add support for free-threaded python on Windows.
+- Add support for free-threaded Python 3.13 on Windows.
+- Add support for building against `libbson 2.0`.
 
 # Changes in Version 1.9.0 (2025/05/27)
 
