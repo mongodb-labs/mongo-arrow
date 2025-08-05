@@ -163,5 +163,5 @@ docs = [
   "sphinx>=5.3,<9",
   "sphinx_rtd_theme>=2,<4",
   "sphinxcontrib-shellcheck>=1,<2",
-  "furo==2024.8.6"
+  "furo==2025.7.19"
 ]
