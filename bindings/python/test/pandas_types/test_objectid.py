@@ -83,7 +83,9 @@ class TestDtype(base.BaseDtypeTests):
 
 
 class TestInterface(base.BaseInterfaceTests):
-    pass
+    def test_array_interface_copy(self):
+        # We cannot avoid copying with our extension arrays.
+        pass
 
 
 class TestConstructors(base.BaseConstructorsTests):

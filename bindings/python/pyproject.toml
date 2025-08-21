@@ -106,6 +106,7 @@ xfail_strict = true
 filterwarnings = [
   "error",
   "module:The global interpreter lock:RuntimeWarning", # from pandas
+  "module:matching against an empty string will:pytest.PytestWarning", # from pandas
 ]
 
 [tool.ruff]
