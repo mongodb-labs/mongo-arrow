@@ -87,6 +87,10 @@ class TestInterface(base.BaseInterfaceTests):
         # We cannot compare a Code object to an array.
         pass
 
+    def test_array_interface_copy(self):
+        # We cannot avoid copying with our extension arrays.
+        pass
+
 
 class TestConstructors(base.BaseConstructorsTests):
     pass
