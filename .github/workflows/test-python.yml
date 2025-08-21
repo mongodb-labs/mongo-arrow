@@ -143,3 +143,25 @@ jobs:
         run: just docs
       - name: Run linkcheck
         run: just docs-linkcheck
+  test_minimum:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+          cache: 'pip'
+          cache-dependency-path: '**/pyproject.toml'
+      - name: Install Deps
+        run: |
+          python -m pip install uv
+      - name: Run tests
+        shell: bash
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e ".[test]" --resolution=lowest-direct
+          pytest

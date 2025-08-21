@@ -49,6 +49,7 @@ from pyarrow.types import (
     is_uint32,
     is_uint64,
 )
+from pymongo.collection import Collection
 from pymongo.common import MAX_WRITE_BATCH_SIZE
 
 from pymongoarrow.context import PyMongoArrowContext
@@ -488,7 +489,9 @@ class _DecimalCodec(TypeEncoder):
         return Decimal128(value)
 
 
-def write(collection, tabular, *, exclude_none: bool = False, auto_convert: bool = True):
+def write(
+    collection: Collection, tabular, *, exclude_none: bool = False, auto_convert: bool = True
+):
     """Write data from `tabular` into the given MongoDB `collection`.
 
     :Parameters:
@@ -559,10 +562,13 @@ def write(collection, tabular, *, exclude_none: bool = False, auto_convert: bool
 
     # Add handling for special case types.
     codec_options = collection.codec_options
+    base_codecs = []
+    if hasattr(codec_options.type_registry, "codecs"):
+        base_codecs = codec_options.type_registry.codecs
     if pd is not None:
-        type_registry = TypeRegistry([_PandasNACodec(), _DecimalCodec()])
+        type_registry = TypeRegistry([*base_codecs, _PandasNACodec(), _DecimalCodec()])
     else:
-        type_registry = TypeRegistry([_DecimalCodec()])
+        type_registry = TypeRegistry([*base_codecs, _DecimalCodec()])
     codec_options = codec_options.with_options(type_registry=type_registry)
 
     while cur_offset < tab_size:
