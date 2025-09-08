@@ -61,7 +61,7 @@ jobs:
           export PYTHON_VERSION=$(sed 's/^cp3/3./' <<< ${{ matrix.python }} )
           echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           allow-prereleases: true
@@ -114,7 +114,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           # Build sdist on lowest supported Python
           python-version: '3.9'
