@@ -3,9 +3,6 @@
 set -o xtrace
 set -o errexit
 
-cmake --version
-exit 1
-
 # Version of libbson to build
 # Keep in sync with pymongoarrow.version._MIN_LIBBSON_VERSION
 LIBBSON_VERSION=${LIBBSON_VERSION:-"1.23.1"}

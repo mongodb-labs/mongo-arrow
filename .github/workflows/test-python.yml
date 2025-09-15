@@ -60,6 +60,10 @@ jobs:
         with:
           mongodb-version: 4.4
           mongodb-replica-set: test-rs
+      - name: Install CMake 3 on MacOS
+        if: ${{ startsWith(runner.os, 'macOS') }}
+        run: |
+          brew install cmake@3
       - name: Start MongoDB on MacOS
         if: ${{ startsWith(runner.os, 'macOS') }}
         run: |
