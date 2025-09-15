@@ -60,6 +60,11 @@ jobs:
         with:
           mongodb-version: 4.4
           mongodb-replica-set: test-rs
+      - name: Install CMake 3 on MacOS
+        # libbson requires cmake 3, and cmake 4 is now the default on the GHA runners.
+        if: ${{ startsWith(runner.os, 'macOS') }}
+        run: |
+          pipx install "cmake>=3.15,<4"
       - name: Start MongoDB on MacOS
         if: ${{ startsWith(runner.os, 'macOS') }}
         run: |
