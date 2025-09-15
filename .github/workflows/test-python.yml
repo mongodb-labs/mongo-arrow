@@ -63,7 +63,7 @@ jobs:
       - name: Install CMake 3 on MacOS
         if: ${{ startsWith(runner.os, 'macOS') }}
         run: |
-          brew install --cask cmake-app@3
+          brew install "cmake@3"
       - name: Start MongoDB on MacOS
         if: ${{ startsWith(runner.os, 'macOS') }}
         run: |
