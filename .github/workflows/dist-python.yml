@@ -46,7 +46,7 @@ jobs:
           - buildplat: [windows-2022, win_amd64]
             python: "cp313t"
         include:
-          - buildplat: [macos-13, macosx_*]
+          - buildplat: [macos-latest, macosx_*]
             python: "cp39"
 
 
