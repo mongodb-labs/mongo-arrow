@@ -35,4 +35,4 @@
 
 ## Focus Areas for Reviewer (optional)
 
-<!-- List any complex portion of code you believe needs additional scrutiny and explain why.  -->
+<!-- List any complex portion of code you believe needs particular scrutiny and explain why.  -->
