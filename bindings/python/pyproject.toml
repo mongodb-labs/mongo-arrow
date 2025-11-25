@@ -6,7 +6,7 @@ requires = [
     # Needed for numpy headers.
     "numpy>=2.0",
     # Must be kept in sync with "project.dependencies" below.
-    "pyarrow>=21.0,<21.1.0",
+    "pyarrow>=22.0,<22.1.0",
 ]
 
 [project]
@@ -25,19 +25,19 @@ classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Database",
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     # Must be kept in sync with "build_sytem.requires" above.
-    "pyarrow >=21.0,<21.1",
+    "pyarrow >=22.0,<22.1",
     "pymongo >=4.4,<5",
     "numpy>=2.0.1",
     "packaging >=23.2",

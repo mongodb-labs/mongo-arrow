@@ -39,16 +39,7 @@ jobs:
         - [ubuntu-24.04, manylinux_aarch64]
         - [macos-14, macosx_*]
         - [windows-2022, win_amd64]
-        python: ["cp39", "cp310", "cp311", "cp312", "cp313", "cp313t"]
-        exclude:
-          - buildplat: [macos-14, macosx_*]
-            python: "cp39"
-          - buildplat: [windows-2022, win_amd64]
-            python: "cp313t"
-        include:
-          - buildplat: [macos-latest, macosx_*]
-            python: "cp39"
-
+        python: ["cp310", "cp311", "cp312", "cp313", "cp314", "cp314t"]
 
     steps:
       - name: Checkout pymongoarrow
@@ -87,22 +78,12 @@ jobs:
           pipx install "cmake>=3.15,<4"
 
       - name: Install deps
-        run: python -m pip install "cibuildwheel>=2.4,<3" uv rust-just
-
-      - name: Build MacOS Py39 Wheels
-        if: ${{ matrix.python == 'cp39' && matrix.buildplat[0] == 'macos-11' }}
-        env:
-          MACOS_TEST_SKIP: "*arm64"
-          CIBW_BUILD: cp39-macosx_*
-          CIBW_ENABLE: cpython-freethreading
-          MACOSX_DEPLOYMENT_TARGET: "10.14"
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: python -m pip install "cibuildwheel>=3.3,<4" uv rust-just
 
       - name: Build wheels
         if: ${{ matrix.buildplat[0] != 'macos-11' }}
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
-          CIBW_ENABLE: cpython-freethreading
           MACOSX_DEPLOYMENT_TARGET: "12.0"
         run: python -m cibuildwheel --output-dir wheelhouse
 
@@ -123,7 +104,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           # Build sdist on lowest supported Python
-          python-version: '3.9'
+          python-version: '3.10'
 
       - name: Install deps
         run: |
