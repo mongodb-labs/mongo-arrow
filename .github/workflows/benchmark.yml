@@ -50,8 +50,7 @@ jobs:
               just benchmark --set-commit-hash $(git rev-parse HEAD)
           }
 
-          uv sync --group benchmarks
-          source .venv/bin/activate
+          pip install asv virtualenv
           asv machine --yes
           git fetch origin main:main
           git update-ref refs/bm/pr HEAD
