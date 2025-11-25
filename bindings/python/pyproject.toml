@@ -107,6 +107,7 @@ filterwarnings = [
   "error",
   "module:The global interpreter lock:RuntimeWarning", # from pandas
   "module:matching against an empty string will:pytest.PytestWarning", # from pandas
+  "module:.*behaviour will change in pandas 3.0:FutureWarning", # from pandas
 ]
 
 [tool.ruff]
@@ -149,7 +150,7 @@ exclude = [
 "setup.py" = ["PTH", "EM", "B", "S", "E501"]
 "docs/source/conf.py" = ["E501", "S", "PTH"]
 "benchmarks.py" = ["T201", "E501", "C4"]
-"test/*.py" = ["PT", "S", "ARG", "B", "C", "EM", "E501", "RUF005"]
+"test/*.py" = ["PT", "S", "ARG", "B", "C", "EM", "E501", "RUF005", "UP038"]
 
 [dependency-groups]
 dev = [
