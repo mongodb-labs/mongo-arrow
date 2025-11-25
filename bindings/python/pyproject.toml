@@ -160,7 +160,7 @@ dev = [
     "setuptools>=79.0.0",
     "sphinx-autobuild>=2024.10.3",
 ]
-benchmarks = [
+benchmark = [
   "asv>=0.6.4"
 ]
 docs = [
