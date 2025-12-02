@@ -6,7 +6,7 @@ requires = [
     # Needed for numpy headers.
     "numpy>=2.0",
     # Must be kept in sync with "project.dependencies" below.
-    "pyarrow>=21.0,<21.1.0",
+    "pyarrow>=22.0,<22.1.0",
 ]
 
 [project]
@@ -25,19 +25,19 @@ classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Database",
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     # Must be kept in sync with "build_sytem.requires" above.
-    "pyarrow >=21.0,<21.1",
+    "pyarrow >=22.0,<22.1",
     "pymongo >=4.4,<5",
     "numpy>=2.0.1",
     "packaging >=23.2",
@@ -107,6 +107,7 @@ filterwarnings = [
   "error",
   "module:The global interpreter lock:RuntimeWarning", # from pandas
   "module:matching against an empty string will:pytest.PytestWarning", # from pandas
+  "module:.*behaviour will change in pandas 3.0:FutureWarning", # from pandas
 ]
 
 [tool.ruff]
@@ -149,16 +150,18 @@ exclude = [
 "setup.py" = ["PTH", "EM", "B", "S", "E501"]
 "docs/source/conf.py" = ["E501", "S", "PTH"]
 "benchmarks.py" = ["T201", "E501", "C4"]
-"test/*.py" = ["PT", "S", "ARG", "B", "C", "EM", "E501", "RUF005"]
+"test/*.py" = ["PT", "S", "ARG", "B", "C", "EM", "E501", "RUF005", "UP038"]
 
 [dependency-groups]
 dev = [
-    "asv>=0.6.4",
     "check-manifest>=0.50",
     "packaging>=25.0",
     "pre-commit>=4.2.0",
     "setuptools>=79.0.0",
     "sphinx-autobuild>=2024.10.3",
+]
+benchmark = [
+  "asv>=0.6.4"
 ]
 docs = [
   "sphinx>=5.3,<9",
