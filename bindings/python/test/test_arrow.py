@@ -53,6 +53,7 @@ from pymongo import DESCENDING, MongoClient, WriteConcern
 from pymongo.collection import Collection
 from pytz import timezone
 
+import pymongoarrow.version as pymongoarrow_version
 from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
@@ -1255,6 +1256,14 @@ class ArrowApiTestMixin:
             concurrent.futures.wait(futures)
             for future in futures:
                 future.result()
+
+    def test_driver_metadata(self):
+        self.run_find({}, schema=self.schema)
+
+        metadata = self.coll.database.client.options.pool_options.metadata
+
+        self.assertIn("PyMongoArrow", metadata["driver"]["name"])
+        self.assertIn(pymongoarrow_version.__version__, metadata["driver"]["version"])
 
 
 class TestArrowExplicitApi(ArrowApiTestMixin, unittest.TestCase):
