@@ -3,11 +3,12 @@
 
 ---
 
-# Changes in Version 1.11.0 (2025/XX/YY)
+# Changes in Version 1.11.0 (2025/12/10)
 
 - Add support for PyArrow 22.0.
 - Add support for Python 3.14 and 3.14 free-threaded on Linux and MacOS.
 - Drop support for Python 3.9 and Python 3.13 free-threaded.
+- Extend rather than replace TypeRegistry in write function.
 
 # Changes in Version 1.10.0 (2025/08/05)
 
