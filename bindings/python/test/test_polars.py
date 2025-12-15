@@ -213,7 +213,9 @@ class TestExplicitPolarsApi(PolarsTestBase):
             (CodeType(), [str(i) for i in range(2)]),
         ):
             table = pa.Table.from_pydict({"foo": data}, pa.schema({"foo": ext_type}))
-            pl.from_arrow(table)
+            df = pl.from_arrow(table)
+            expected = pl.datatypes.String if ext_type == CodeType() else pl.datatypes.Binary
+            assert df.dtypes[0] == expected, ext_type
 
     def test_auto_schema_succeeds_on_find(self):
         """Confirms Polars can read ObjectID Extension type.
