@@ -203,17 +203,19 @@ class TestExplicitPolarsApi(PolarsTestBase):
         df_out = find_polars_all(self.coll, {}, schema=Schema(pa_schema))
         pl.testing.assert_frame_equal(df_in, df_out)
 
-    def test_extension_types_fail(self):
-        """Confirm failure on ExtensionTypes for Polars.DataFrame.from_arrow"""
-
+    def test_extension_types(self):
+        """Confirm ExtensionTypes for Polars.DataFrame.from_arrow"""
+        if not hasattr(pl, "register_extension_type"):
+            raise unittest.SkipTest("Requires polars extension types")
         for ext_type, data in (
             (ObjectIdType(), [bson.ObjectId().binary, bson.ObjectId().binary]),
             (Decimal128Type(), [bson.Decimal128(str(i)).bid for i in range(2)]),
             (CodeType(), [str(i) for i in range(2)]),
         ):
             table = pa.Table.from_pydict({"foo": data}, pa.schema({"foo": ext_type}))
-            with self.assertRaises(pl.exceptions.ComputeError):
-                pl.from_arrow(table)
+            df = pl.from_arrow(table)
+            expected = pl.datatypes.String if ext_type == CodeType() else pl.datatypes.Binary
+            assert df.dtypes[0] == expected, ext_type
 
     def test_auto_schema_succeeds_on_find(self):
         """Confirms Polars can read ObjectID Extension type.
@@ -331,6 +333,8 @@ class TestExplicitPolarsApi(PolarsTestBase):
         Note that this tests only types currently supported by Arrow.
         bson.Regex is not included, for example.
         """
+        if not hasattr(pl, "register_extension_type"):
+            raise unittest.SkipTest("Requires polars extension types")
 
         # 1. Use pymongo / bson packages to build create and write tabular data
         self.coll.drop()
@@ -376,7 +380,7 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 "type": "object id",
                 "value": bson.ObjectId(),
                 "atype": ObjectIdType(),
-                "ptype": pl.Object,
+                "ptype": pl.Binary,
             },
             {
                 "type": "javascript",
@@ -388,7 +392,7 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 "type": "decimal128",
                 "value": bson.Decimal128("10.99"),
                 "atype": Decimal128Type(),
-                "ptype": pl.Decimal,
+                "ptype": pl.Binary,
             },
             {
                 "type": "uuid",
