@@ -3,6 +3,10 @@
 
 ---
 
+# Changes in Version 1.11.1 (2025/12/15)
+
+- Add support for Polars 1.36.0.
+
 # Changes in Version 1.11.0 (2025/12/10)
 
 - Add support for PyArrow 22.0.
