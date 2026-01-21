@@ -40,9 +40,9 @@ def dtype():
 
 def make_data():
     return (
-        [make_datum() for _ in range(8)]
+        [make_datum() for _ in range(4)]
         + [np.nan]
-        + [make_datum() for _ in range(88)]
+        + [make_datum(), make_datum()]
         + [np.nan]
         + [make_datum(), make_datum()]
     )

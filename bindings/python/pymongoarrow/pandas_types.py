@@ -29,6 +29,10 @@ try:
         ExtensionDtype,
         register_extension_dtype,
     )
+    from pandas.core.indexers import (
+        check_array_indexer,
+        getitem_returns_view,
+    )
 except ImportError:
     ExtensionDtype = object
     ExtensionArray = object
@@ -88,7 +92,7 @@ class PandasBSONExtensionArray(ExtensionArray):
 
     _default_dtype = None
 
-    def __init__(self, values, dtype, copy=False) -> None:  # noqa: ARG002
+    def __init__(self, values, dtype, copy=False) -> None:
         if not isinstance(values, np.ndarray):
             msg = "Need to pass a numpy array as values"
             raise TypeError(msg)
@@ -101,6 +105,8 @@ class PandasBSONExtensionArray(ExtensionArray):
                 msg = f"Values must be either {dtype.type} or NA"
                 raise ValueError(msg)
         self._dtype = dtype
+        if copy:
+            values = values.copy()
         self.data = values
 
     @property
@@ -119,10 +125,16 @@ class PandasBSONExtensionArray(ExtensionArray):
 
     def __getitem__(self, item):
         if isinstance(item, numbers.Integral):
-            return self.data[item]
+            result = self.data[item]
+            if getitem_returns_view(self, item):
+                result._readonly = self._readonly
+            return result
         # slice, list-like, mask
-        item = pd.api.indexers.check_array_indexer(self, item)
-        return type(self)(self.data[item], dtype=self._dtype)
+        item_slice = check_array_indexer(self, item)
+        result = type(self)(self.data[item_slice], dtype=self._dtype)
+        if getitem_returns_view(self, item_slice):
+            result._readonly = self._readonly
+        return result
 
     def __setitem__(self, item, value):
         if (
@@ -132,13 +144,26 @@ class PandasBSONExtensionArray(ExtensionArray):
         ):
             msg = f"Value must be of type {self.dtype.type} or nan"
             raise ValueError(msg)
+        if self._readonly:
+            msg = "Cannot modify read-only array"
+            raise ValueError(msg)
         if not isinstance(item, numbers.Integral):
             # slice, list-like, mask
-            item = pd.api.indexers.check_array_indexer(self, item)
+            item = check_array_indexer(self, item)
         elif not isinstance(value, self.dtype.type) and not pd.isna(value):
             msg = f"Array element must be of type {self.dtype.type} or nan"
             raise ValueError(msg)
         self.data[item] = value
+
+    def __array__(self, dtype=None, copy=None) -> np.ndarray:
+        if copy is True:
+            return np.array(self.data, dtype=dtype)
+
+        result = self.data
+        if self._readonly:
+            result = result.view()
+            result.flags.writeable = False
+        return result
 
     def __len__(self) -> int:
         return len(self.data)

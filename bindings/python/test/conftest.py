@@ -16,13 +16,21 @@ from test import client_context
 import pytest
 
 try:
-    import pandas as pd  # noqa: F401
+    import pandas as pd
 
     pytest_plugins = [
         "pandas.tests.extension.conftest",
     ]
 except ImportError:
     pass
+
+
+# Inline from pandas/conftest.py
+@pytest.fixture(params=[True, False])
+def using_nan_is_na(request):
+    opt = request.param
+    with pd.option_context("future.distinguish_nan_and_na", not opt):
+        yield opt
 
 
 @pytest.fixture(autouse=True, scope="session")
