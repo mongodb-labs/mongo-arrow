@@ -26,7 +26,7 @@ install:
     uv run pre-commit install
 
 test *args:
-    uv run --resolution=lowest-direct --no-dev --extra test --extra test-polars --extra test-pandas pytest {{args}}
+    uv run --no-dev --extra test --extra test-polars --extra test-pandas pytest {{args}}
 
 test-no-optional *args:
     uv run --no-dev --extra test pytest {{args}}
