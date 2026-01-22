@@ -50,6 +50,7 @@ jobs:
               just benchmark --set-commit-hash $(git rev-parse HEAD)
           }
 
+          export LIBBSON_INSTALL_DIR=$(pwd)/libbson
           just benchmark-install
           git fetch origin main:main
           git update-ref refs/bm/pr HEAD
