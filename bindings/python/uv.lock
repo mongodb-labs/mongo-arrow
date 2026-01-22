@@ -1069,7 +1069,6 @@ test-polars = [
 [package.dev-dependencies]
 benchmark = [
     { name = "asv" },
-    { name = "virtualenv" },
 ]
 dev = [
     { name = "check-manifest" },
@@ -1101,10 +1100,7 @@ requires-dist = [
 provides-extras = ["test", "test-pandas", "test-polars"]
 
 [package.metadata.requires-dev]
-benchmark = [
-    { name = "asv", specifier = ">=0.6.4" },
-    { name = "virtualenv", specifier = ">=20.23.1" },
-]
+benchmark = [{ name = "asv", specifier = ">=0.6.4" }]
 dev = [
     { name = "check-manifest", specifier = ">=0.50" },
     { name = "packaging", specifier = ">=25.0" },

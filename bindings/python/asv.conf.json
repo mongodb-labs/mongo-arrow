@@ -10,6 +10,6 @@
              "N_DOCS": ["20000", "1000"]
          }
     },
-    "environment_type": "virtualenv",
-    "plugins": ["virtualenv"]
+    "environment_type": "uv",
+    "plugins": ["uv"]
 }
