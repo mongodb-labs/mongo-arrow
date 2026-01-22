@@ -126,7 +126,13 @@ class TestExplicitPandasApi(PandasTestBase):
             # Object types may lose type information in a round trip.
             # Integer types with missing values are converted to floating
             # point in a round trip.
-            if str(out_col.dtype) in ["object", "float64", "datetime64[ms]", "datetime64[us]"]:
+            if str(out_col.dtype) in [
+                "object",
+                "float64",
+                "datetime64[ms]",
+                "datetime64[us]",
+                "datetime64[ns]",
+            ]:
                 out_col = out_col.astype(in_col.dtype)
             pd.testing.assert_series_equal(in_col, out_col)
 
