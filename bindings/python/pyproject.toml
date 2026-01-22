@@ -4,7 +4,7 @@ requires = [
     "setuptools>=70,<72.2",
     "cython>=3.0",
     # Needed for numpy headers.
-    "numpy>=2.0",
+    "numpy>=2.1.0",
     # Must be kept in sync with "project.dependencies" below.
     "pyarrow>=22.0,<22.1.0",
 ]
