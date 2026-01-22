@@ -53,7 +53,7 @@ Tracker = "https://jira.mongodb.org/projects/INTPYTHON/issues"
 [project.optional-dependencies]
 test = ["pytz>=2025.2", "pytest>=8.0"]
 test-polars = ["polars>=1.10"]
-test-pandas = ["pandas>=2.0.3,<4.0"]
+test-pandas = ["pandas>=2.0.3,<4.0", "numpy>=1.21"]
 
 [tool.setuptools]
 zip-safe = false
@@ -161,7 +161,7 @@ dev = [
     "sphinx-autobuild>=2024.10.3",
 ]
 benchmark = [
-  "asv>=0.6.5"
+  "asv>=0.6.4"
 ]
 docs = [
   "sphinx>=5.3,<9",

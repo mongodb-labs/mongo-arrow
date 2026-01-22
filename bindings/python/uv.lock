@@ -334,7 +334,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -773,6 +773,7 @@ test = [
     { name = "pytz" },
 ]
 test-pandas = [
+    { name = "numpy" },
     { name = "pandas" },
 ]
 test-polars = [
@@ -800,6 +801,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "numpy", specifier = ">=2.0.1" },
+    { name = "numpy", marker = "extra == 'test-pandas'", specifier = ">=1.21" },
     { name = "packaging", specifier = ">=23.2" },
     { name = "pandas", marker = "extra == 'test-pandas'", specifier = ">=2.0.3,<4.0" },
     { name = "polars", marker = "extra == 'test-polars'", specifier = ">=1.10" },
@@ -811,7 +813,7 @@ requires-dist = [
 provides-extras = ["test", "test-pandas", "test-polars"]
 
 [package.metadata.requires-dev]
-benchmark = [{ name = "asv", specifier = ">=0.6.5" }]
+benchmark = [{ name = "asv", specifier = ">=0.6.4" }]
 dev = [
     { name = "check-manifest", specifier = ">=0.50" },
     { name = "packaging", specifier = ">=25.0" },
