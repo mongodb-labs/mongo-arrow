@@ -29,10 +29,16 @@ try:
         ExtensionDtype,
         register_extension_dtype,
     )
-    from pandas.core.indexers import (
-        check_array_indexer,
-        getitem_returns_view,
-    )
+    from pandas.core.indexers import check_array_indexer
+
+    # Readonly support was added in pandas 3.0.
+    try:
+        from pandas.core.indexers import getitem_returns_view
+    except ImportError:
+
+        def getitem_returns_view(self, obj):  # noqa: ARG001
+            return False
+
 except ImportError:
     ExtensionDtype = object
     ExtensionArray = object
@@ -144,7 +150,7 @@ class PandasBSONExtensionArray(ExtensionArray):
         ):
             msg = f"Value must be of type {self.dtype.type} or nan"
             raise ValueError(msg)
-        if self._readonly:
+        if getattr(self, "_readonly", None):
             msg = "Cannot modify read-only array"
             raise ValueError(msg)
         if not isinstance(item, numbers.Integral):
@@ -160,7 +166,7 @@ class PandasBSONExtensionArray(ExtensionArray):
             return np.array(self.data, dtype=dtype)
 
         result = self.data
-        if self._readonly:
+        if getattr(self, "_readonly", None):
             result = result.view()
             result.flags.writeable = False
         return result
@@ -329,6 +335,15 @@ class PandasCode(PandasBSONDtype):
 
 class PandasCodeArray(PandasBSONExtensionArray):
     """A pandas extension type for BSON Code data arrays."""
+
+    def __init__(self, values, dtype, copy=False) -> None:
+        # In pandas 3.0+, the values may have been converted to strings.
+        result = []
+        for value in values:
+            if isinstance(value, str):
+                value = Code(value)  # noqa: PLW2901
+            result.append(value)
+        super().__init__(np.array(result, dtype=object), dtype, copy)
 
     @property
     def _default_dtype(self):

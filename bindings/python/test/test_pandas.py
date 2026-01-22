@@ -40,6 +40,7 @@ try:
     import pandas as pd
     import pandas.testing
 except ImportError:
+    pd = None
     pytest.skip("skipping pandas tests", allow_module_level=True)
 
 
@@ -165,7 +166,9 @@ class TestExplicitPandasApi(PandasTestBase):
         schema["Int64"] = pd.Int64Dtype()
         schema["int"] = pd.Int32Dtype()
         schema["str"] = "string"
-        schema["datetime"] = "datetime64[ms]"
+        schema["datetime"] = "datetime64[us]"
+        if hasattr(pd, "StringDtype"):
+            schema["str"] = "str"
 
         data = pd.DataFrame(
             data={
@@ -252,6 +255,8 @@ class TestExplicitPandasApi(PandasTestBase):
             "dt": "datetime64[ms]",
         }
         schema["nested"] = "object"
+        if hasattr(pd, "StringDtype"):
+            schema["string"] = "str"
 
         raw_data = {
             "string": [str(i) for i in range(3)],
@@ -341,7 +346,7 @@ class TestExplicitPandasApi(PandasTestBase):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", RuntimeWarning)
                 data.to_csv(f.name, index=False, na_rep="")
-            out = pd.read_csv(f.name)
+            out = pd.read_csv(f.name, parse_dates=["datetime"])
             self._assert_frames_equal(data, out)
 
     def test_exclude_none(self):
@@ -437,6 +442,8 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         Decimal128: "bson_PandasDecimal128",
         bool: "object",
     }
+    if hasattr(pd, "StringDtype"):
+        pytype_tab_map[str] = "str"
 
     pytype_writeback_exc_map = {
         str: None,

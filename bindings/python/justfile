@@ -10,6 +10,9 @@ build-libbson:
     uv sync --no-install-project --dev --frozen
     bash build-libbson.sh
 
+build:
+    uv sync --dev --reinstall-package pymongoarrow
+
 import-check:
     uv run python -c "from pymongoarrow.lib import libbson_version"
 
@@ -19,7 +22,7 @@ benchmark *args:
 
 install:
     just build-libbson
-    uv sync --dev --refresh-package pymongoarrow
+    just build
     uv run pre-commit install
 
 test *args:

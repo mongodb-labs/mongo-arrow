@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from test.pandas_types.util import base_make_data
+
 import numpy as np
 import pytest
 from bson import ObjectId
@@ -39,13 +41,7 @@ def dtype():
 
 
 def make_data():
-    return (
-        [make_datum() for _ in range(4)]
-        + [np.nan]
-        + [make_datum(), make_datum()]
-        + [np.nan]
-        + [make_datum(), make_datum()]
-    )
+    return base_make_data(make_datum)
 
 
 @pytest.fixture
