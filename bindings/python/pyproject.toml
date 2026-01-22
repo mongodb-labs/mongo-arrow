@@ -161,7 +161,8 @@ dev = [
     "sphinx-autobuild>=2024.10.3",
 ]
 benchmark = [
-  "asv>=0.6.4"
+  "asv>=0.6.4",
+  "virtualenv>=20.23.1"
 ]
 docs = [
   "sphinx>=5.3,<9",
