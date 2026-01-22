@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: ["ubuntu-22.04"]
-        python-version: ["3.11"]
+        python-version: ["3.10"]
       fail-fast: false
     steps:
       - uses: actions/checkout@v6
@@ -47,15 +47,11 @@ jobs:
           run_asv () {
               git show --no-patch --format="%H (%s)"
               export LIBBSON_INSTALL_DIR=$(pwd)/libbson
-              set -x
-              pwd
-              ls -a
-              ls .venv/bin
               just benchmark --set-commit-hash $(git rev-parse HEAD)
           }
 
-          export LIBBSON_INSTALL_DIR=$(pwd)/libbson
-          just benchmark-install
+          pip install asv virtualenv
+          asv machine --yes
           git fetch origin main:main
           git update-ref refs/bm/pr HEAD
           # We know this is a PR run. The branch is a GitHub refs/pull/*/merge ref, so
