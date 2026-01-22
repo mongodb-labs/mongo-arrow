@@ -120,10 +120,10 @@ class PandasBSONExtensionArray(ExtensionArray):
         return self._dtype
 
     @classmethod
-    def _from_sequence(cls, scalars, dtype=None, copy=False):  # noqa: ARG003
+    def _from_sequence(cls, scalars, dtype=None, copy=False):
         data = np.empty(len(scalars), dtype=object)
         data[:] = scalars
-        return cls(data, dtype=dtype)
+        return cls(data, dtype=dtype, copy=copy)
 
     @classmethod
     def _from_factorized(cls, values, original):

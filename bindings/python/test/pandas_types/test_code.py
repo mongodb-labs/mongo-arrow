@@ -87,6 +87,10 @@ class TestInterface(base.BaseInterfaceTests):
         # We cannot avoid copying with our extension arrays.
         pass
 
+    def test_view(self):
+        # We cannot avoid copying with our extension arrays.
+        pass
+
 
 class TestConstructors(base.BaseConstructorsTests):
     pass
@@ -100,6 +104,10 @@ class TestSetitem(base.BaseSetitemTests):
     def test_setitem_frame_2d_values(self):
         # Results in passing an integer as a value, which
         # cannot be converted to Code type.
+        pass
+
+    def test_setitem_preserves_views(self):
+        # We cannot avoid copying with our extension arrays.
         pass
 
 
