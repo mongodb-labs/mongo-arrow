@@ -16,6 +16,10 @@ build:
 import-check:
     uv run python -c "from pymongoarrow.lib import libbson_version"
 
+benchmark-install *args:
+    uv sync --dev --group benchmark --extra test --extra test-polars --extra test-pandas
+    uv run asv machine --yes
+
 benchmark *args:
     uv sync --dev --group benchmark --extra test --extra test-polars --extra test-pandas
     uv run asv run -e --python=$(uv run python -c "import sys;print(sys.executable)") {{args}}
