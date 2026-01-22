@@ -913,7 +913,7 @@ requires-dist = [
 provides-extras = ["test", "test-pandas", "test-polars"]
 
 [package.metadata.requires-dev]
-benchmark = [{ name = "asv", specifier = ">=0.6.4" }]
+benchmark = [{ name = "asv", specifier = ">=0.6.5" }]
 dev = [
     { name = "check-manifest", specifier = ">=0.50" },
     { name = "packaging", specifier = ">=25.0" },
