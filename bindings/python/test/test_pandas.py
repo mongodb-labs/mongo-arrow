@@ -166,9 +166,10 @@ class TestExplicitPandasApi(PandasTestBase):
         schema["Int64"] = pd.Int64Dtype()
         schema["int"] = pd.Int32Dtype()
         schema["str"] = "string"
-        schema["datetime"] = "datetime64[us]"
+        schema["datetime"] = "datetime64[ns]"
         if hasattr(pd, "StringDtype"):
             schema["str"] = "str"
+            schema["datetime"] = "datetime64[us]"
 
         data = pd.DataFrame(
             data={
