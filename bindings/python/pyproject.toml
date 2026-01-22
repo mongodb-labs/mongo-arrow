@@ -39,7 +39,8 @@ dependencies = [
     # Must be kept in sync with "build_sytem.requires" above.
     "pyarrow >=22.0,<22.1",
     "pymongo >=4.4,<5",
-    "numpy>=2.0.1",
+    "numpy>=1.26; python_version < '3.11'",
+    "numpy>=2.0.1; python_version >= '3.11'",
     "packaging >=23.2",
 ]
 dynamic = ["version"]
@@ -53,7 +54,7 @@ Tracker = "https://jira.mongodb.org/projects/INTPYTHON/issues"
 [project.optional-dependencies]
 test = ["pytz>=2025.2", "pytest>=8.0"]
 test-polars = ["polars>=1.10"]
-test-pandas = ["pandas>=2.0.3; python_version < '3.11'", "pandas>=3.0; python_version > '3.11'"]
+test-pandas = ["pandas>=2.0.3; python_version < '3.11'", "numpy<2; python_version < '3.11'", "pandas>=3.0; python_version >= '3.11'"]
 
 [tool.setuptools]
 zip-safe = false
