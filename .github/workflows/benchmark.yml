@@ -47,6 +47,8 @@ jobs:
           run_asv () {
               git show --no-patch --format="%H (%s)"
               export LIBBSON_INSTALL_DIR=$(pwd)/libbson
+              pwd
+              ls -a
               just benchmark --set-commit-hash $(git rev-parse HEAD)
           }
 
