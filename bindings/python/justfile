@@ -16,12 +16,12 @@ import-check:
 benchmark-install *args:
     rm -rf .venv
     python3 -m venv .venv
-    .venv/bin/pip install asv virtualenv
+    .venv/bin/pip install asv
     .venv/bin/pip install -e ".[test,test-polars,test-pandas]"
     .venv/bin/asv machine --yes
 
 benchmark *args:
-    [[ -f .venv/bin/asv ]] || just benchmark-install
+    [ -f .venv/bin/asv ] || just benchmark-install
     .venv/bin/asv run -e {{args}}
 
 install:
