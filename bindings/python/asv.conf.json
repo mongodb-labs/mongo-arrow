@@ -4,12 +4,14 @@
     "project_url": "https://mongo-arrow.readthedocs.io/en/latest/",
     "repo": "../../",
     "repo_subdir": "bindings/python",
+    "install_command": [
+     "pip install ."
+    ],
     "branches": ["main"],
     "matrix": {
          "env": {
              "N_DOCS": ["20000", "1000"]
          }
     },
-    "environment_type": "virtualenv",
-    "plugins": ["virtualenv"]
+    "environment_type": "virtualenv"
 }
