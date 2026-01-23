@@ -1258,6 +1258,8 @@ class ArrowApiTestMixin:
                 future.result()
 
     def test_driver_metadata(self):
+        if not callable(self.coll.database.client.append_metadata):
+            raise unittest.SkipTest("This version of PyMongo does not support client metadata")
         self.run_find({}, schema=self.schema)
 
         metadata = self.coll.database.client.options.pool_options.metadata
