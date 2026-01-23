@@ -48,11 +48,12 @@ jobs:
           just benchmark-install
       - name: Run benchmarks
         run: |
-          just benchmark ${GITHUB_REF}..${GITHUB_BASE_REF}
+          git pull ${GITHUB_BASE_REF}:base
+          just benchmark HEAD..base
       - name: Compare benchmarks
         run: |
-          .venv/bin/asv compare --factor 1.2 --split ${GITHUB_BASE_REF} ${GITHUB_REF} --
+          .venv/bin/asv compare --factor 1.2 --split base HEAD --
 
       - name: Fail if any benchmarks have slowed down too much
         run: |
-          .venv/bin/asv compare --factor 1.2 --split ${GITHUB_BASE_REF} ${GITHUB_REF} 2> /dev/null | grep -q "got worse"
+          .venv/bin/asv compare --factor 1.2 --split base HEAD 2> /dev/null | grep -q "got worse"
