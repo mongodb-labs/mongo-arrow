@@ -33,7 +33,7 @@ jobs:
       - name: Start MongoDB
         uses: mongodb-labs/drivers-evergreen-tools@master
         with:
-          version: "6.0"
+          version: "7.0"
       - name: Install deps
         run: |
           python -m pip install rust-just uv
