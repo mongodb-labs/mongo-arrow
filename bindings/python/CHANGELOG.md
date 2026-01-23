@@ -6,6 +6,7 @@
 # Changes in Version 1.12.0 (2026/01/XX)
 
 - Add support for Pandas 3.0.  Drop support for Pandas 1.x.
+- Add support for PyArrow 23.0.
 
 # Changes in Version 1.11.1 (2025/12/15)
 
