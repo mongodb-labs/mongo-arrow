@@ -53,6 +53,11 @@ jobs:
         run: |
            echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
            echo "LD_LIBRARY_PATH=$PWD/libbson/lib" >> $GITHUB_ENV
+           echo "MONGODB_VERSION=8.0" >> $GITHUB_ENV
+      - name: Set up env on Windows
+        if: ${{ startsWith(runner.os, 'Windows') }}
+        run: |
+          echo "MONGODB_VERSION=4.4" >> $GITHUB_ENV
       - name: Start MongoDB
         uses: mongodb-labs/drivers-evergreen-tools@master
         with:
@@ -97,11 +102,6 @@ jobs:
            echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
            echo "LD_LIBRARY_PATH=$PWD/libbson/lib" >> $GITHUB_ENV
            echo "LIBBSON_VERSION=2.0.1" >> $GITHUB_ENV
-           echo "MONGODB_VERSION=8.0" >> $GITHUB_ENV
-      - name: Set up env on Windows
-        if: ${{ startsWith(runner.os, 'Windows') }}
-        run: |
-          echo "MONGODB_VERSION=4.4" >> $GITHUB_ENV
       - name: Install libbson
         run: just build-libbson
       - name: Ensure imports with no test deps
@@ -109,7 +109,7 @@ jobs:
       - name: Start MongoDB
         uses: mongodb-labs/drivers-evergreen-tools@master
         with:
-          version: ${{ env.MONGODB_VERSION }}
+          version: "8.0"
           topology: replica_set
       - name: Run the tests
         run: just test
