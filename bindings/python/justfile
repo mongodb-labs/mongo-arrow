@@ -13,9 +13,16 @@ build-libbson:
 import-check:
     uv run python -c "from pymongoarrow.lib import libbson_version"
 
+benchmark-install *args:
+    rm -rf .venv
+    python3 -m venv .venv
+    .venv/bin/pip install asv virtualenv
+    .venv/bin/pip install -e ".[test,test-polars,test-pandas]"
+    .venv/bin/asv machine --yes
+
 benchmark *args:
-    uv sync --dev --group benchmark --extra test --extra test-polars --extra test-pandas
-    uv run asv run -e --python=$(uv run python -c "import sys;print(sys.executable)") {{args}}
+    [[ -f .venv/bin/asv ]] || just benchmark-install
+    .venv/bin/asv run -e {{args}}
 
 install:
     just build-libbson

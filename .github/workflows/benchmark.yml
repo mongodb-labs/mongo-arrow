@@ -50,8 +50,8 @@ jobs:
               just benchmark --set-commit-hash $(git rev-parse HEAD)
           }
 
-          pip install asv virtualenv
-          asv machine --yes
+          export LIBBSON_INSTALL_DIR=$(pwd)/libbson
+          just benchmark-install
           git fetch origin main:main
           git update-ref refs/bm/pr HEAD
           # We know this is a PR run. The branch is a GitHub refs/pull/*/merge ref, so
@@ -65,8 +65,10 @@ jobs:
 
       - name: Compare benchmarks
         run: |
+          source .venv/bin/activate
           asv compare --factor 1.2 --split refs/bm/merge-target refs/bm/pr --
 
       - name: Fail if any benchmarks have slowed down too much
         run: |
+          source .venv/bin/activate
           ! asv compare --factor 1.2 --split refs/bm/merge-target refs/bm/pr 2> /dev/null | grep -q "got worse"
