@@ -22,7 +22,7 @@ benchmark-install *args:
 
 benchmark *args:
     [ -f .venv/bin/asv ] || just benchmark-install
-    .venv/bin/asv run -e {{args}}
+    .venv/bin/asv run -v -e {{args}}
 
 install:
     just build-libbson
