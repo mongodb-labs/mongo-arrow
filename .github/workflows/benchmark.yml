@@ -39,7 +39,10 @@ jobs:
           python -m pip install rust-just uv
       - name: Set up env
         run: |
+           set -x
            echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
+           git pull origin $GITHUB_BASE_REF
+           git pull origin $GITHUB_REF
            echo "BASE_REF=$(git rev-parse --short $GITHUB_BASE_REF)" >> $GITHUB_ENV
            echo "HEAD_REF=$(git rev-parse --short $GITHUB_REF)" >> $GITHUB_ENV
       - name: Install libbson
