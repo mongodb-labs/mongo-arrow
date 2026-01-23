@@ -41,13 +41,8 @@ jobs:
         run: |
            set -eux
            echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
-           git fetch origin $GITHUB_BASE_REF
-           git fetch origin $GITHUB_REF
-           git add .
-           git config --global user.email "you@example.com"
-           git config --global user.name "Your Name"
-           git commit -a -m "set up HEAD"
-           echo "BASE_REF=$(git rev-parse --short origin/$GITHUB_BASE_REF)" >> $GITHUB_ENV
+           git fetch origin $GITHUB_BASE_REF:base_branch
+           git fetch origin $GITHUB_REF:head_branch
       - name: Install libbson
         run: |
           just build-libbson
@@ -56,11 +51,11 @@ jobs:
           just benchmark-install
       - name: Run benchmarks
         run: |
-          just benchmark HEAD..${BASE_REF}
+          just benchmark base_branch..head_branch
       - name: Compare benchmarks
         run: |
-          .venv/bin/asv compare --factor 1.2 --split ${BASE_REF} HEAD --
+          .venv/bin/asv compare --factor 1.2 --split head_branch base_branch --
 
       - name: Fail if any benchmarks have slowed down too much
         run: |
-          .venv/bin/asv compare --factor 1.2 --split ${BASE_REF} HEAD 2> /dev/null | grep -q "got worse"
+          .venv/bin/asv compare --factor 1.2 --split head_branch base_branch 2> /dev/null | grep -q "got worse"
