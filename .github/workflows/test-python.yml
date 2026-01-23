@@ -104,7 +104,7 @@ jobs:
       - name: Start MongoDB
         uses: mongodb-labs/drivers-evergreen-tools@master
         with:
-          version: 6.0
+          version: "6.0"
           topology: replica_set
       - name: Run the tests
         run: just test
@@ -153,7 +153,7 @@ jobs:
       - name: Start MongoDB
         uses: mongodb-labs/drivers-evergreen-tools@master
         with:
-          version: 6.0
+          version: "6.0"
           topology: replica_set
       - name: Run tests
         shell: bash
