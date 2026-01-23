@@ -44,6 +44,8 @@ jobs:
            git fetch origin $GITHUB_BASE_REF
            git fetch origin $GITHUB_REF
            git add .
+           git config --global user.email "you@example.com"
+           git config --global user.name "Your Name"
            git commit -a -m "set up HEAD"
            echo "BASE_REF=$(git rev-parse --short origin/$GITHUB_BASE_REF)" >> $GITHUB_ENV
       - name: Install libbson
