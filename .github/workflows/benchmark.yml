@@ -39,10 +39,7 @@ jobs:
           python -m pip install rust-just uv
       - name: Set up env
         run: |
-           set -eux
            echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
-           git fetch origin $GITHUB_BASE_REF:base_branch
-           git fetch origin $GITHUB_REF:head_branch
       - name: Install libbson
         run: |
           just build-libbson
@@ -50,12 +47,7 @@ jobs:
         run: |
           just benchmark-install
       - name: Run benchmarks
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          just benchmark base_branch..head_branch
-      - name: Compare benchmarks
-        run: |
-          .venv/bin/asv compare --factor 1.2 --split head_branch base_branch --
-
-      - name: Fail if any benchmarks have slowed down too much
-        run: |
-          .venv/bin/asv compare --factor 1.2 --split head_branch base_branch 2> /dev/null | grep -q "got worse"
+          just benchmark-ci ${BASE_SHA} ${GITHUB_SHA}

@@ -20,9 +20,13 @@ benchmark-install *args:
     .venv/bin/pip install -e ".[test,test-polars,test-pandas]"
     .venv/bin/asv machine --yes
 
+benchmark-ci *args:
+    [ -f .venv/bin/asv ] || just benchmark-install
+    .venv/bin/asv continuous --split --show-stderr --factor 1.2 {{args}}
+
 benchmark *args:
     [ -f .venv/bin/asv ] || just benchmark-install
-    .venv/bin/asv run -v -e {{args}}
+    .venv/bin/asv run {{args}}
 
 install:
     just build-libbson
