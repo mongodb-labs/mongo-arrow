@@ -48,7 +48,7 @@ jobs:
           just benchmark-install
       - name: Run benchmarks
         run: |
-          git pull ${GITHUB_BASE_REF}:base
+          git pull origin ${GITHUB_BASE_REF}:base
           just benchmark HEAD..base
       - name: Compare benchmarks
         run: |
