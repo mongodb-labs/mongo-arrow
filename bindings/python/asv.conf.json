@@ -5,7 +5,7 @@
     "repo": "../../",
     "repo_subdir": "bindings/python",
     "install_command": [
-     "pip install ."
+     "pip install . pandas polars"
     ],
     "branches": ["main"],
     "matrix": {
