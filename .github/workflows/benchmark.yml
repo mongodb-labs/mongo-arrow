@@ -31,9 +31,9 @@ jobs:
           cache: 'pip'
           cache-dependency-path: '**/setup.cfg'
       - name: Start MongoDB
-        uses: supercharge/mongodb-github-action@315db7fe45ac2880b7758f1933e6e5d59afd5e94 # 1.12.1
+        uses: mongodb-labs/drivers-evergreen-tools@master
         with:
-          mongodb-version: 6.0
+          version: 6.0
       - name: Install deps
         run: |
           python -m pip install rust-just uv
