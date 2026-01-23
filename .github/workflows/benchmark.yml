@@ -44,24 +44,16 @@ jobs:
       - name: Run benchmarks
         run: |
           set -eux
-          run_asv () {
-              git show --no-patch --format="%H (%s)"
-              export LIBBSON_INSTALL_DIR=$(pwd)/libbson
-              just benchmark --set-commit-hash $(git rev-parse HEAD)
-          }
-
           export LIBBSON_INSTALL_DIR=$(pwd)/libbson
           just benchmark-install
           git fetch origin main:main
           git update-ref refs/bm/pr HEAD
+
           # We know this is a PR run. The branch is a GitHub refs/pull/*/merge ref, so
           # the current target that this PR will be merged into is HEAD^1.
           git update-ref refs/bm/merge-target $(git log -n 1 --pretty=format:"%H" main --)
-          git checkout --force refs/bm/pr --
-          run_asv
 
-          git checkout --force refs/bm/merge-target --
-          run_asv
+          just benchmark refs/bm/pr..refs/bm/merge-target
 
       - name: Compare benchmarks
         run: |
