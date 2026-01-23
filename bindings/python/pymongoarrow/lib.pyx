@@ -110,6 +110,16 @@ cdef str _bson_type_name(uint8_t type_t):
     return result
 
 
+cdef bool next_is_double_nan(bson_iter_t *iter, bson_type_t value_t):
+    cdef bson_iter_t *tmp = iter
+    cdef double d
+    if value_t != BSON_TYPE_DOUBLE:   # bail if the next element is not a double
+        return False
+    if tmp == NULL:
+        return False
+    d = bson_iter_as_double(tmp)
+    return isnan(d)                    # true iff the double is NaN
+
 cdef class BuilderManager:
     cdef:
         dict builder_map
@@ -151,7 +161,7 @@ cdef class BuilderManager:
         cdef uint32_t val_buf_len = 0
 
         # Mark a null key as missing until we find it.
-        if value_t == BSON_TYPE_NULL:
+        if value_t == BSON_TYPE_NULL or next_is_double_nan(doc_iter, value_t):
             self.builder_map[key] = None
             return
 
@@ -251,9 +261,12 @@ cdef class BuilderManager:
                         raise ValueError("Failed to append nulls to", full_key.decode('utf8'), ":", status.message().decode('utf8'))
 
             # Append the next value.
-            status = builder.append_raw(doc_iter, value_t)
-            if not status.ok():
-                raise ValueError("Could not append raw value to", full_key.decode('utf8'), ":", status.message().decode('utf8'))
+            if next_is_double_nan(doc_iter, value_t):
+                builder.append_null()
+            else:
+                status = builder.append_raw(doc_iter, value_t)
+                if not status.ok():
+                    raise ValueError("Could not append raw value to", full_key.decode('utf8'), ":", status.message().decode('utf8'))
 
             # Recurse into documents.
             if value_t == BSON_TYPE_DOCUMENT and builder.type_marker == BSON_TYPE_DOCUMENT:
@@ -360,9 +373,12 @@ cdef class _ArrayBuilderBase:
         while bson_iter_next(&doc_iter):
             bson_iter_key(&doc_iter)
             value_t = bson_iter_type(&doc_iter)
-            status = self.append_raw(&doc_iter, value_t)
-            if not status.ok():
-                raise ValueError("Could not append raw value of type", value_t, ":", status.message().decode("utf8"))
+            if next_is_double_nan(&doc_iter, value_t):
+                self.append_null()
+            else:
+                status = self.append_raw(&doc_iter, value_t)
+                if not status.ok():
+                    raise ValueError("Could not append raw value of type", value_t, ":", status.message().decode("utf8"))
 
     cdef CStatus append_raw(self, bson_iter_t * doc_iter, bson_type_t value_t):
         pass
