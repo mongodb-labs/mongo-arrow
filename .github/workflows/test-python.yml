@@ -61,7 +61,7 @@ jobs:
       - name: Start MongoDB
         uses: mongodb-labs/drivers-evergreen-tools@master
         with:
-          version: "8.0"
+          version: ${{ env.MONGODB_VERSION }}
           topology: replica_set
       - name: Install CMake 3 on MacOS
         # libbson requires cmake 3, and cmake 4 is now the default on the GHA runners.
