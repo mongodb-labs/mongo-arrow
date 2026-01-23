@@ -33,7 +33,7 @@ from pymongoarrow.api import (
 )
 from pymongoarrow.types import BinaryType, Decimal128Type
 
-N_DOCS = int(os.environ.get("N_DOCS"))
+N_DOCS = int(os.environ.get("N_DOCS", "10"))
 assert pymongo.has_c()  # noqa: S101
 db = pymongo.MongoClient().pymongoarrow_test
 
