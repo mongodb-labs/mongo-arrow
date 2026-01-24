@@ -49,6 +49,8 @@ jobs:
           just benchmark-install
       - name: Run benchmarks
         env:
+          # Based on https://github.com/astropy/astropy/blob/1d3dac9a6fbc96b00e4c79cd5965a40d6fcef93f/.github/workflows/ci_benchmark.yml#L19
+          # and config from https://github.com/astropy/astropy/blob/1d3dac9a6fbc96b00e4c79cd5965a40d6fcef93f/asv.ci.conf.json
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           just benchmark-ci ${BASE_SHA} ${GITHUB_SHA}
