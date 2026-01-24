@@ -21,6 +21,7 @@ import pandas as pd
 import polars as pl
 import pyarrow as pa
 import pymongo
+from asv_runner.benchmarks.mark import SkipNotImplemented
 from bson import BSON, Binary, Decimal128
 
 from pymongoarrow.api import (
@@ -33,7 +34,7 @@ from pymongoarrow.api import (
 )
 from pymongoarrow.types import BinaryType, Decimal128Type
 
-N_DOCS = int(os.environ.get("N_DOCS", "10"))
+N_DOCS = int(os.environ.get("N_DOCS"))
 assert pymongo.has_c()  # noqa: S101
 db = pymongo.MongoClient().pymongoarrow_test
 
@@ -206,22 +207,22 @@ class ProfileReadArray(Read):
 
     # All of the following tests are being skipped because NumPy/Pandas/Polars do not work with nested arrays.
     def time_to_numpy(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_to_pandas(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_to_polars(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_conventional_ndarray(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_conventional_pandas(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_conventional_polars(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
 
 class ProfileReadDocument(Read):
@@ -253,22 +254,22 @@ class ProfileReadDocument(Read):
 
     # All of the following tests are being skipped because NumPy/Pandas/Polars do not work with nested documents.
     def time_to_numpy(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_to_pandas(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_to_polars(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_conventional_ndarray(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_conventional_pandas(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_conventional_polars(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
 
 class ProfileReadSmall(Read):
@@ -329,10 +330,10 @@ class ProfileReadExtensionSmall(Read):
 
     # This must be skipped because arrow can't read the Decimal128Type
     def time_conventional_arrow(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_insert_conventional(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
 
 class ProfileReadExtensionLarge(Read):
@@ -353,10 +354,10 @@ class ProfileReadExtensionLarge(Read):
 
     # This must be skipped because arrow can't read the Decimal128Type
     def time_conventional_arrow(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
     def time_insert_conventional(self):
-        pass
+        raise SkipNotImplemented("skipped")
 
 
 class ProfileInsertSmall(Insert):

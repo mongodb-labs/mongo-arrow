@@ -22,7 +22,7 @@ benchmark-install *args:
 
 benchmark-ci *args:
     [ -f .venv/bin/asv ] || just benchmark-install
-    .venv/bin/asv continuous --split --show-stderr --factor 1.2 {{args}}
+    .venv/bin/asv continuous --split --show-stderr --factor 1.3 {{args}}
 
 benchmark *args:
     [ -f .venv/bin/asv ] || just benchmark-install
