@@ -154,7 +154,7 @@ exclude = [
 [tool.ruff.lint.per-file-ignores]
 "setup.py" = ["PTH", "EM", "B", "S", "E501"]
 "docs/source/conf.py" = ["E501", "S", "PTH"]
-"benchmarks.py" = ["T201", "E501", "C4"]
+"benchmarks.py" = ["T201", "E501", "C4", "EM101"]
 "test/*.py" = ["PT", "S", "ARG", "B", "C", "EM", "E501", "RUF005", "UP038"]
 
 [dependency-groups]
