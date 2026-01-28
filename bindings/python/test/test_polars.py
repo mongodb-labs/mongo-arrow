@@ -42,6 +42,8 @@ from pymongoarrow.types import (
 try:
     import polars as pl
     from polars.testing import assert_frame_equal
+
+    from pymongoarrow.polars_types import PolarsBinary, PolarsCode, PolarsDecimal128, PolarsObjectId
 except ImportError:
     pl = None
 
@@ -207,15 +209,14 @@ class TestExplicitPolarsApi(PolarsTestBase):
         """Confirm ExtensionTypes for Polars.DataFrame.from_arrow"""
         if not hasattr(pl, "register_extension_type"):
             raise unittest.SkipTest("Requires polars extension types")
-        for ext_type, data in (
-            (ObjectIdType(), [bson.ObjectId().binary, bson.ObjectId().binary]),
-            (Decimal128Type(), [bson.Decimal128(str(i)).bid for i in range(2)]),
-            (CodeType(), [str(i) for i in range(2)]),
+        for ext_type, data, expected_type in (
+            (ObjectIdType(), [bson.ObjectId().binary, bson.ObjectId().binary], PolarsObjectId()),
+            (Decimal128Type(), [bson.Decimal128(str(i)).bid for i in range(2)], PolarsDecimal128()),
+            (CodeType(), [str(i) for i in range(2)], PolarsCode()),
         ):
             table = pa.Table.from_pydict({"foo": data}, pa.schema({"foo": ext_type}))
             df = pl.from_arrow(table)
-            expected = pl.datatypes.String if ext_type == CodeType() else pl.datatypes.Binary
-            assert df.dtypes[0] == expected, ext_type
+            assert df.dtypes[0] == expected_type, ext_type
 
     def test_auto_schema_succeeds_on_find(self):
         """Confirms Polars can read ObjectID Extension type.
@@ -232,7 +233,7 @@ class TestExplicitPolarsApi(PolarsTestBase):
         df_out = find_polars_all(self.coll, {})
         self.assertEqual(df_out.columns, ["_id", "a"])
         self.assertEqual(df_out.shape, (4, 2))
-        self.assertEqual(df_out.dtypes, [pl.Binary, pl.Int32])
+        self.assertEqual(df_out.dtypes, [PolarsObjectId(), pl.Int32()])
 
     def test_arrow_to_polars(self):
         """Test reading Polars data from written Arrow Data."""
@@ -368,37 +369,37 @@ class TestExplicitPolarsApi(PolarsTestBase):
                 "type": "bytes",
                 "value": b"\x00\x01\x02\x03\x04",
                 "atype": BinaryType(pa.binary()),
-                "ptype": pl.Binary,
+                "ptype": PolarsBinary(),
             },
             {
                 "type": "binary data",
                 "value": bson.Binary(b"\x00\x01\x02\x03\x04"),
                 "atype": BinaryType(pa.binary()),
-                "ptype": pl.Binary,
+                "ptype": PolarsBinary(),
             },
             {
                 "type": "object id",
                 "value": bson.ObjectId(),
                 "atype": ObjectIdType(),
-                "ptype": pl.Binary,
+                "ptype": PolarsObjectId(),
             },
             {
                 "type": "javascript",
                 "value": bson.Code("function() { return x; }"),
                 "atype": CodeType(),
-                "ptype": pl.String,
+                "ptype": PolarsCode(),
             },
             {
                 "type": "decimal128",
                 "value": bson.Decimal128("10.99"),
                 "atype": Decimal128Type(),
-                "ptype": pl.Binary,
+                "ptype": PolarsDecimal128(),
             },
             {
                 "type": "uuid",
                 "value": uuid.uuid4(),
                 "atype": BinaryType(pa.binary()),
-                "ptype": pl.Binary,
+                "ptype": PolarsBinary(),
             },
         ]
 
