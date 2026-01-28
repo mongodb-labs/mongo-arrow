@@ -353,39 +353,13 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, allow_invalid=Fals
     )
 
 
-def _cast_away_extension_type(field: pa.field) -> pa.field:
-    if isinstance(field.type, pa.ExtensionType):
-        field_without_extension = pa.field(field.name, field.type.storage_type)
-    elif isinstance(field.type, pa.StructType):
-        field_without_extension = pa.field(
-            field.name,
-            pa.struct([_cast_away_extension_type(nested_field) for nested_field in field.type]),
-        )
-    elif isinstance(field.type, pa.ListType):
-        field_without_extension = pa.field(
-            field.name, pa.list_(_cast_away_extension_type(field.type.value_field))
-        )
-    else:
-        field_without_extension = field
-
-    return field_without_extension
-
-
 def _arrow_to_polars(arrow_table: pa.Table):
-    """Helper function that converts an Arrow Table to a Polars DataFrame.
-
-    Note: Polars lacks ExtensionTypes. We cast them  to their base arrow classes.
-    """
+    """Helper function that converts an Arrow Table to a Polars DataFrame."""
     if pl is None:
         msg = "polars is not installed. Try pip install polars."
         raise ValueError(msg)
 
-    schema_without_extensions = pa.schema(
-        [_cast_away_extension_type(field) for field in arrow_table.schema]
-    )
-    arrow_table_without_extensions = arrow_table.cast(schema_without_extensions)
-
-    return pl.from_arrow(arrow_table_without_extensions)
+    return pl.from_arrow(arrow_table)
 
 
 def find_polars_all(collection, query, *, schema=None, allow_invalid=False, **kwargs):
