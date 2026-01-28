@@ -233,8 +233,7 @@ class TestExplicitPolarsApi(PolarsTestBase):
         df_out = find_polars_all(self.coll, {})
         self.assertEqual(df_out.columns, ["_id", "a"])
         self.assertEqual(df_out.shape, (4, 2))
-        self.assertTrue(isinstance(df_out.dtypes[0], PolarsObjectId))
-        self.assertTrue(isinstance(df_out.dtypes[1], pl.Int32))
+        self.assertEqual(df_out.dtypes, [PolarsObjectId(), pl.Int32()])
 
     def test_arrow_to_polars(self):
         """Test reading Polars data from written Arrow Data."""
