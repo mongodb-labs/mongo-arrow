@@ -20,6 +20,8 @@ import pyarrow as pa
 
 try:
     import polars as pl
+
+    from pymongoarrow.polars_types import PolarsBinary, PolarsCode, PolarsDecimal128, PolarsObjectId
 except ImportError:
     pl = None
 import pyarrow.types as _atypes
@@ -45,7 +47,6 @@ from pymongoarrow.pandas_types import (
     PandasDecimal128,
     PandasObjectId,
 )
-from pymongoarrow.polars_types import PolarsBinary, PolarsCode, PolarsDecimal128, PolarsObjectId
 
 
 class _BsonArrowTypes(enum.Enum):

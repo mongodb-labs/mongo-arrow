@@ -19,55 +19,52 @@ try:
 except ImportError:
     pl = None
 
+if pl:
 
-class PolarsExtensionBase(pl.datatypes.BaseExtension):
-    def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__)
-            and self.ext_name() == other.ext_name()
-            and self.ext_storage() == other.ext_storage()
-        )
+    class PolarsExtensionBase(pl.datatypes.BaseExtension):
+        def __eq__(self, other):
+            return (
+                isinstance(other, self.__class__)
+                and self.ext_name() == other.ext_name()
+                and self.ext_storage() == other.ext_storage()
+            )
 
+    class PolarsBinary(PolarsExtensionBase):
+        def __init__(self) -> None:
+            super().__init__(name="pymongoarrow.binary", storage=pl.Binary)
 
-class PolarsBinary(PolarsExtensionBase):
-    def __init__(self) -> None:
-        super().__init__(name="pymongoarrow.binary", storage=pl.Binary)
+        def __repr__(self) -> str:
+            return f"{self.__class__.__name__}"
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}"
+        def _string_repr(self) -> str:
+            return "binary"
 
-    def _string_repr(self) -> str:
-        return "binary"
+    class PolarsObjectId(PolarsExtensionBase):
+        def __init__(self) -> None:
+            super().__init__(name="pymongoarrow.objectid", storage=pl.Binary)
 
+        def __repr__(self) -> str:
+            return f"{self.__class__.__name__}"
 
-class PolarsObjectId(PolarsExtensionBase):
-    def __init__(self) -> None:
-        super().__init__(name="pymongoarrow.objectid", storage=pl.Binary)
+        def _string_repr(self) -> str:
+            return "objectid"
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}"
+    class PolarsCode(PolarsExtensionBase):
+        def __init__(self) -> None:
+            super().__init__(name="pymongoarrow.code", storage=pl.String)
 
-    def _string_repr(self) -> str:
-        return "objectid"
+        def __repr__(self) -> str:
+            return f"{self.__class__.__name__}"
 
+        def _string_repr(self) -> str:
+            return "code"
 
-class PolarsCode(PolarsExtensionBase):
-    def __init__(self) -> None:
-        super().__init__(name="pymongoarrow.code", storage=pl.String)
+    class PolarsDecimal128(PolarsExtensionBase):
+        def __init__(self) -> None:
+            super().__init__(name="pymongoarrow.decimal128", storage=pl.Binary)
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}"
+        def __repr__(self) -> str:
+            return f"{self.__class__.__name__}"
 
-    def _string_repr(self) -> str:
-        return "code"
-
-
-class PolarsDecimal128(PolarsExtensionBase):
-    def __init__(self) -> None:
-        super().__init__(name="pymongoarrow.decimal128", storage=pl.Binary)
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}"
-
-    def _string_repr(self) -> str:
-        return "decimal128"
+        def _string_repr(self) -> str:
+            return "decimal128"
