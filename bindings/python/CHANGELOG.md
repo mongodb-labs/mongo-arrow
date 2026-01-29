@@ -3,6 +3,10 @@
 
 ---
 
+# Changes in Version 1.13.0 (2026/XX/XX)
+
+- Add Polars Extension Type support for the BSON Binary, Code, ObjectId, and Decimal128 types.
+
 # Changes in Version 1.12.0 (2026/01/26)
 
 - Add support for Pandas 3.0.  Drop support for Pandas 1.x.
