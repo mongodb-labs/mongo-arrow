@@ -17,6 +17,13 @@ from datetime import datetime
 import bson
 import numpy as np
 import pyarrow as pa
+
+try:
+    import polars as pl
+
+    from pymongoarrow.polars_types import PolarsBinary, PolarsCode, PolarsDecimal128, PolarsObjectId
+except ImportError:
+    pl = None
 import pyarrow.types as _atypes
 from bson import Binary, Code, Decimal128, Int64, ObjectId
 from pyarrow import DataType as _ArrowDataType
@@ -200,6 +207,12 @@ class CodeType(ExtensionType):
 for dtype in [ObjectIdType, CodeType, Decimal128Type]:
     pa.register_extension_type(dtype())
 pa.register_extension_type(BinaryType(0))
+
+if pl and hasattr(pl, "register_extension_type"):
+    pl.register_extension_type("pymongoarrow.objectid", PolarsObjectId)
+    pl.register_extension_type("pymongoarrow.code", PolarsCode)
+    pl.register_extension_type("pymongoarrow.decimal128", PolarsDecimal128)
+    pl.register_extension_type("pymongoarrow.binary", PolarsBinary)
 
 # Internal Type Handling.
 
