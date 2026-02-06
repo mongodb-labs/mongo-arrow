@@ -10,16 +10,30 @@ build-libbson:
     uv sync --no-install-project --dev --frozen
     bash build-libbson.sh
 
+build:
+    uv sync --dev --reinstall-package pymongoarrow
+
 import-check:
     uv run python -c "from pymongoarrow.lib import libbson_version"
 
+benchmark-install *args:
+    rm -rf .venv
+    python3 -m venv .venv
+    .venv/bin/pip install asv virtualenv
+    .venv/bin/pip install -e ".[test,test-polars,test-pandas]"
+    .venv/bin/asv machine --yes
+
+benchmark-ci *args:
+    [ -f .venv/bin/asv ] || just benchmark-install
+    .venv/bin/asv continuous --split --show-stderr --factor 1.3 {{args}}
+
 benchmark *args:
-    uv sync --dev --extra test --extra test-polars --extra test-pandas
-    uv run asv run -e --python=$(uv run python -c "import sys;print(sys.executable)") {{args}}
+    [ -f .venv/bin/asv ] || just benchmark-install
+    .venv/bin/asv run {{args}}
 
 install:
     just build-libbson
-    uv sync --dev --refresh-package pymongoarrow
+    just build
     uv run pre-commit install
 
 test *args:

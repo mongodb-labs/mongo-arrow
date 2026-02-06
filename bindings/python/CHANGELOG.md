@@ -3,6 +3,26 @@
 
 ---
 
+# Changes in Version 1.13.0 (2026/XX/XX)
+
+- Add Polars Extension Type support for the BSON Binary, Code, ObjectId, and Decimal128 types.
+
+# Changes in Version 1.12.0 (2026/01/26)
+
+- Add support for Pandas 3.0.  Drop support for Pandas 1.x.
+- Add support for PyArrow 23.0. Drop support for PyArrow 22.0.
+
+# Changes in Version 1.11.1 (2025/12/15)
+
+- Add support for Polars 1.36.0.
+
+# Changes in Version 1.11.0 (2025/12/10)
+
+- Add support for PyArrow 22.0.
+- Add support for Python 3.14 and 3.14 free-threaded on Linux and MacOS.
+- Drop support for Python 3.9 and Python 3.13 free-threaded.
+- Extend rather than replace TypeRegistry in write function.
+
 # Changes in Version 1.10.0 (2025/08/05)
 
 - Add support for PyArrow 21.0.

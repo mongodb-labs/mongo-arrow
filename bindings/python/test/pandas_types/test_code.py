@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from test.pandas_types.util import base_make_data
+
 import numpy as np
 import pytest
 from bson import Code
@@ -39,13 +41,7 @@ def dtype():
 
 
 def make_data():
-    return (
-        [make_datum() for _ in range(8)]
-        + [np.nan]
-        + [make_datum() for _ in range(88)]
-        + [np.nan]
-        + [make_datum(), make_datum()]
-    )
+    return base_make_data(make_datum)
 
 
 @pytest.fixture
@@ -91,6 +87,10 @@ class TestInterface(base.BaseInterfaceTests):
         # We cannot avoid copying with our extension arrays.
         pass
 
+    def test_view(self):
+        # We cannot avoid copying with our extension arrays.
+        pass
+
 
 class TestConstructors(base.BaseConstructorsTests):
     pass
@@ -104,6 +104,10 @@ class TestSetitem(base.BaseSetitemTests):
     def test_setitem_frame_2d_values(self):
         # Results in passing an integer as a value, which
         # cannot be converted to Code type.
+        pass
+
+    def test_setitem_preserves_views(self):
+        # We cannot avoid copying with our extension arrays.
         pass
 
 

@@ -21,9 +21,10 @@ jobs:
         python-version: ["3.10"]
       fail-fast: false
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
@@ -31,42 +32,25 @@ jobs:
           cache: 'pip'
           cache-dependency-path: '**/setup.cfg'
       - name: Start MongoDB
-        uses: supercharge/mongodb-github-action@90004df786821b6308fb02299e5835d0dae05d0d # 1.12.0
+        uses: mongodb-labs/drivers-evergreen-tools@master
         with:
-          mongodb-version: 6.0
+          version: "7.0"
       - name: Install deps
         run: |
           python -m pip install rust-just uv
+      - name: Set up env
+        run: |
+           echo "LIBBSON_INSTALL_DIR=$PWD/libbson" >> $GITHUB_ENV
       - name: Install libbson
         run: |
           just build-libbson
-
+      - name: Install benchmarks
+        run: |
+          just benchmark-install
       - name: Run benchmarks
+        env:
+          # Based on https://github.com/astropy/astropy/blob/1d3dac9a6fbc96b00e4c79cd5965a40d6fcef93f/.github/workflows/ci_benchmark.yml#L19
+          # and config from https://github.com/astropy/astropy/blob/1d3dac9a6fbc96b00e4c79cd5965a40d6fcef93f/asv.ci.conf.json
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          set -eux
-          run_asv () {
-              git show --no-patch --format="%H (%s)"
-              export LIBBSON_INSTALL_DIR=$(pwd)/libbson
-              just benchmark --set-commit-hash $(git rev-parse HEAD)
-          }
-
-          pip install asv virtualenv
-          asv machine --yes
-          git fetch origin main:main
-          git update-ref refs/bm/pr HEAD
-          # We know this is a PR run. The branch is a GitHub refs/pull/*/merge ref, so
-          # the current target that this PR will be merged into is HEAD^1.
-          git update-ref refs/bm/merge-target $(git log -n 1 --pretty=format:"%H" main --)
-          git checkout --force refs/bm/pr --
-          run_asv
-
-          git checkout --force refs/bm/merge-target --
-          run_asv
-
-      - name: Compare benchmarks
-        run: |
-          asv compare --factor 1.2 --split refs/bm/merge-target refs/bm/pr --
-
-      - name: Fail if any benchmarks have slowed down too much
-        run: |
-          ! asv compare --factor 1.2 --split refs/bm/merge-target refs/bm/pr 2> /dev/null | grep -q "got worse"
+          just benchmark-ci ${BASE_SHA} ${GITHUB_SHA}

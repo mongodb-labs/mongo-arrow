@@ -39,7 +39,10 @@ from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectI
 try:
     import pandas as pd
     import pandas.testing
+
+    pd.options.future.infer_string = True
 except ImportError:
+    pd = None
     pytest.skip("skipping pandas tests", allow_module_level=True)
 
 
@@ -123,7 +126,13 @@ class TestExplicitPandasApi(PandasTestBase):
             # Object types may lose type information in a round trip.
             # Integer types with missing values are converted to floating
             # point in a round trip.
-            if str(out_col.dtype) in ["object", "float64", "datetime64[ms]"]:
+            if str(out_col.dtype) in [
+                "object",
+                "float64",
+                "datetime64[ms]",
+                "datetime64[us]",
+                "datetime64[ns]",
+            ]:
                 out_col = out_col.astype(in_col.dtype)
             pd.testing.assert_series_equal(in_col, out_col)
 
@@ -166,6 +175,8 @@ class TestExplicitPandasApi(PandasTestBase):
         schema["int"] = pd.Int32Dtype()
         schema["str"] = "string"
         schema["datetime"] = "datetime64[ms]"
+        if hasattr(pd, "StringDtype"):
+            schema["str"] = "str"
 
         data = pd.DataFrame(
             data={
@@ -252,6 +263,8 @@ class TestExplicitPandasApi(PandasTestBase):
             "dt": "datetime64[ms]",
         }
         schema["nested"] = "object"
+        if hasattr(pd, "StringDtype"):
+            schema["string"] = "str"
 
         raw_data = {
             "string": [str(i) for i in range(3)],
@@ -341,7 +354,7 @@ class TestExplicitPandasApi(PandasTestBase):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", RuntimeWarning)
                 data.to_csv(f.name, index=False, na_rep="")
-            out = pd.read_csv(f.name)
+            out = pd.read_csv(f.name, parse_dates=["datetime"])
             self._assert_frames_equal(data, out)
 
     def test_exclude_none(self):
@@ -437,6 +450,8 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         Decimal128: "bson_PandasDecimal128",
         bool: "object",
     }
+    if hasattr(pd, "StringDtype"):
+        pytype_tab_map[str] = "str"
 
     pytype_writeback_exc_map = {
         str: None,

@@ -29,6 +29,16 @@ try:
         ExtensionDtype,
         register_extension_dtype,
     )
+    from pandas.core.indexers import check_array_indexer
+
+    # Readonly support was added in pandas 3.0.
+    try:
+        from pandas.core.indexers import getitem_returns_view
+    except ImportError:
+
+        def getitem_returns_view(self, obj):  # noqa: ARG001
+            return False
+
 except ImportError:
     ExtensionDtype = object
     ExtensionArray = object
@@ -88,7 +98,7 @@ class PandasBSONExtensionArray(ExtensionArray):
 
     _default_dtype = None
 
-    def __init__(self, values, dtype, copy=False) -> None:  # noqa: ARG002
+    def __init__(self, values, dtype, copy=False) -> None:
         if not isinstance(values, np.ndarray):
             msg = "Need to pass a numpy array as values"
             raise TypeError(msg)
@@ -101,6 +111,8 @@ class PandasBSONExtensionArray(ExtensionArray):
                 msg = f"Values must be either {dtype.type} or NA"
                 raise ValueError(msg)
         self._dtype = dtype
+        if copy:
+            values = values.copy()
         self.data = values
 
     @property
@@ -108,10 +120,10 @@ class PandasBSONExtensionArray(ExtensionArray):
         return self._dtype
 
     @classmethod
-    def _from_sequence(cls, scalars, dtype=None, copy=False):  # noqa: ARG003
+    def _from_sequence(cls, scalars, dtype=None, copy=False):
         data = np.empty(len(scalars), dtype=object)
         data[:] = scalars
-        return cls(data, dtype=dtype)
+        return cls(data, dtype=dtype, copy=copy)
 
     @classmethod
     def _from_factorized(cls, values, original):
@@ -119,10 +131,16 @@ class PandasBSONExtensionArray(ExtensionArray):
 
     def __getitem__(self, item):
         if isinstance(item, numbers.Integral):
-            return self.data[item]
+            result = self.data[item]
+            if getitem_returns_view(self, item):
+                result._readonly = self._readonly
+            return result
         # slice, list-like, mask
-        item = pd.api.indexers.check_array_indexer(self, item)
-        return type(self)(self.data[item], dtype=self._dtype)
+        item_slice = check_array_indexer(self, item)
+        result = type(self)(self.data[item_slice], dtype=self._dtype)
+        if getitem_returns_view(self, item_slice):
+            result._readonly = self._readonly
+        return result
 
     def __setitem__(self, item, value):
         if (
@@ -132,13 +150,26 @@ class PandasBSONExtensionArray(ExtensionArray):
         ):
             msg = f"Value must be of type {self.dtype.type} or nan"
             raise ValueError(msg)
+        if getattr(self, "_readonly", None):
+            msg = "Cannot modify read-only array"
+            raise ValueError(msg)
         if not isinstance(item, numbers.Integral):
             # slice, list-like, mask
-            item = pd.api.indexers.check_array_indexer(self, item)
+            item = check_array_indexer(self, item)
         elif not isinstance(value, self.dtype.type) and not pd.isna(value):
             msg = f"Array element must be of type {self.dtype.type} or nan"
             raise ValueError(msg)
         self.data[item] = value
+
+    def __array__(self, dtype=None, copy=None) -> np.ndarray:
+        if copy is True:
+            return np.array(self.data, dtype=dtype)
+
+        result = self.data
+        if getattr(self, "_readonly", None):
+            result = result.view()
+            result.flags.writeable = False
+        return result
 
     def __len__(self) -> int:
         return len(self.data)
@@ -304,6 +335,15 @@ class PandasCode(PandasBSONDtype):
 
 class PandasCodeArray(PandasBSONExtensionArray):
     """A pandas extension type for BSON Code data arrays."""
+
+    def __init__(self, values, dtype, copy=False) -> None:
+        # In pandas 3.0+, the values may have been converted to strings.
+        result = []
+        for value in values:
+            if isinstance(value, str):
+                value = Code(value)  # noqa: PLW2901
+            result.append(value)
+        super().__init__(np.array(result, dtype=object), dtype, copy)
 
     @property
     def _default_dtype(self):
