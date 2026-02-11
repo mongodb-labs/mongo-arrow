@@ -138,7 +138,7 @@ def find_arrow_all(
         results will have all fields that do not conform to the schema silently converted to NaN.
       - `parallelism` (optional): Controls how batch processing is parallelized.
         Possible values are:
-            - "auto": (default) Use threads on free-threaded Python builds and processes otherwise.
+            - "auto": (default) Use threads on free-threaded Python builds and single-process behavior otherwise.
             - "threads": Always use a threaded implementation.
             - "processes": Always use a multiprocess implementation.
             - "off": Disable parallelism and use the single-process behavior.
@@ -175,7 +175,7 @@ def find_arrow_all(
             results = list(executor.map(lambda args: process_batch(*args), args_iterable()))
         return pa.concat_tables(results, promote_options="default")
 
-    if parallelism == "auto" or parallelism == "processes":
+    if parallelism == "processes":
         with multiprocessing.Pool(processes=4) as pool:
             results = pool.starmap(process_batch, args_iterable())
         return pa.concat_tables(results, promote_options="default")
