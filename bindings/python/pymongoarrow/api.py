@@ -150,9 +150,6 @@ def find_arrow_all(
       An instance of class:`pyarrow.Table`.
     """
     _add_driver_metadata(collection)
-    context = PyMongoArrowContext(
-        schema, codec_options=collection.codec_options, allow_invalid=allow_invalid
-    )
 
     for opt in ("cursor_type",):
         if kwargs.pop(opt, None):
@@ -167,24 +164,25 @@ def find_arrow_all(
 
     raw_batch_cursor = collection.find_raw_batches(query, **kwargs)
 
+    def args_iterable():
+        for batch in collection.find_raw_batches(query, **kwargs):
+            yield (schema, collection.codec_options, allow_invalid, batch)
+
     if (
         parallelism == "auto" and sysconfig.get_config_var("Py_GIL_DISABLED")
     ) or parallelism == "threads":
-        args_iterable = [
-            (schema, collection.codec_options, allow_invalid, batch) for batch in raw_batch_cursor
-        ]
         with ThreadPoolExecutor(max_workers=4) as executor:
-            results = list(executor.map(lambda args: process_batch(*args), args_iterable))
+            results = list(executor.map(lambda args: process_batch(*args), args_iterable()))
         return pa.concat_tables(results, promote_options="default")
 
     if parallelism == "auto" or parallelism == "processes":
-        args_iterable = [
-            (schema, collection.codec_options, allow_invalid, batch) for batch in raw_batch_cursor
-        ]
         with multiprocessing.Pool(processes=4) as pool:
-            results = pool.starmap(process_batch, args_iterable)
+            results = pool.starmap(process_batch, args_iterable())
         return pa.concat_tables(results, promote_options="default")
 
+    context = PyMongoArrowContext(
+        schema, codec_options=collection.codec_options, allow_invalid=allow_invalid
+    )
     for batch in raw_batch_cursor:
         context.process_bson_stream(batch)
 
