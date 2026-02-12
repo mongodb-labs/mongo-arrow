@@ -138,7 +138,8 @@ def find_arrow_all(
         results will have all fields that do not conform to the schema silently converted to NaN.
       - `parallelism` (optional): Controls how batch processing is parallelized.
         Possible values are:
-            - "auto": (default) Use threads on free-threaded Python builds and single-process behavior otherwise.
+            - "auto": (default) Use threads on free-threaded Python builds and single-process
+              behavior otherwise.
             - "threads": Always use a threaded implementation.
             - "processes": Always use a multiprocess implementation.
             - "off": Disable parallelism and use the single-process behavior.
