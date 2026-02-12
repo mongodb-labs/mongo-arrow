@@ -163,7 +163,7 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          uv venv
+          uv venv --clear
           source .venv/bin/activate
           uv pip install -e ".[test]" --resolution=lowest-direct
           pytest
