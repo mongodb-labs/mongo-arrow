@@ -112,7 +112,7 @@ def process_batch(schema, codec_options, allow_invalid, batch):
     return context.finish()
 
 
-Parallelism = Literal["auto", "threads", "processes", "off"]
+Parallelism = Literal["threads", "processes", "off"]
 
 
 def find_arrow_all(
@@ -121,7 +121,7 @@ def find_arrow_all(
     *,
     schema=None,
     allow_invalid=False,
-    parallelism: Parallelism = "auto",
+    parallelism: Parallelism = "off",
     **kwargs,
 ):
     """Method that returns the results of a find query as a
@@ -169,9 +169,7 @@ def find_arrow_all(
         for batch in collection.find_raw_batches(query, **kwargs):
             yield (schema, collection.codec_options, allow_invalid, batch)
 
-    if (
-        parallelism == "auto" and sysconfig.get_config_var("Py_GIL_DISABLED")
-    ) or parallelism == "threads":
+    if parallelism == "threads":
         with ThreadPoolExecutor(max_workers=4) as executor:
             results = list(executor.map(lambda args: process_batch(*args), args_iterable()))
         return pa.concat_tables(results, promote_options="default")
