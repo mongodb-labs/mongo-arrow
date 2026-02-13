@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import multiprocessing
-import sysconfig
 import warnings
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
@@ -251,7 +250,15 @@ def _arrow_to_pandas(arrow_table):
     return arrow_table.to_pandas(split_blocks=True, self_destruct=True)
 
 
-def find_pandas_all(collection, query, *, schema=None, allow_invalid=False, **kwargs):
+def find_pandas_all(
+    collection,
+    query,
+    *,
+    schema=None,
+    allow_invalid=False,
+    parallelism: Parallelism = "off",
+    **kwargs,
+):
     """Method that returns the results of a find query as a
     :class:`pandas.DataFrame` instance.
 
@@ -264,6 +271,13 @@ def find_pandas_all(collection, query, *, schema=None, allow_invalid=False, **kw
         result set.
       - `allow_invalid` (optional): If set to ``True``,
         results will have all fields that do not conform to the schema silently converted to NaN.
+      - `parallelism` (optional): Controls how batch processing is parallelized.
+        Possible values are:
+            - "auto": (default) Use threads on free-threaded Python builds and single-process
+              behavior otherwise.
+            - "threads": Always use a threaded implementation.
+            - "processes": Always use a multiprocess implementation.
+            - "off": Disable parallelism and use the single-process behavior.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -272,7 +286,14 @@ def find_pandas_all(collection, query, *, schema=None, allow_invalid=False, **kw
       An instance of class:`pandas.DataFrame`.
     """
     return _arrow_to_pandas(
-        find_arrow_all(collection, query, schema=schema, allow_invalid=allow_invalid, **kwargs)
+        find_arrow_all(
+            collection,
+            query,
+            schema=schema,
+            allow_invalid=allow_invalid,
+            parallelism=parallelism,
+            **kwargs,
+        )
     )
 
 
@@ -323,7 +344,15 @@ def _arrow_to_numpy(arrow_table, schema=None):
     return container
 
 
-def find_numpy_all(collection, query, *, schema=None, allow_invalid=False, **kwargs):
+def find_numpy_all(
+    collection,
+    query,
+    *,
+    schema=None,
+    allow_invalid=False,
+    parallelism: Parallelism = "off",
+    **kwargs,
+):
     """Method that returns the results of a find query as a
     :class:`dict` instance whose keys are field names and values are
     :class:`~numpy.ndarray` instances bearing the appropriate dtype.
@@ -337,6 +366,13 @@ def find_numpy_all(collection, query, *, schema=None, allow_invalid=False, **kwa
         result set.
       - `allow_invalid` (optional): If set to ``True``,
         results will have all fields that do not conform to the schema silently converted to NaN.
+      - `parallelism` (optional): Controls how batch processing is parallelized.
+        Possible values are:
+            - "auto": (default) Use threads on free-threaded Python builds and single-process
+              behavior otherwise.
+            - "threads": Always use a threaded implementation.
+            - "processes": Always use a multiprocess implementation.
+            - "off": Disable parallelism and use the single-process behavior.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -354,7 +390,14 @@ def find_numpy_all(collection, query, *, schema=None, allow_invalid=False, **kwa
       An instance of :class:`dict`.
     """
     return _arrow_to_numpy(
-        find_arrow_all(collection, query, schema=schema, allow_invalid=allow_invalid, **kwargs),
+        find_arrow_all(
+            collection,
+            query,
+            schema=schema,
+            allow_invalid=allow_invalid,
+            parallelism=parallelism,
+            **kwargs,
+        ),
         schema,
     )
 
@@ -406,7 +449,15 @@ def _arrow_to_polars(arrow_table: pa.Table):
     return pl.from_arrow(arrow_table)
 
 
-def find_polars_all(collection, query, *, schema=None, allow_invalid=False, **kwargs):
+def find_polars_all(
+    collection,
+    query,
+    *,
+    schema=None,
+    allow_invalid=False,
+    parallelism: Parallelism = "off",
+    **kwargs,
+):
     """Method that returns the results of a find query as a
     :class:`polars.DataFrame` instance.
 
@@ -419,6 +470,13 @@ def find_polars_all(collection, query, *, schema=None, allow_invalid=False, **kw
         result set.
       - `allow_invalid` (optional): If set to ``True``,
         results will have all fields that do not conform to the schema silently converted to NaN.
+      - `parallelism` (optional): Controls how batch processing is parallelized.
+        Possible values are:
+            - "auto": (default) Use threads on free-threaded Python builds and single-process
+              behavior otherwise.
+            - "threads": Always use a threaded implementation.
+            - "processes": Always use a multiprocess implementation.
+            - "off": Disable parallelism and use the single-process behavior.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -429,7 +487,14 @@ def find_polars_all(collection, query, *, schema=None, allow_invalid=False, **kw
     .. versionadded:: 1.3
     """
     return _arrow_to_polars(
-        find_arrow_all(collection, query, schema=schema, allow_invalid=allow_invalid, **kwargs)
+        find_arrow_all(
+            collection,
+            query,
+            schema=schema,
+            allow_invalid=allow_invalid,
+            parallelism=parallelism,
+            **kwargs,
+        )
     )
 
 
