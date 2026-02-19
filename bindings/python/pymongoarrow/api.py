@@ -104,7 +104,7 @@ def _add_driver_metadata(collection: Collection):
         )
 
 
-def process_batch(schema, codec_options, allow_invalid, batch):
+def _process_batch(schema, codec_options, allow_invalid, batch):
     context = PyMongoArrowContext(schema, codec_options=codec_options, allow_invalid=allow_invalid)
     context.process_bson_stream(batch)
 
@@ -137,11 +137,9 @@ def find_arrow_all(
         results will have all fields that do not conform to the schema silently converted to NaN.
       - `parallelism` (optional): Controls how batch processing is parallelized.
         Possible values are:
-            - "auto": (default) Use threads on free-threaded Python builds and single-process
-              behavior otherwise.
+            - "off": (default) Disable parallelism and use the single-process behavior.
             - "threads": Always use a threaded implementation.
             - "processes": Always use a multiprocess implementation.
-            - "off": Disable parallelism and use the single-process behavior.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -170,12 +168,12 @@ def find_arrow_all(
 
     if parallelism == "threads":
         with ThreadPoolExecutor(max_workers=4) as executor:
-            results = list(executor.map(lambda args: process_batch(*args), args_iterable()))
+            results = list(executor.map(lambda args: _process_batch(*args), args_iterable()))
         return pa.concat_tables(results, promote_options="default")
 
     if parallelism == "processes":
         with multiprocessing.Pool(processes=4) as pool:
-            results = pool.starmap(process_batch, args_iterable())
+            results = pool.starmap(_process_batch, args_iterable())
         return pa.concat_tables(results, promote_options="default")
 
     context = PyMongoArrowContext(
@@ -273,11 +271,9 @@ def find_pandas_all(
         results will have all fields that do not conform to the schema silently converted to NaN.
       - `parallelism` (optional): Controls how batch processing is parallelized.
         Possible values are:
-            - "auto": (default) Use threads on free-threaded Python builds and single-process
-              behavior otherwise.
+            - "off": (default) Disable parallelism and use the single-process behavior.
             - "threads": Always use a threaded implementation.
             - "processes": Always use a multiprocess implementation.
-            - "off": Disable parallelism and use the single-process behavior.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -367,12 +363,10 @@ def find_numpy_all(
       - `allow_invalid` (optional): If set to ``True``,
         results will have all fields that do not conform to the schema silently converted to NaN.
       - `parallelism` (optional): Controls how batch processing is parallelized.
-        Possible values are:
-            - "auto": (default) Use threads on free-threaded Python builds and single-process
-              behavior otherwise.
+         Possible values are:
+            - "off": (default) Disable parallelism and use the single-process behavior.
             - "threads": Always use a threaded implementation.
             - "processes": Always use a multiprocess implementation.
-            - "off": Disable parallelism and use the single-process behavior.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.
@@ -472,11 +466,9 @@ def find_polars_all(
         results will have all fields that do not conform to the schema silently converted to NaN.
       - `parallelism` (optional): Controls how batch processing is parallelized.
         Possible values are:
-            - "auto": (default) Use threads on free-threaded Python builds and single-process
-              behavior otherwise.
+            - "off": (default) Disable parallelism and use the single-process behavior.
             - "threads": Always use a threaded implementation.
             - "processes": Always use a multiprocess implementation.
-            - "off": Disable parallelism and use the single-process behavior.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``find`` operation.

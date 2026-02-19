@@ -7,7 +7,9 @@
 
 - Add Polars Extension Type support for the BSON Binary, Code, ObjectId, and Decimal128 types.
 - Add ability to use threads or multiprocesses in `find_arrow_all`, `find_pandas_all`,
-  `find_numpy_all`, and `find_polars_all`
+  `find_numpy_all`, and `find_polars_all` with the `parallelism` parameter. For example,
+  `find_arrow_all(collection, {}, parallelism="threads")` would utilize threads. Other values of
+  `parallelism` are `"off"` (default) and `"processes"`.
 
 
 # Changes in Version 1.12.0 (2026/01/26)
