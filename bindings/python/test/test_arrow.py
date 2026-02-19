@@ -24,6 +24,7 @@ from pathlib import Path
 from test import client_context
 from test.utils import AllowListEventListener, NullsTestMixin
 
+import bson
 import pyarrow as pa
 import pyarrow.json
 import pymongo
@@ -1344,3 +1345,59 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
 
     def na_safe(self, atype):
         return True
+
+
+class TestFindArrowAllParallelism(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not client_context.connected:
+            raise unittest.SkipTest("cannot connect to MongoDB")
+        cls.client = client_context.get_client()
+
+        cls.coll = cls.client.pymongoarrow_test.get_collection("test")
+        cls.addClassCleanup(cls.client.close)
+
+    def setUp(self):
+        self.coll.drop()
+
+    def test_find_arrow_all_parallelism_options(self):
+        docs = [{"_id": i, "value": bson.Binary(b"\x00\x01\x02\x03\x04")} for i in range(50)]
+        self.coll.insert_many(docs)
+
+        table_off = find_arrow_all(
+            self.coll,
+            {},
+            parallelism="off",
+        )
+        table_proc = find_arrow_all(
+            self.coll,
+            {},
+            parallelism="processes",
+        )
+        table_thread = find_arrow_all(
+            self.coll,
+            {},
+            parallelism="threads",
+        )
+
+        self.assertEqual(table_off.num_rows, len(docs))
+        self.assertEqual(table_proc.num_rows, len(docs))
+        self.assertEqual(table_thread.num_rows, len(docs))
+
+        self.assertTrue(
+            table_off.schema.equals(table_proc.schema),
+            msg=f"{table_off.schema} != {table_proc.schema}",
+        )
+        self.assertTrue(
+            table_off.schema.equals(table_thread.schema),
+            msg=f"{table_off.schema} != {table_thread.schema}",
+        )
+
+        self.assertTrue(
+            table_off.equals(table_proc),
+            msg=f"tables differ:\n{table_off}\n\n{table_proc}",
+        )
+        self.assertTrue(
+            table_off.equals(table_thread),
+            msg=f"tables differ:\n{table_off}\n\n{table_thread}",
+        )

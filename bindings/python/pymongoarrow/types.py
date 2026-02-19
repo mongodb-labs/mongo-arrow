@@ -166,7 +166,13 @@ class BinaryType(ExtensionType):
         return PandasBinary(self.subtype)
 
     def __arrow_ext_serialize__(self):
-        return f"subtype={self.subtype}".encode()
+        if isinstance(self.subtype, bool):
+            # Previously serialized "True"/"False". Going forward, normalize to 1/0.
+            subtype_str = "1" if self.subtype else "0"
+        else:
+            subtype_str = str(self.subtype)
+
+        return f"subtype={subtype_str}".encode()
 
     @classmethod
     def __arrow_ext_deserialize__(cls, storage_type, serialized):
