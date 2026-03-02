@@ -1,17 +1,13 @@
-import pytest
-
-from pymongo import MongoClient
-from pymongoarrow.monkey import patch_all
-from pymongoarrow.api import Schema
 import pyarrow as pa
+from pymongo import MongoClient
+
+from pymongoarrow.api import Schema
+from pymongoarrow.monkey import patch_all
 
 # Enable aggregate_pandas_all, etc., on Collection instances.
 patch_all()
 
-@pytest.mark.xfail(
-    raises=OverflowError,
-    reason="INTPYTHON-870: schema inference chooses Int32 for mixed ints and overflows",
-)
+
 def test_aggregate_pandas_all_schema_inference_int32_overflow():
     client = MongoClient()  # adapt to use test client fixture if desired
     db = client["pymongoarrow_int32_overflow_test_db"]
@@ -35,6 +31,8 @@ def test_aggregate_pandas_all_schema_inference_int32_overflow():
     # Without an explicit schema, inference is expected to choose Int32
     # and then overflow when it sees the large value.
     coll.aggregate_pandas_all(pipeline)
+    client.close()
+
 
 def test_aggregate_pandas_all_explicit_int64_schema_avoids_overflow():
     client = MongoClient()  # adapt to use test client fixture if desired
@@ -59,3 +57,4 @@ def test_aggregate_pandas_all_explicit_int64_schema_avoids_overflow():
     # Sanity checks: we got both rows and the large value survived.
     assert len(df) == 2
     assert df["value"].max() == 2**40
+    client.close()

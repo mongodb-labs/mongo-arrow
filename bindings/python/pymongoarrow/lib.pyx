@@ -242,7 +242,9 @@ cdef class BuilderManager:
 
             # Get the builder.
             builder = <_ArrayBuilderBase>self.builder_map.get(full_key, None)
-            if builder is None and not self.has_schema:
+            # If the inferred type was int32 but the same field has an int64 value,
+            # re-infer the field's type since int32 is a strict subset of int64.
+            if not self.has_schema and (builder is None or builder.type_marker == BSON_TYPE_INT32 and value_t == BSON_TYPE_INT64):
                 builder = self.get_builder(full_key, value_t, doc_iter, True)
             if builder is None:
                 continue
