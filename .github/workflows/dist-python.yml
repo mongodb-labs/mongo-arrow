@@ -138,7 +138,7 @@ jobs:
     name: Download Wheels
     steps:
       - name: Download all workflow run artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
       - name: Flatten directory
         working-directory: .
         run: |
