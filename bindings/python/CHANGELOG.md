@@ -10,6 +10,7 @@
   `find_numpy_all`, and `find_polars_all` with the `parallelism` parameter. For example,
   `find_arrow_all(collection, {}, parallelism="threads")` would utilize threads. Other values of
   `parallelism` are `"off"` (default) and `"processes"`.
+- Fix a bug where schema inference for integer fields could produce an overflow error if the first value in the field fit within the int32 range but later values did not.
 
 
 # Changes in Version 1.12.0 (2026/01/26)
