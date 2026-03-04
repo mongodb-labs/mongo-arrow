@@ -1,8 +1,14 @@
 import pyarrow as pa
+import pytest
 from pymongo import MongoClient
 
 from pymongoarrow.api import Schema
 from pymongoarrow.monkey import patch_all
+
+try:
+    import pandas as pd  # noqa: F401
+except ImportError:
+    pytest.skip("skipping pandas tests", allow_module_level=True)
 
 patch_all()
 
