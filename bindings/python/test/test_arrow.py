@@ -21,8 +21,6 @@ import unittest
 import unittest.mock as mock
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from test import client_context
-from test.utils import AllowListEventListener, NullsTestMixin
 
 import bson
 import pyarrow as pa
@@ -65,6 +63,8 @@ from pymongoarrow.types import (
     Decimal128Type,
     ObjectIdType,
 )
+from test import client_context
+from test.utils import AllowListEventListener, NullsTestMixin
 
 try:
     import pandas as pd
@@ -1171,26 +1171,28 @@ class ArrowApiTestMixin:
                 if isinstance(arrow_value, decimal.Decimal):
                     assert (
                         Decimal128(arrow_value).to_decimal() == Decimal128(mongo_value).to_decimal()
-                    ), f"Precision loss in decimal field '{column_name}' for row {row_idx}. Expected {arrow_value}, got {mongo_value}."
+                    ), (
+                        f"Precision loss in decimal field '{column_name}' for row {row_idx}. Expected {arrow_value}, got {mongo_value}."
+                    )
                 elif isinstance(arrow_value, (np.datetime64, pd.Timestamp, datetime)):
                     arrow_value_rounded = pd.Timestamp(arrow_value).round(
                         "ms"
                     )  # Round to milliseconds
-                    assert (
-                        arrow_value_rounded.to_pydatetime() == mongo_value
-                    ), f"Datetime mismatch in field '{column_name}' for row {row_idx}. Expected {arrow_value_rounded}, got {mongo_value}."
+                    assert arrow_value_rounded.to_pydatetime() == mongo_value, (
+                        f"Datetime mismatch in field '{column_name}' for row {row_idx}. Expected {arrow_value_rounded}, got {mongo_value}."
+                    )
                 elif isinstance(arrow_value, (list, np.ndarray)):
-                    assert (
-                        arrow_value == mongo_value
-                    ), f"List mismatch in field '{column_name}' for row {row_idx}. Expected {arrow_value}, got {mongo_value}."
+                    assert arrow_value == mongo_value, (
+                        f"List mismatch in field '{column_name}' for row {row_idx}. Expected {arrow_value}, got {mongo_value}."
+                    )
                 elif isinstance(arrow_value, timedelta):
-                    assert (
-                        arrow_value == timedelta(seconds=mongo_value)
-                    ), f"Timedelta mismatch in field '{column_name}' for row {row_idx}. Expected {arrow_value}, got {mongo_value}."
+                    assert arrow_value == timedelta(seconds=mongo_value), (
+                        f"Timedelta mismatch in field '{column_name}' for row {row_idx}. Expected {arrow_value}, got {mongo_value}."
+                    )
                 else:
-                    assert (
-                        arrow_value == mongo_value
-                    ), f"Value mismatch in field '{column_name}' for row {row_idx}. Expected {arrow_value}, got {mongo_value}."
+                    assert arrow_value == mongo_value, (
+                        f"Value mismatch in field '{column_name}' for row {row_idx}. Expected {arrow_value}, got {mongo_value}."
+                    )
 
     def test_all_types(self):
         """
