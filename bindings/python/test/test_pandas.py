@@ -430,7 +430,7 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
     def equal_fn(self, left, right):
         left = left.fillna(0)
         right = right.fillna(0)
-        if type(left) == pandas.DataFrame:
+        if isinstance(left, pandas.DataFrame):
             pandas.testing.assert_frame_equal(left, right, check_dtype=False)
         else:
             pandas.testing.assert_series_equal(left, right, check_dtype=False)
