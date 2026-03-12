@@ -3,7 +3,7 @@
 
 ---
 
-# Changes in Version 1.13.0 (2026/XX/XX)
+# Changes in Version 1.13.0 (2026/03/12)
 
 - Add Polars Extension Type support for the BSON Binary, Code, ObjectId, and Decimal128 types.
 - Add ability to use threads or multiprocesses in `find_arrow_all`, `find_pandas_all`,
