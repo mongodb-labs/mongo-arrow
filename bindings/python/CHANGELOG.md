@@ -3,6 +3,10 @@
 
 ---
 
+# Changes in Version 1.14.0 (2026/XX/XX)
+
+- ...
+
 # Changes in Version 1.13.0 (2026/03/12)
 
 - Add Polars Extension Type support for the BSON Binary, Code, ObjectId, and Decimal128 types.
