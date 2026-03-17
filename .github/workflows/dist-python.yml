@@ -61,7 +61,7 @@ jobs:
 
       - name: Set up QEMU
         if: matrix.buildplat[1] == 'manylinux_aarch64'
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
         with:
           # setup-qemu-action by default uses `tonistiigi/binfmt:latest` image,
           # which is out of date. This causes seg faults during build.
@@ -89,7 +89,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "12.0"
         run: python -m cibuildwheel --output-dir wheelhouse
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.python }}-${{ startsWith(matrix.buildplat[1], 'macosx') && 'macosx' || matrix.buildplat[1] }}
           path: ./bindings/python/wheelhouse/*.whl
@@ -127,7 +127,7 @@ jobs:
           cd ..
           python -c "from pymongoarrow.lib import libbson_version"
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: "sdist"
           path: ./bindings/python/dist/*.tar.gz
@@ -144,7 +144,7 @@ jobs:
         run: |
           find . -mindepth 2 -type f -exec mv {} . \;
           find . -type d -empty -delete
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: all-dist-${{ github.run_id }}
           path: "./*"
