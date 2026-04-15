@@ -4,6 +4,10 @@
 
 If you are an external contributor and there is no JIRA ticket associated with your change, then use your best judgement
 for the PR title. A MongoDB employee will create a JIRA ticket and edit the name and links as appropriate.
+
+Note on AI Contributions:
+We only accept pull requests that are authored and submitted by human contributors who fully understand the changes they are proposing.
+All contributions must be written and understood by human contributors. Please read about our policy in our contributing guide.
 -->
 [JIRA TICKET](https://jira.mongodb.org/browse/%7BJIRA_TICKET%7D)
 
