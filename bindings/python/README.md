@@ -67,6 +67,29 @@ python -m pip install pandas
 Note: `pymongoarrow` is not supported or tested on big-endian systems
 (e.g. Linux s390x).
 
+### Installing in a pixi environment
+
+[Pixi](https://pixi.sh) is a conda-compatible package manager. PyMongoArrow is
+not currently available on conda-forge, so install it from PyPI using the
+`--pypi` flag:
+
+```bash
+pixi add python
+pixi add --pypi pymongoarrow pymongo pyarrow
+```
+
+Your `pixi.toml` will look like:
+
+```toml
+[dependencies]
+python = ">=3.x"
+
+[pypi-dependencies]
+pymongoarrow = ">=1.13.0, <2"
+pymongo = ">=4.0, <5"
+pyarrow = ">=14.0"
+```
+
 ## Development Install
 
 See the instructions in the [Contributing Guide][./CONTRIBUTING.md]
