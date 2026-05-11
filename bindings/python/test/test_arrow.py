@@ -1470,78 +1470,27 @@ class TestFindArrowAllParallelism(unittest.TestCase):
                 msg=f"{table.schema} != {expected_schema}",
             )
 
-    def test_find_arrow_all_threads_empty_query_returns_empty_table(self):
+    def test_find_arrow_all_empty_query_returns_empty_table(self):
         self.coll.insert_one({"_id": 1, "value": 1})
 
-        expected = find_arrow_all(
-            self.coll,
-            {"_id": 999},
-            parallelism="off",
-        )
-        table = find_arrow_all(
-            self.coll,
-            {"_id": 999},
-            parallelism="threads",
-        )
+        for schema in (None, Schema({"_id": int, "value": int})):
+            expected = find_arrow_all(
+                self.coll,
+                {"_id": 999},
+                schema=schema,
+                parallelism="off",
+            )
 
-        self._assert_empty_arrow_table(table, expected.schema)
-        self.assertTrue(table.equals(expected), msg=f"{table} != {expected}")
-
-    def test_find_arrow_all_processes_empty_query_returns_empty_table(self):
-        self.coll.insert_one({"_id": 1, "value": 1})
-
-        expected = find_arrow_all(
-            self.coll,
-            {"_id": 999},
-            parallelism="off",
-        )
-        table = find_arrow_all(
-            self.coll,
-            {"_id": 999},
-            parallelism="processes",
-        )
-
-        self._assert_empty_arrow_table(table, expected.schema)
-        self.assertTrue(table.equals(expected), msg=f"{table} != {expected}")
-
-    def test_find_arrow_all_threads_empty_query_with_schema_returns_empty_table(self):
-        self.coll.insert_one({"_id": 1, "value": 1})
-
-        schema = Schema({"_id": int, "value": int})
-
-        expected = find_arrow_all(
-            self.coll,
-            {"_id": 999},
-            schema=schema,
-            parallelism="off",
-        )
-        table = find_arrow_all(
-            self.coll,
-            {"_id": 999},
-            schema=schema,
-            parallelism="threads",
-        )
-
-        self._assert_empty_arrow_table(table, expected.schema)
-        self.assertTrue(table.equals(expected), msg=f"{table} != {expected}")
-
-    def test_find_arrow_all_processes_empty_query_with_schema_returns_empty_table(self):
-        self.coll.insert_one({"_id": 1, "value": 1})
-
-        schema = Schema({"_id": int, "value": int})
-
-        expected = find_arrow_all(
-            self.coll,
-            {"_id": 999},
-            schema=schema,
-            parallelism="off",
-        )
-        table = find_arrow_all(
-            self.coll,
-            {"_id": 999},
-            schema=schema,
-            parallelism="processes",
-        )
-
-        self._assert_empty_arrow_table(table, expected.schema)
-        self.assertTrue(table.equals(expected), msg=f"{table} != {expected}")
+            for parallelism in ("threads", "processes"):
+                with self.subTest(
+                    parallelism=parallelism,
+                    schema_provided=schema is not None,
+                ):
+                    table = find_arrow_all(
+                        self.coll,
+                        {"_id": 999},
+                        schema=schema,
+                        parallelism=parallelism,
+                    )
+                    self._assert_empty_arrow_table(table, expected.schema)
+                    self.assertTrue(table.equals(expected), msg=f"{table} != {expected}")
