@@ -1459,7 +1459,7 @@ class TestFindArrowAllParallelism(unittest.TestCase):
             table_off.equals(table_thread),
             msg=f"tables differ:\n{table_off}\n\n{table_thread}",
         )
-    
+
     def _assert_empty_arrow_table(self, table, expected_schema=None):
         self.assertEqual(table.num_rows, 0)
         if expected_schema is None:

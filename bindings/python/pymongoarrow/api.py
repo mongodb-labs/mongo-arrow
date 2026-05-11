@@ -110,6 +110,7 @@ def _process_batch(schema, codec_options, allow_invalid, batch):
 
     return context.finish()
 
+
 def _concat_or_empty(results, *, schema, codec_options, allow_invalid):
     if results:
         return pa.concat_tables(results, promote_options="permissive")
@@ -120,6 +121,7 @@ def _concat_or_empty(results, *, schema, codec_options, allow_invalid):
         allow_invalid=allow_invalid,
     )
     return context.finish()
+
 
 Parallelism = Literal["threads", "processes", "off"]
 
