@@ -19,8 +19,6 @@ import threading
 import unittest
 import unittest.mock as mock
 import warnings
-from test import client_context
-from test.utils import AllowListEventListener, NullsTestMixin
 
 import numpy as np
 import pyarrow as pa
@@ -35,6 +33,8 @@ from pymongoarrow.api import Schema, aggregate_pandas_all, find_pandas_all, writ
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.pandas_types import PandasBSONDtype, PandasDecimal128, PandasObjectId
 from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
+from test import client_context
+from test.utils import AllowListEventListener, NullsTestMixin
 
 try:
     import pandas as pd
@@ -430,7 +430,7 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
     def equal_fn(self, left, right):
         left = left.fillna(0)
         right = right.fillna(0)
-        if type(left) == pandas.DataFrame:
+        if isinstance(left, pandas.DataFrame):
             pandas.testing.assert_frame_equal(left, right, check_dtype=False)
         else:
             pandas.testing.assert_series_equal(left, right, check_dtype=False)

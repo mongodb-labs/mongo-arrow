@@ -22,6 +22,9 @@ except ImportError:
 if pl:
 
     class PolarsExtensionBase(pl.datatypes.BaseExtension):
+        def __hash__(self):
+            return hash(self.ext_name(), self.ext_storage())
+
         def __eq__(self, other):
             return (
                 isinstance(other, self.__class__)

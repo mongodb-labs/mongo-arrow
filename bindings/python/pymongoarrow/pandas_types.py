@@ -183,6 +183,9 @@ class PandasBSONExtensionArray(ExtensionArray):
             dtype=bool,
         )
 
+    def __hash__(self):
+        return hash(self.data)
+
     def __eq__(self, other):
         return self.data == other
 
@@ -267,6 +270,9 @@ class PandasBinaryArray(PandasBSONExtensionArray):
 
         return pa.array(self.data, type=BinaryType(self.dtype.subtype))
 
+    def __hash__(self):
+        return super().__hash__()
+
     def __eq__(self, other):
         # Binary types do not support element-wise comparison.
         if isinstance(other, Binary):
@@ -348,6 +354,9 @@ class PandasCodeArray(PandasBSONExtensionArray):
     @property
     def _default_dtype(self):
         return PandasCode()
+
+    def __hash__(self):
+        return super().__hash__()
 
     def __eq__(self, other):
         # Code types do not support element-wise comparison.

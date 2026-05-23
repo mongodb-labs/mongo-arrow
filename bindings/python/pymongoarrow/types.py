@@ -255,7 +255,7 @@ _TYPE_NORMALIZER_FACTORY = {
     Decimal128: lambda _: Decimal128Type(),
     str: lambda _: string(),
     bool: lambda _: bool_(),
-    Binary: lambda subtype: BinaryType(subtype),
+    Binary: BinaryType,
     Code: lambda _: CodeType(),
 }
 
