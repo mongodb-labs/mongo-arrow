@@ -27,7 +27,6 @@ PyMongoArrow uses [Ruff](https://docs.astral.sh/ruff/) for formatting and lintin
 -   Write tests and make sure they pass (make sure you have a mongod
     running on the default port, then execute `just test` from the cmd
     line to run the test suite).
--   Add yourself to doc/contributors.rst `:)`
 
 ## Authoring a Pull Request
 
