@@ -7,6 +7,12 @@
 
 - ...
 
+
+# Changes in Version 1.13.1 (2026/05/27)
+
+- Fixes bug where if parallel `find_all` on empty results failed due to trying to concat no tables. Now, the concat is skipped on empty results.
+
+
 # Changes in Version 1.13.0 (2026/03/12)
 
 - Add Polars Extension Type support for the BSON Binary, Code, ObjectId, and Decimal128 types.
