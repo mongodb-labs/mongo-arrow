@@ -155,10 +155,10 @@ def append_arrow_flags(ext):
         pa.create_library_symlinks()
 
     if os.name == "posix":
-        ext.extra_compile_args.append("-std=c++17")
+        ext.extra_compile_args.append("-std=c++20")
 
     elif os.name == "nt":
-        ext.extra_compile_args.append("/std:c++17")
+        ext.extra_compile_args.append("/std:c++20")
 
 
 def get_extension_modules():
