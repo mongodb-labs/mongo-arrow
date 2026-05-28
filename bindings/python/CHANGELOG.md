@@ -5,7 +5,7 @@
 
 # Changes in Version 1.14.0 (2026/XX/XX)
 
-- ...
+- Add support for PyArrow 24.0. Drop support for PyArrow 23.0.
 
 
 # Changes in Version 1.13.1 (2026/05/27)
