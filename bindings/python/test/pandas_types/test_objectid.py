@@ -11,13 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from test.pandas_types.util import base_make_data
-
 import numpy as np
 import pytest
 from bson import ObjectId
 
 from pymongoarrow.pandas_types import PandasObjectId, PandasObjectIdArray
+from test.pandas_types.util import base_make_data
 
 try:
     from pandas.tests.extension import base

@@ -145,6 +145,7 @@ select = [
 ignore = [
   "PLR",        # Design related pylint codes
   "RUF012",     # Mutable class attributes should be annotated with `typing.ClassVar`
+  "PLC0415",    # `import` should be at the top-level of a file
 ]
 unfixable = [
 ]
