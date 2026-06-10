@@ -1,13 +1,13 @@
 [build-system]
 requires = [
-    # ARROW-248, pin to less than 72.2.
-    "setuptools>=70,<72.2",
+    "scikit-build-core>=0.10",
     "cython>=3.0",
-    # Needed for numpy headers.
+    # Needed for numpy headers at build time.
     "numpy>=2.1.0",
     # Must be kept in sync with "project.dependencies" below.
     "pyarrow>=24.0,<24.1.0",
 ]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "pymongoarrow"
@@ -35,6 +35,8 @@ classifiers = [
 ]
 readme = "README.md"
 requires-python = ">=3.10"
+# Keep version in sync with pymongoarrow/version.py
+version = "1.15.0.dev0"
 dependencies = [
     # Must be kept in sync with "build_sytem.requires" above.
     "pyarrow >=24.0,<24.1",
@@ -45,7 +47,6 @@ dependencies = [
     "numpy>=2.1.0; python_version >= '3.11'",
     "packaging >=23.2",
 ]
-dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://www.mongodb.org"
@@ -60,23 +61,8 @@ test-polars = ["polars>=1.10"]
 # pandas 2.x on python 3.11 only supports numpy<2.
 test-pandas = ["pandas>=2.0.3; python_version < '3.11'", "numpy<2; python_version < '3.11'", "pandas>=3.0; python_version >= '3.11'"]
 
-[tool.setuptools]
-zip-safe = false
-include-package-data = true
-platforms = ["Linux", "Mac OS X"]
-
-[tool.setuptools.package-data]
-pymongoarrow = ["*.pxd", "*.pyx", "*.pyi", "*.so.*", "*.dylib", "*.dll", "*.pyd"]
-
-[tool.setuptools.packages.find]
-exclude = [
-    "test",
-    "docs",
-]
-namespaces = false
-
-[tool.setuptools.dynamic]
-version = {attr = "pymongoarrow.version.__version__"}
+[tool.scikit-build]
+wheel.packages = ["pymongoarrow"]
 
 [tool.cibuildwheel]
 skip = "pp* *-manylinux_i686 *_ppc64le *_s390x *-musllinux*"
@@ -152,17 +138,14 @@ exclude = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"setup.py" = ["PTH", "EM", "B", "S", "E501"]
 "docs/source/conf.py" = ["E501", "S", "PTH"]
 "benchmarks.py" = ["T201", "E501", "C4", "EM101"]
 "test/*.py" = ["PT", "S", "ARG", "B", "C", "EM", "E501", "RUF005", "UP038"]
 
 [dependency-groups]
 dev = [
-    "check-manifest>=0.50",
     "packaging>=25.0",
     "pre-commit>=4.2.0",
-    "setuptools>=79.0.0",
     "sphinx-autobuild>=2024.10.3",
 ]
 benchmark = [
