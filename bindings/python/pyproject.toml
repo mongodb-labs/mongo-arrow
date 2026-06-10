@@ -35,7 +35,6 @@ classifiers = [
 ]
 readme = "README.md"
 requires-python = ">=3.10"
-# Keep version in sync with pymongoarrow/version.py
 version = "1.15.0.dev0"
 dependencies = [
     # Must be kept in sync with "build_sytem.requires" above.

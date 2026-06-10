@@ -20,6 +20,7 @@ env:
   # to 'false' when the input is set to 'false'.
   DRY_RUN: ${{ ! contains(inputs.dry_run, 'false') }}
   FOLLOWING_VERSION: ${{ inputs.following_version || '' }}
+  VERSION: ${{ github.event_name == 'schedule' && '10.10.10.10' || '' }}
 
 concurrency:
   group: wheels-${{ github.ref }}
@@ -64,6 +65,8 @@ jobs:
       - uses: mongodb-labs/drivers-github-tools/python-labs/pre-publish@v3
         id: pre-publish
         with:
+          version: ${{ env.VERSION }}
+          version_bump_script: "bash ./../../.github/scripts/bump-version.sh"
           dry_run: ${{ env.DRY_RUN }}
           working_directory: ./bindings/python
 
