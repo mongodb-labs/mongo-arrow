@@ -157,55 +157,49 @@ just install
 
 ### libbson
 
-PyMongoArrow uses
-[libbson](http://mongoc.org/libbson/current/index.html). Detailed
-instructions for building/installing `libbson` can be found
-[here](http://mongoc.org/libmongoc/1.21.0/installing.html#installing-the-mongodb-c-driver-libmongoc-and-bson-library-libbson).
+PyMongoArrow uses [libbson](http://mongoc.org/libbson/current/index.html) (bson2, version 2.x).
+Detailed instructions for building/installing libbson can be found
+[here](http://mongoc.org/libmongoc/current/installing.html).
 
-You can either use a system-provided version of `libbson` that is
+You can either use a system-provided version of libbson that is
 properly configured for use with `pkg-config`, or use the provided
 `build-libbson.sh` script to build it:
 
-``` bash
+```bash
 just build-libbson
 ```
 
-On macOS, users can install the latest `libbson` using Homebrew:
+On macOS, users can install the latest libbson using Homebrew:
 
-``` bash
-$ brew install mongo-c-driver
+```bash
+brew install mongo-c-driver
 ```
 
-Conda users can install `libbson` as follows:
+Conda users can install libbson as follows:
 
-``` bash
-$ conda install --channel conda-forge libbson pkg-config
+```bash
+conda install --channel conda-forge libbson pkg-config
 ```
 
 The minimum required version is listed in `pymongoarrow/version.py`. If
-you try to build with a lower version a `ValueError` will be raised.
-
-Our minimum supported major version is 1.x, and that is what we include in our wheels.
-In order to build with `bson2`, you can `export LIBBSON_VERSION=2.<minor>.<patch>` before
-running `just build-libbson` or building the library.
+you try to build with a lower version an `ImportError` will be raised.
 
 ## Build
 
 Typically we will use the provided `just` scripts and will not build
 directly, but you can build and test in the created virtualenv.
 
-In the previously created virtualenv, to install PyMongoArrow and its
-test dependencies in editable mode:
+To install PyMongoArrow and its test dependencies in editable mode:
 
 ```bash
 pip install -v -e ".[test]"
 ```
 
-If you built libbson using the `build-libbson` script then use the same
-`LIBBSON_INSTALL_DIR` as above:
+If you built libbson using the `build-libbson` script, set `LIBBSON_INSTALL_DIR` so CMake can find it:
 
-> (pymongoarrow) \$ LIBBSON_INSTALL_DIR=\$(pwd)/libbson pip install -v
-> -e ".\[test\]"
+```bash
+LIBBSON_INSTALL_DIR=$(pwd)/libbson pip install -v -e ".[test]"
+```
 
 ## Test
 
@@ -218,7 +212,9 @@ just test
 
 or, if not using `just`:
 
-> (pymongoarrow) \$ pytest
+```bash
+pytest
+```
 
 ## Running Linters
 
