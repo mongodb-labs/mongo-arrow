@@ -76,9 +76,16 @@ else()
     list(GET _bson_h 0 _bson_h_first)
     get_filename_component(_bson_h_dir "${_bson_h_first}" DIRECTORY)
     get_filename_component(LIBBSON_INCLUDE_DIRS "${_bson_h_dir}" DIRECTORY)
-    file(GLOB _lib_dirs "${LIBBSON_INSTALL_DIR}/lib*")
-    list(GET _lib_dirs 0 _lib_dir)
-    set(LIBBSON_LINK_LIBS "${_lib_dir}/bson2.lib")
+    # MSVC multi-config generators install to lib/<Config>/bson2.lib;
+    # single-config generators (Ninja) install to lib/bson2.lib.
+    file(GLOB _bson2_libs
+        "${LIBBSON_INSTALL_DIR}/lib/bson2.lib"
+        "${LIBBSON_INSTALL_DIR}/lib/*/bson2.lib"
+    )
+    if(NOT _bson2_libs)
+        message(FATAL_ERROR "Could not find bson2.lib under ${LIBBSON_INSTALL_DIR}/lib")
+    endif()
+    list(GET _bson2_libs 0 LIBBSON_LINK_LIBS)
 endif()
 
 # --- Cython compilation ---
@@ -162,17 +169,24 @@ if(NOT "$ENV{MONGO_NO_COPY_LIBBSON}" AND LIBBSON_INSTALL_DIR)
             endif()
         endforeach()
     elseif(UNIX)
-        # libbson2.so.0 is the SOVERSION file for libbson 2.x
-        file(GLOB _all_so "${LIBBSON_INSTALL_DIR}/lib*/libbson2.so.0")
+        # Find the SOVERSION symlink (e.g. libbson2.so.2) and install its real target.
+        file(GLOB _all_so "${LIBBSON_INSTALL_DIR}/lib*/libbson2.so.*")
         foreach(_f ${_all_so})
             get_filename_component(_fname "${_f}" NAME)
-            get_filename_component(_libbson_real "${_f}" REALPATH)
-            install(FILES "${_libbson_real}" DESTINATION pymongoarrow RENAME "${_fname}")
+            if(_fname MATCHES "^libbson2\\.so\\.[0-9]+$")
+                get_filename_component(_libbson_real "${_f}" REALPATH)
+                install(FILES "${_libbson_real}" DESTINATION pymongoarrow RENAME "${_fname}")
+            endif()
         endforeach()
     elseif(WIN32)
-        file(GLOB _libbson_bin "${LIBBSON_INSTALL_DIR}/bin/bson2.dll")
+        # MSVC multi-config installs to bin/<Config>/bson2.dll; Ninja to bin/bson2.dll
+        file(GLOB _libbson_bin
+            "${LIBBSON_INSTALL_DIR}/bin/bson2.dll"
+            "${LIBBSON_INSTALL_DIR}/bin/*/bson2.dll"
+        )
         if(_libbson_bin)
-            install(FILES ${_libbson_bin} DESTINATION pymongoarrow)
+            list(GET _libbson_bin 0 _first_dll)
+            install(FILES "${_first_dll}" DESTINATION pymongoarrow RENAME bson2.dll)
         endif()
     endif()
 endif()
