@@ -187,7 +187,7 @@ you try to build with a lower version an `ImportError` will be raised.
 ## Build
 
 The build backend is [scikit-build-core](https://scikit-build-core.readthedocs.io/) + CMake, so **CMake 3.17 or later must be on your `PATH`**
-before building. It is already listed as a system requirement above.
+before building.
 
 The standard workflow is:
 
