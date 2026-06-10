@@ -186,16 +186,29 @@ you try to build with a lower version an `ImportError` will be raised.
 
 ## Build
 
-Typically we will use the provided `just` scripts and will not build
-directly, but you can build and test in the created virtualenv.
+The build backend is scikit-build-core + CMake, so **cmake must be on your `PATH`** before
+building. It is already listed as a system requirement above.
 
-To install PyMongoArrow and its test dependencies in editable mode:
+The standard workflow is:
 
 ```bash
-pip install -v -e ".[test]"
+just build       # rebuild the Cython extension and reinstall into the venv
 ```
 
-If you built libbson using the `build-libbson` script, set `LIBBSON_INSTALL_DIR` so CMake can find it:
+This runs `uv sync --dev --reinstall-package pymongoarrow`, which invokes CMake under the hood.
+If you built libbson using the `build-libbson` script, export `LIBBSON_INSTALL_DIR` first so
+CMake can locate it:
+
+```bash
+export LIBBSON_INSTALL_DIR=$(pwd)/libbson
+just build
+```
+
+The compiled `.so` extension is **not** placed in the source tree. scikit-build-core's editable
+install puts it in a `build/` subdirectory and registers an import hook so that Python finds it
+automatically. You will not see `lib.cpython-*.so` inside `pymongoarrow/`.
+
+To install directly with pip (e.g. for the benchmark environment):
 
 ```bash
 LIBBSON_INSTALL_DIR=$(pwd)/libbson pip install -v -e ".[test]"

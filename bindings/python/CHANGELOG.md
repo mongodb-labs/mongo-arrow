@@ -5,7 +5,7 @@
 
 # Changes in Version 1.15.0 (TBD)
 
-- Switch build backend from setuptools to scikit-build-core + CMake.
+- Switch build backend from setuptools to scikit-build-core + CMake. CMake is now required to build from source.
 - Drop support for libbson 1.x. The minimum supported libbson version is now 2.0.1 (bson2).
 
 
