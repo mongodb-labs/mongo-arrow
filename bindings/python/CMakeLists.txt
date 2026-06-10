@@ -76,14 +76,14 @@ else()
     list(GET _bson_h 0 _bson_h_first)
     get_filename_component(_bson_h_dir "${_bson_h_first}" DIRECTORY)
     get_filename_component(LIBBSON_INCLUDE_DIRS "${_bson_h_dir}" DIRECTORY)
-    # MSVC multi-config generators install to lib/<Config>/bson2.lib;
-    # single-config generators (Ninja) install to lib/bson2.lib.
+    # bson2.dll.lib is the DLL import library (defines __imp_bson_* symbols).
+    # bson2.lib is the static library — do NOT link that; it won't resolve dllimport symbols.
     file(GLOB _bson2_libs
-        "${LIBBSON_INSTALL_DIR}/lib/bson2.lib"
-        "${LIBBSON_INSTALL_DIR}/lib/*/bson2.lib"
+        "${LIBBSON_INSTALL_DIR}/lib/bson2.dll.lib"
+        "${LIBBSON_INSTALL_DIR}/lib/*/bson2.dll.lib"
     )
     if(NOT _bson2_libs)
-        message(FATAL_ERROR "Could not find bson2.lib under ${LIBBSON_INSTALL_DIR}/lib")
+        message(FATAL_ERROR "Could not find bson2.dll.lib under ${LIBBSON_INSTALL_DIR}/lib")
     endif()
     list(GET _bson2_libs 0 LIBBSON_LINK_LIBS)
 endif()
