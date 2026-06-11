@@ -24,11 +24,11 @@ author = "Prashant Mital"
 html_show_sphinx = False
 
 HERE = Path(__file__).absolute().parent
-version_file = HERE / "../pymongoarrow/version.py"
-version_data = {}
-with version_file.open() as vf:
-    exec(vf.read(), {}, version_data)  # noqa:S102
-version = version_data["__version__"]
+pyproject = HERE / "../pyproject.toml"
+import re  # noqa: E402
+
+_version_match = re.search(r'^version = "([^"]+)"', pyproject.read_text(), re.MULTILINE)
+version = _version_match.group(1) if _version_match else "0.0.0"
 release = version
 
 # The name of the Pygments (syntax highlighting) style to use.

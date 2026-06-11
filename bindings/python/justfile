@@ -45,7 +45,6 @@ test-no-optional *args:
 lint:
     uv sync --no-install-project --dev --frozen
     uv run --no-project pre-commit run --hook-stage manual --all-files
-    uv run --no-project  check-manifest -v
 
 docs:
     uv sync --no-install-project --group docs --frozen

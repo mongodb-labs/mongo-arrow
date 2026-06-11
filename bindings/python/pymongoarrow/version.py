@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "1.15.0.dev0"
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _get_version
 
-_MIN_LIBBSON_VERSION = "1.23.1"
+try:
+    __version__ = _get_version("pymongoarrow")
+except PackageNotFoundError:
+    # Package metadata is unavailable (e.g. in PyInstaller bundles).
+    __version__ = "0.0.0"
+
+_MIN_LIBBSON_VERSION = "2.0.1"

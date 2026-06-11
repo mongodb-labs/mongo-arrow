@@ -3,6 +3,12 @@
 
 ---
 
+# Changes in Version 1.15.0 (TBD)
+
+- Switch build backend from setuptools to [scikit-build-core](https://scikit-build-core.readthedocs.io/) + CMake. CMake 3.17+ is now required to build from source.
+- Drop support for libbson 1.x. The minimum supported libbson version is now 2.0.1 (bson2).
+
+
 # Changes in Version 1.14.0 (2026/05/28)
 
 - Add support for PyArrow 24.0. Drop support for PyArrow 23.0.
