@@ -5,7 +5,7 @@ requires = [
     # Needed for numpy headers at build time.
     "numpy>=2.1.0",
     # Must be kept in sync with "project.dependencies" below.
-    "pyarrow>=24.0,<24.1.0",
+    "pyarrow>=25.0,<25.1",
 ]
 build-backend = "scikit_build_core.build"
 
@@ -35,10 +35,10 @@ classifiers = [
 ]
 readme = "README.md"
 requires-python = ">=3.10"
-version = "1.15.0.dev0"
+version = "1.15.0"
 dependencies = [
-    # Must be kept in sync with "build_sytem.requires" above.
-    "pyarrow >=24.0,<24.1",
+    # Must be kept in sync with "build-system.requires" above.
+    "pyarrow >=25.0,<25.1",
     "pymongo >=4.4,<5",
     # See comment in test-pandas optional dep below for why we have separate
     # numpy version deps.
