@@ -35,7 +35,7 @@ classifiers = [
 ]
 readme = "README.md"
 requires-python = ">=3.10"
-version = "1.15.0"
+version = "1.16.0.dev0"
 dependencies = [
     # Must be kept in sync with "build-system.requires" above.
     "pyarrow >=25.0,<25.1",
