@@ -55,7 +55,15 @@ from pymongo.collection import Collection
 from pytz import timezone
 
 import pymongoarrow.version as pymongoarrow_version
-from pymongoarrow.api import Schema, aggregate_arrow_all, find_arrow_all, write
+from pymongoarrow.api import (
+    Schema,
+    aggregate_arrow_all,
+    aggregate_numpy_all,
+    aggregate_pandas_all,
+    aggregate_polars_all,
+    find_arrow_all,
+    write,
+)
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.monkey import patch_all
 from pymongoarrow.types import (
@@ -1494,3 +1502,83 @@ class TestFindArrowAllParallelism(unittest.TestCase):
                     )
                     self._assert_empty_arrow_table(table, expected.schema)
                     self.assertTrue(table.equals(expected), msg=f"{table} != {expected}")
+
+    def test_aggregate_arrow_all_parallel_batches(self):
+        self.coll.insert_many(
+            [{"_id": i, "value": i} for i in range(10)] + [{"_id": 10, "value": 2**40}]
+        )
+        original = self.coll.aggregate_raw_batches
+
+        def small_batches(*args, **kwargs):
+            kwargs["batchSize"] = 2
+            return original(*args, **kwargs)
+
+        with mock.patch.object(
+            pymongo.collection.Collection, "aggregate_raw_batches", wraps=small_batches
+        ):
+            for parallelism in ("threads", "processes"):
+                with self.subTest(parallelism=parallelism):
+                    table = aggregate_arrow_all(
+                        self.coll, [{"$sort": {"_id": 1}}], parallelism=parallelism
+                    )
+                    self.assertEqual(table["_id"].to_pylist(), list(range(11)))
+                    self.assertEqual(table["value"].to_pylist(), list(range(10)) + [2**40])
+                    self.assertEqual(table.schema.field("value").type, int64())
+
+
+class TestAggregateArrowAllParallelism(unittest.TestCase):
+    def setUp(self):
+        self.collection = mock.Mock()
+        self.collection.codec_options = CodecOptions()
+
+    def test_parallel_batches_promote_schema_and_preserve_order(self):
+        batches = [
+            bson.encode({"_id": 1, "value": 12}),
+            bson.encode({"_id": 2, "value": 2**40}),
+            bson.encode({"_id": 3, "value": -7}),
+        ]
+        expected = Table.from_pydict(
+            {"_id": [1, 2, 3], "value": [12, 2**40, -7]},
+            ArrowSchema([("_id", int32()), ("value", int64())]),
+        )
+        self.collection.aggregate_raw_batches.side_effect = lambda *args, **kwargs: iter(batches)
+
+        for parallelism in ("off", "threads", "processes"):
+            with self.subTest(parallelism=parallelism):
+                pipeline = [{"$match": {"value": {"$exists": True}}}]
+                result = aggregate_arrow_all(
+                    self.collection, pipeline, parallelism=parallelism, allowDiskUse=True
+                )
+                self.assertTrue(result.equals(expected), msg=f"{result} != {expected}")
+                self.collection.aggregate_raw_batches.assert_called_with(
+                    pipeline, allowDiskUse=True
+                )
+
+    def test_empty_batches_keep_schema(self):
+        self.collection.aggregate_raw_batches.side_effect = lambda *args, **kwargs: iter(())
+        for schema in (None, Schema({"value": int64()})):
+            for parallelism in ("off", "threads", "processes"):
+                with self.subTest(schema=schema, parallelism=parallelism):
+                    pipeline = [{"$match": {"value": 999}}]
+                    result = aggregate_arrow_all(
+                        self.collection, pipeline, schema=schema, parallelism=parallelism
+                    )
+                    self.assertEqual(result.num_rows, 0)
+                    if schema:
+                        self.assertEqual(result.schema, ArrowSchema([("value", int64())]))
+                        self.collection.aggregate_raw_batches.assert_called_with(
+                            [{"$match": {"value": 999}}, {"$project": schema._get_projection()}]
+                        )
+                    else:
+                        self.assertEqual(result.num_columns, 0)
+                        self.collection.aggregate_raw_batches.assert_called_with(pipeline)
+
+    def test_aggregate_wrappers_forward_parallelism(self):
+        self.collection.aggregate_raw_batches.side_effect = lambda *args, **kwargs: iter(
+            [bson.encode({"value": 12})]
+        )
+        for function in (aggregate_numpy_all, aggregate_pandas_all, aggregate_polars_all):
+            with self.subTest(function=function.__name__):
+                result = function(self.collection, [], parallelism="threads")
+                self.assertEqual(result["value"][0], 12)
+                self.collection.aggregate_raw_batches.assert_called_with([])
