@@ -126,6 +126,28 @@ def _concat_or_empty(results, *, schema, codec_options, allow_invalid):
 Parallelism = Literal["threads", "processes", "off"]
 
 
+def _process_raw_batches(raw_batch_cursor, schema, codec_options, allow_invalid, parallelism):
+    if parallelism not in ("threads", "processes"):
+        context = PyMongoArrowContext(
+            schema, codec_options=codec_options, allow_invalid=allow_invalid
+        )
+        for batch in raw_batch_cursor:
+            context.process_bson_stream(batch)
+        return context.finish()
+
+    args = ((schema, codec_options, allow_invalid, batch) for batch in raw_batch_cursor)
+    if parallelism == "threads":
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            results = list(executor.map(lambda batch_args: _process_batch(*batch_args), args))
+    else:
+        with multiprocessing.Pool(processes=4) as pool:
+            results = pool.starmap(_process_batch, args)
+
+    return _concat_or_empty(
+        results, schema=schema, codec_options=codec_options, allow_invalid=allow_invalid
+    )
+
+
 def find_arrow_all(
     collection,
     query,
@@ -173,38 +195,9 @@ def find_arrow_all(
         kwargs.setdefault("projection", schema._get_projection())
 
     raw_batch_cursor = collection.find_raw_batches(query, **kwargs)
-
-    def args_iterable():
-        for batch in collection.find_raw_batches(query, **kwargs):
-            yield (schema, collection.codec_options, allow_invalid, batch)
-
-    if parallelism == "threads":
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            results = list(executor.map(lambda args: _process_batch(*args), args_iterable()))
-        return _concat_or_empty(
-            results,
-            schema=schema,
-            codec_options=collection.codec_options,
-            allow_invalid=allow_invalid,
-        )
-
-    if parallelism == "processes":
-        with multiprocessing.Pool(processes=4) as pool:
-            results = pool.starmap(_process_batch, args_iterable())
-        return _concat_or_empty(
-            results,
-            schema=schema,
-            codec_options=collection.codec_options,
-            allow_invalid=allow_invalid,
-        )
-
-    context = PyMongoArrowContext(
-        schema, codec_options=collection.codec_options, allow_invalid=allow_invalid
+    return _process_raw_batches(
+        raw_batch_cursor, schema, collection.codec_options, allow_invalid, parallelism
     )
-    for batch in raw_batch_cursor:
-        context.process_bson_stream(batch)
-
-    return context.finish()
 
 
 def aggregate_arrow_all(
@@ -260,43 +253,9 @@ def aggregate_arrow_all(
         pipeline.append({"$project": schema._get_projection()})
 
     raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
-    if parallelism == "threads":
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            results = list(
-                executor.map(
-                    lambda batch: _process_batch(
-                        schema, collection.codec_options, allow_invalid, batch
-                    ),
-                    raw_batch_cursor,
-                )
-            )
-        return _concat_or_empty(
-            results,
-            schema=schema,
-            codec_options=collection.codec_options,
-            allow_invalid=allow_invalid,
-        )
-
-    if parallelism == "processes":
-        args = (
-            (schema, collection.codec_options, allow_invalid, batch) for batch in raw_batch_cursor
-        )
-        with multiprocessing.Pool(processes=4) as pool:
-            results = pool.starmap(_process_batch, args)
-        return _concat_or_empty(
-            results,
-            schema=schema,
-            codec_options=collection.codec_options,
-            allow_invalid=allow_invalid,
-        )
-
-    context = PyMongoArrowContext(
-        schema, codec_options=collection.codec_options, allow_invalid=allow_invalid
+    return _process_raw_batches(
+        raw_batch_cursor, schema, collection.codec_options, allow_invalid, parallelism
     )
-    for batch in raw_batch_cursor:
-        context.process_bson_stream(batch)
-
-    return context.finish()
 
 
 def _arrow_to_pandas(arrow_table):

@@ -1526,10 +1526,21 @@ class TestFindArrowAllParallelism(unittest.TestCase):
                     self.assertEqual(table.schema.field("value").type, int64())
 
 
-class TestAggregateArrowAllParallelism(unittest.TestCase):
+class TestRawBatchParallelism(unittest.TestCase):
     def setUp(self):
         self.collection = mock.Mock()
         self.collection.codec_options = CodecOptions()
+
+    def test_find_parallel_uses_one_cursor(self):
+        self.collection.find_raw_batches.side_effect = lambda *args, **kwargs: iter(
+            [bson.encode({"value": 12})]
+        )
+        for parallelism in ("threads", "processes"):
+            with self.subTest(parallelism=parallelism):
+                result = find_arrow_all(self.collection, {}, parallelism=parallelism)
+                self.assertEqual(result["value"].to_pylist(), [12])
+                self.collection.find_raw_batches.assert_called_once_with({})
+                self.collection.find_raw_batches.reset_mock()
 
     def test_parallel_batches_promote_schema_and_preserve_order(self):
         batches = [
