@@ -11,15 +11,10 @@ if [[ "$CIBW_BUILD" == *"macosx_"* ]]
 then
   if [[ "$ARCHFLAGS" == *"arm64"* ]]
   then
-    platform="macosx_12_0_arm64"
     export CMAKE_OSX_ARCHITECTURES="arm64"
   else
-    platform="macosx_12_0_x86_64"
     export CMAKE_OSX_ARCHITECTURES="x86_64"
   fi
-
-  # Install pyarrow with the appropriate platform.
-  pip install --platform $platform --upgrade --target $HOME/wheels --no-deps --only-binary=:all: pyarrow
 fi
 
 # Install just uv, needed for the build command.

@@ -4,8 +4,13 @@ requires = [
     "cython>=3.0",
     # Needed for numpy headers at build time.
     "numpy>=2.1.0",
-    # Must be kept in sync with "project.dependencies" below.
-    "pyarrow>=25.0,<25.1",
+    # Exact pin since PEP 517 build isolation resolves ranges to the
+    # NEWEST matching version, but Cython bakes the build-time size of
+    # pyarrow's cdef classes into the extension,
+    # so the built module only imports on pyarrow >= the compiled-against
+    # version. This must equal the minimum pyarrow in "project.dependencies"
+    # below so every installable build/runtime combination is safe.
+    "pyarrow==25.0.1",
 ]
 build-backend = "scikit_build_core.build"
 
@@ -37,8 +42,8 @@ readme = "README.md"
 requires-python = ">=3.10"
 version = "1.16.0.dev0"
 dependencies = [
-    # Must be kept in sync with "build-system.requires" above.
-    "pyarrow >=25.0,<25.1",
+    # The floor must equal the build-time pin in "build-system.requires" above.
+    "pyarrow >=25.0.1,<25.1",
     "pymongo >=4.4,<5",
     # See comment in test-pandas optional dep below for why we have separate
     # numpy version deps.
