@@ -5,7 +5,6 @@ set -o errexit
 
 # Handle architectures from cibuildwheel.
 # Set CMAKE_OSX_ARCHITECTURES for libbson.
-# Get the appropriate version of pyarrow for macos.
 
 if [[ "$CIBW_BUILD" == *"macosx_"* ]]
 then

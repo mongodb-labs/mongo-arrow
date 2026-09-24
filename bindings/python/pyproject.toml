@@ -145,6 +145,8 @@ exclude = [
 "docs/source/conf.py" = ["E501", "S", "PTH"]
 "benchmarks.py" = ["T201", "E501", "C4", "EM101"]
 "test/*.py" = ["PT", "S", "ARG", "B", "C", "EM", "E501", "RUF005", "UP038"]
+"tools/sync_pyarrow_pin.py" = ["T201"]  # prints are its output
+"tools/test_*.py" = ["S101"]
 
 [dependency-groups]
 dev = [
