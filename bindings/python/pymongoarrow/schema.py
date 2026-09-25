@@ -84,6 +84,9 @@ class Schema:
         projection[fname] = value
         return projection
 
+    def __hash__(self):
+        return hash(self.typemap)
+
     def __eq__(self, other):
         if isinstance(other, type(self)):
             return self.typemap == other.typemap

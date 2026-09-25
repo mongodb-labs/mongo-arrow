@@ -64,16 +64,16 @@ from pymongoarrow.schema import Schema
 from pymongoarrow.types import _validate_schema, get_numpy_type
 
 __all__ = [
+    "Schema",
     "aggregate_arrow_all",
-    "find_arrow_all",
-    "aggregate_pandas_all",
-    "find_pandas_all",
     "aggregate_numpy_all",
-    "find_numpy_all",
+    "aggregate_pandas_all",
     "aggregate_polars_all",
+    "find_arrow_all",
+    "find_numpy_all",
+    "find_pandas_all",
     "find_polars_all",
     "write",
-    "Schema",
 ]
 
 
