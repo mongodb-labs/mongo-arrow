@@ -4,8 +4,12 @@
     "project_url": "https://mongo-arrow.readthedocs.io/en/latest/",
     "repo": "../../",
     "repo_subdir": "bindings/python",
+    "build_command": [
+     "python -m pip wheel --no-deps -w {build_cache_dir} {build_dir}"
+    ],
     "install_command": [
-     "pip install . pandas polars"
+     "python -m pip install {wheel_file} --force-reinstall",
+     "python -m pip install pandas polars"
     ],
     "branches": ["main"],
     "matrix": {

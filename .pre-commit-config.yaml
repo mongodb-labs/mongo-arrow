@@ -112,3 +112,14 @@ repos:
     # - test/versioned-api/crud-api-version-1-strict.json:514: nin ==> inn, min, bin, nine
     # - test/test_client.py:188: te ==> the, be, we, to
     args: ["-L", "fle,fo,infinit,isnt,nin,te"]
+
+# Keep the pyarrow build-time pin and runtime floor in
+# bindings/python/pyproject.toml in sync.
+- repo: local
+  hooks:
+  - id: sync-pyarrow-pin
+    name: sync-pyarrow-pin
+    entry: python3 bindings/python/tools/sync_pyarrow_pin.py
+    language: system
+    files: ^bindings/python/pyproject\.toml$
+    pass_filenames: false
