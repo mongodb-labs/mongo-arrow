@@ -126,6 +126,28 @@ def _concat_or_empty(results, *, schema, codec_options, allow_invalid):
 Parallelism = Literal["threads", "processes", "off"]
 
 
+def _process_raw_batches(raw_batch_cursor, schema, codec_options, allow_invalid, parallelism):
+    if parallelism not in ("threads", "processes"):
+        context = PyMongoArrowContext(
+            schema, codec_options=codec_options, allow_invalid=allow_invalid
+        )
+        for batch in raw_batch_cursor:
+            context.process_bson_stream(batch)
+        return context.finish()
+
+    args = ((schema, codec_options, allow_invalid, batch) for batch in raw_batch_cursor)
+    if parallelism == "threads":
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            results = list(executor.map(lambda batch_args: _process_batch(*batch_args), args))
+    else:
+        with multiprocessing.Pool(processes=4) as pool:
+            results = pool.starmap(_process_batch, args)
+
+    return _concat_or_empty(
+        results, schema=schema, codec_options=codec_options, allow_invalid=allow_invalid
+    )
+
+
 def find_arrow_all(
     collection,
     query,
@@ -173,41 +195,20 @@ def find_arrow_all(
         kwargs.setdefault("projection", schema._get_projection())
 
     raw_batch_cursor = collection.find_raw_batches(query, **kwargs)
-
-    def args_iterable():
-        for batch in collection.find_raw_batches(query, **kwargs):
-            yield (schema, collection.codec_options, allow_invalid, batch)
-
-    if parallelism == "threads":
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            results = list(executor.map(lambda args: _process_batch(*args), args_iterable()))
-        return _concat_or_empty(
-            results,
-            schema=schema,
-            codec_options=collection.codec_options,
-            allow_invalid=allow_invalid,
-        )
-
-    if parallelism == "processes":
-        with multiprocessing.Pool(processes=4) as pool:
-            results = pool.starmap(_process_batch, args_iterable())
-        return _concat_or_empty(
-            results,
-            schema=schema,
-            codec_options=collection.codec_options,
-            allow_invalid=allow_invalid,
-        )
-
-    context = PyMongoArrowContext(
-        schema, codec_options=collection.codec_options, allow_invalid=allow_invalid
+    return _process_raw_batches(
+        raw_batch_cursor, schema, collection.codec_options, allow_invalid, parallelism
     )
-    for batch in raw_batch_cursor:
-        context.process_bson_stream(batch)
-
-    return context.finish()
 
 
-def aggregate_arrow_all(collection, pipeline, *, schema=None, allow_invalid=False, **kwargs):
+def aggregate_arrow_all(
+    collection,
+    pipeline,
+    *,
+    schema=None,
+    allow_invalid=False,
+    parallelism: Parallelism = "off",
+    **kwargs,
+):
     """Method that returns the results of an aggregation pipeline as a
     :class:`pyarrow.Table` instance.
 
@@ -220,6 +221,11 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, allow_invalid=Fals
         result set.
       - `allow_invalid` (optional): If set to ``True``,
         results will have all fields that do not conform to the schema silently converted to NaN.
+      - `parallelism` (optional): Controls how batch processing is parallelized.
+        Possible values are:
+            - "off": (default) Disable parallelism and use the single-process behavior.
+            - "threads": Always use a threaded implementation.
+            - "processes": Always use a multiprocess implementation.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -228,9 +234,6 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, allow_invalid=Fals
       An instance of class:`pyarrow.Table`.
     """
     _add_driver_metadata(collection)
-    context = PyMongoArrowContext(
-        schema, codec_options=collection.codec_options, allow_invalid=allow_invalid
-    )
 
     if pipeline and ("$out" in pipeline[-1] or "$merge" in pipeline[-1]):
         msg = (
@@ -250,10 +253,9 @@ def aggregate_arrow_all(collection, pipeline, *, schema=None, allow_invalid=Fals
         pipeline.append({"$project": schema._get_projection()})
 
     raw_batch_cursor = collection.aggregate_raw_batches(pipeline, **kwargs)
-    for batch in raw_batch_cursor:
-        context.process_bson_stream(batch)
-
-    return context.finish()
+    return _process_raw_batches(
+        raw_batch_cursor, schema, collection.codec_options, allow_invalid, parallelism
+    )
 
 
 def _arrow_to_pandas(arrow_table):
@@ -315,7 +317,15 @@ def find_pandas_all(
     )
 
 
-def aggregate_pandas_all(collection, pipeline, *, schema=None, allow_invalid=False, **kwargs):
+def aggregate_pandas_all(
+    collection,
+    pipeline,
+    *,
+    schema=None,
+    allow_invalid=False,
+    parallelism: Parallelism = "off",
+    **kwargs,
+):
     """Method that returns the results of an aggregation pipeline as a
     :class:`pandas.DataFrame` instance.
 
@@ -328,6 +338,8 @@ def aggregate_pandas_all(collection, pipeline, *, schema=None, allow_invalid=Fal
         result set.
       - `allow_invalid` (optional): If set to ``True``,
         results will have all fields that do not conform to the schema silently converted to NaN.
+      - `parallelism` (optional): Controls how batch processing is parallelized.
+        Possible values are "off" (default), "threads", and "processes".
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -337,7 +349,12 @@ def aggregate_pandas_all(collection, pipeline, *, schema=None, allow_invalid=Fal
     """
     return _arrow_to_pandas(
         aggregate_arrow_all(
-            collection, pipeline, schema=schema, allow_invalid=allow_invalid, **kwargs
+            collection,
+            pipeline,
+            schema=schema,
+            allow_invalid=allow_invalid,
+            parallelism=parallelism,
+            **kwargs,
         )
     )
 
@@ -418,7 +435,15 @@ def find_numpy_all(
     )
 
 
-def aggregate_numpy_all(collection, pipeline, *, schema=None, allow_invalid=False, **kwargs):
+def aggregate_numpy_all(
+    collection,
+    pipeline,
+    *,
+    schema=None,
+    allow_invalid=False,
+    parallelism: Parallelism = "off",
+    **kwargs,
+):
     """Method that returns the results of an aggregation pipeline as a
     :class:`dict` instance whose keys are field names and values are
     :class:`~numpy.ndarray` instances bearing the appropriate dtype.
@@ -432,6 +457,8 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, allow_invalid=Fals
         result set.
       - `allow_invalid` (optional): If set to ``True``,
         results will have all fields that do not conform to the schema silently converted to NaN.
+      - `parallelism` (optional): Controls how batch processing is parallelized.
+        Possible values are "off" (default), "threads", and "processes".
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -450,7 +477,12 @@ def aggregate_numpy_all(collection, pipeline, *, schema=None, allow_invalid=Fals
     """
     return _arrow_to_numpy(
         aggregate_arrow_all(
-            collection, pipeline, schema=schema, allow_invalid=allow_invalid, **kwargs
+            collection,
+            pipeline,
+            schema=schema,
+            allow_invalid=allow_invalid,
+            parallelism=parallelism,
+            **kwargs,
         ),
         schema,
     )
@@ -512,7 +544,15 @@ def find_polars_all(
     )
 
 
-def aggregate_polars_all(collection, pipeline, *, schema=None, allow_invalid=False, **kwargs):
+def aggregate_polars_all(
+    collection,
+    pipeline,
+    *,
+    schema=None,
+    allow_invalid=False,
+    parallelism: Parallelism = "off",
+    **kwargs,
+):
     """Method that returns the results of an aggregation pipeline as a
     :class:`polars.DataFrame` instance.
 
@@ -525,6 +565,8 @@ def aggregate_polars_all(collection, pipeline, *, schema=None, allow_invalid=Fal
         result set.
       - `allow_invalid` (optional): If set to ``True``,
         results will have all fields that do not conform to the schema silently converted to NaN.
+      - `parallelism` (optional): Controls how batch processing is parallelized.
+        Possible values are "off" (default), "threads", and "processes".
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -534,7 +576,12 @@ def aggregate_polars_all(collection, pipeline, *, schema=None, allow_invalid=Fal
     """
     return _arrow_to_polars(
         aggregate_arrow_all(
-            collection, pipeline, schema=schema, allow_invalid=allow_invalid, **kwargs
+            collection,
+            pipeline,
+            schema=schema,
+            allow_invalid=allow_invalid,
+            parallelism=parallelism,
+            **kwargs,
         )
     )
 
