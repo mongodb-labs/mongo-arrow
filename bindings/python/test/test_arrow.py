@@ -59,8 +59,6 @@ from pymongoarrow.api import (
     Schema,
     aggregate_arrow_all,
     aggregate_numpy_all,
-    aggregate_pandas_all,
-    aggregate_polars_all,
     find_arrow_all,
     write,
 )
@@ -1584,12 +1582,12 @@ class TestRawBatchParallelism(unittest.TestCase):
                         self.assertEqual(result.num_columns, 0)
                         self.collection.aggregate_raw_batches.assert_called_with(pipeline)
 
-    def test_aggregate_wrappers_forward_parallelism(self):
-        self.collection.aggregate_raw_batches.side_effect = lambda *args, **kwargs: iter(
-            [bson.encode({"value": 12})]
+    def test_aggregate_numpy_forwards_parallelism(self):
+        with mock.patch(
+            "pymongoarrow.api.aggregate_arrow_all", return_value=pa.table({"value": [12]})
+        ) as aggregate:
+            result = aggregate_numpy_all(self.collection, [], parallelism="threads")
+        self.assertEqual(result["value"][0], 12)
+        aggregate.assert_called_once_with(
+            self.collection, [], schema=None, allow_invalid=False, parallelism="threads"
         )
-        for function in (aggregate_numpy_all, aggregate_pandas_all, aggregate_polars_all):
-            with self.subTest(function=function.__name__):
-                result = function(self.collection, [], parallelism="threads")
-                self.assertEqual(result["value"][0], 12)
-                self.collection.aggregate_raw_batches.assert_called_with([])
