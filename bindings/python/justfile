@@ -16,6 +16,11 @@ build:
 import-check:
     uv run python -c "from pymongoarrow.lib import libbson_version"
 
+# Build the wheel and verify it imports against both the oldest and the newest
+# supported pyarrow.
+wheel-import-check:
+    bash wheel-import-check.sh
+
 benchmark-install *args:
     rm -rf .venv
     python3 -m venv .venv
