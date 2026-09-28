@@ -339,7 +339,10 @@ def aggregate_pandas_all(
       - `allow_invalid` (optional): If set to ``True``,
         results will have all fields that do not conform to the schema silently converted to NaN.
       - `parallelism` (optional): Controls how batch processing is parallelized.
-        Possible values are "off" (default), "threads", and "processes".
+        Possible values are:
+            - "off": (default) Disable parallelism and use the single-process behavior.
+            - "threads": Always use a threaded implementation.
+            - "processes": Always use a multiprocess implementation.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -458,7 +461,10 @@ def aggregate_numpy_all(
       - `allow_invalid` (optional): If set to ``True``,
         results will have all fields that do not conform to the schema silently converted to NaN.
       - `parallelism` (optional): Controls how batch processing is parallelized.
-        Possible values are "off" (default), "threads", and "processes".
+        Possible values are:
+            - "off": (default) Disable parallelism and use the single-process behavior.
+            - "threads": Always use a threaded implementation.
+            - "processes": Always use a multiprocess implementation.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
@@ -566,7 +572,10 @@ def aggregate_polars_all(
       - `allow_invalid` (optional): If set to ``True``,
         results will have all fields that do not conform to the schema silently converted to NaN.
       - `parallelism` (optional): Controls how batch processing is parallelized.
-        Possible values are "off" (default), "threads", and "processes".
+        Possible values are:
+            - "off": (default) Disable parallelism and use the single-process behavior.
+            - "threads": Always use a threaded implementation.
+            - "processes": Always use a multiprocess implementation.
 
     Additional keyword-arguments passed to this method will be passed
     directly to the underlying ``aggregate`` operation.
