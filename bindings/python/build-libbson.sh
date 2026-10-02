@@ -3,9 +3,11 @@
 set -o xtrace
 set -o errexit
 
-# Version of libbson to build
-# Keep in sync with pymongoarrow.version._MIN_LIBBSON_VERSION
-LIBBSON_VERSION=${LIBBSON_VERSION:-"2.0.1"}
+# Version of libbson to build.
+# 2.1.0 is the first release declaring CMake 3.15...4.0 policy support
+# (CDRIVER-6059), required to build with CMake 4 on the GHA macOS runners.
+# Must be >= pymongoarrow.version._MIN_LIBBSON_VERSION.
+LIBBSON_VERSION=${LIBBSON_VERSION:-"2.1.0"}
 if [ -z "$LIBBSON_VERSION" ]
 then
   echo "Did not provide a libbson revision ID to build"
