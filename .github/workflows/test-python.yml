@@ -70,6 +70,13 @@ jobs:
       - name: Install Deps
         run: |
           python -m pip install rust-just
+      # scikit-build-core 1.1+ asks CMake to find the free-threaded interpreter
+      # via Python_FIND_ABI, which only works reliably on CMake >= 4 (CMake
+      # 3.31 on ubuntu-latest fails with "Could NOT find Python").
+      - name: Install CMake 4
+        if: ${{ matrix.os == 'ubuntu-latest' && endsWith(matrix.python-version, 't') }}
+        run: |
+          python -m pip install "cmake>=4"
       - name: Install libbson
         run: just build-libbson
       - name: Ensure imports with no test deps
