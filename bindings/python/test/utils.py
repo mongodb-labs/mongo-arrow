@@ -14,7 +14,6 @@
 import datetime
 import unittest
 from collections import defaultdict
-from test import client_context
 
 import numpy as np
 import pyarrow as pa
@@ -30,6 +29,7 @@ from pymongoarrow.types import (
     ObjectIdType,
     _in_type_map,
 )
+from test import client_context
 
 
 def isnan(inp):

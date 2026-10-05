@@ -14,8 +14,6 @@
 # from datetime import datetime, timedelta
 import datetime
 import unittest
-from test import client_context
-from test.utils import AllowListEventListener, NullsTestMixin
 from unittest import mock
 
 import numpy as np
@@ -28,6 +26,8 @@ from pytz import timezone
 from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
+from test import client_context
+from test.utils import AllowListEventListener, NullsTestMixin
 
 
 class NumpyTestBase(unittest.TestCase):

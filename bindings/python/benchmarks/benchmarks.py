@@ -201,8 +201,7 @@ class ProfileReadArray(Read):
         )
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
-            "%d docs, %dk each with %d keys"
-            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+            f"{N_DOCS} docs, {len(BSON.encode(base_dict)) // 1024} each with {len(base_dict)} keys"
         )
 
     # All of the following tests are being skipped because NumPy/Pandas/Polars do not work with nested arrays.
@@ -248,8 +247,7 @@ class ProfileReadDocument(Read):
         )
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
-            "%d docs, %dk each with %d keys"
-            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+            f"{N_DOCS} docs, {len(BSON.encode(base_dict)) // 1024} each with {len(base_dict)} keys"
         )
 
     # All of the following tests are being skipped because NumPy/Pandas/Polars do not work with nested documents.
@@ -287,8 +285,7 @@ class ProfileReadSmall(Read):
         )
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
-            "%d docs, %dk each with %d keys"
-            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+            f"{N_DOCS} docs, {len(BSON.encode(base_dict)) // 1024} each with {len(base_dict)} keys"
         )
 
 
@@ -304,8 +301,7 @@ class ProfileReadLarge(Read):
         base_dict = dict([(k, math.pi) for k in self.large_doc_keys])
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
-            "%d docs, %dk each with %d keys"
-            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+            f"{N_DOCS} docs, {len(BSON.encode(base_dict)) // 1024} each with {len(base_dict)} keys"
         )
 
 
@@ -324,8 +320,7 @@ class ProfileReadExtensionSmall(Read):
         )
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
-            "%d docs, %dk each with %d keys"
-            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+            f"{N_DOCS} docs, {len(BSON.encode(base_dict)) // 1024} each with {len(base_dict)} keys"
         )
 
     # This must be skipped because arrow can't read the Decimal128Type
@@ -348,8 +343,7 @@ class ProfileReadExtensionLarge(Read):
         base_dict = dict([(k, Decimal128(k)) for k in self.large_doc_keys])
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
-            "%d docs, %dk each with %d keys"
-            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+            f"{N_DOCS} docs, {len(BSON.encode(base_dict)) // 1024} each with {len(base_dict)} keys"
         )
 
     # This must be skipped because arrow can't read the Decimal128Type
@@ -371,8 +365,7 @@ class ProfileInsertSmall(Insert):
         base_dict = dict([("x", 1), ("y", math.pi)])
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
-            "%d docs, %dk each with %d keys"
-            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+            f"{N_DOCS} docs, {len(BSON.encode(base_dict)) // 1024} each with {len(base_dict)} keys"
         )
         self.arrow_table = find_arrow_all(db.benchmark, {}, schema=self.schema)
         self.pandas_table = find_pandas_all(db.benchmark, {}, schema=self.schema)
@@ -391,8 +384,7 @@ class ProfileInsertLarge(Insert):
         base_dict = dict([(k, math.pi) for k in self.large_doc_keys])
         coll.insert_many([base_dict.copy() for _ in range(N_DOCS)])
         print(
-            "%d docs, %dk each with %d keys"
-            % (N_DOCS, len(BSON.encode(base_dict)) // 1024, len(base_dict))
+            f"{N_DOCS} docs, {len(BSON.encode(base_dict)) // 1024} each with {len(base_dict)} keys"
         )
         self.arrow_table = find_arrow_all(db.benchmark, {}, schema=self.schema)
         self.pandas_table = find_pandas_all(db.benchmark, {}, schema=self.schema)

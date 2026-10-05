@@ -13,7 +13,6 @@
 # limitations under the License.
 import unittest
 from datetime import datetime, timedelta, timezone
-from test import client_context
 
 import pytz
 from bson.codec_options import CodecOptions
@@ -23,6 +22,7 @@ from pymongo import ASCENDING, WriteConcern
 
 from pymongoarrow.api import Schema, find_arrow_all
 from pymongoarrow.context import PyMongoArrowContext
+from test import client_context
 
 
 class TestDateTimeType(unittest.TestCase):
