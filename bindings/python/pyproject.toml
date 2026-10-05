@@ -1,9 +1,9 @@
 [build-system]
 requires = [
     "scikit-build-core>=0.10",
-    "cython>=3.0",
+    "cython>=3.0,<4",
     # Needed for numpy headers at build time.
-    "numpy>=2.1.0",
+    "numpy>=2.1.0,<3",
     # Exact pin since PEP 517 build isolation resolves ranges to the
     # NEWEST matching version, but Cython bakes the build-time size of
     # pyarrow's cdef classes into the extension,
