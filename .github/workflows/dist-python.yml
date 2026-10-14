@@ -39,7 +39,7 @@ jobs:
         - [ubuntu-24.04, manylinux_aarch64]
         - [macos-14, macosx_*]
         - [windows-2022, win_amd64]
-        python: ["cp310", "cp311", "cp312", "cp313", "cp314", "cp314t"]
+        python: ["cp311", "cp312", "cp313", "cp314", "cp314t"]
         exclude:
           - buildplat: [windows-2022, win_amd64]
             python: "cp314t"
@@ -105,7 +105,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           # Build sdist on lowest supported Python
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
