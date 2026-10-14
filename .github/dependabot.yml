@@ -12,11 +12,11 @@ updates:
         patterns:
           - "*"
     assignees:
-      - "@mongodb/dbx-python"
+      - "@mongodb-labs/dbx-python"
   # Python
   - package-ecosystem: "pip"
     directory: "/bindings/python"
     schedule:
       interval: "weekly"
     assignees:
-      - "@mongodb/dbx-python"
+      - "@mongodb-labs/dbx-python"

@@ -30,7 +30,6 @@ classifiers = [
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -39,16 +38,13 @@ classifiers = [
     "Topic :: Database",
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 version = "1.16.0.dev0"
 dependencies = [
     # The floor must equal the build-time pin in "build-system.requires" above.
     "pyarrow >=25.0.1,<25.1",
     "pymongo >=4.4,<5",
-    # See comment in test-pandas optional dep below for why we have separate
-    # numpy version deps.
-    "numpy>=1.26; python_version < '3.11'",
-    "numpy>=2.1.0; python_version >= '3.11'",
+    "numpy>=2.1.0",
     "packaging >=23.2",
 ]
 
@@ -61,9 +57,7 @@ Tracker = "https://jira.mongodb.org/projects/INTPYTHON/issues"
 [project.optional-dependencies]
 test = ["pytz>=2025.2", "pytest>=8.0"]
 test-polars = ["polars>=1.10"]
-# Ensure we test both pandas 2.x and 3.x.  pandas 3.x only supports python 3.11+.
-# pandas 2.x on python 3.11 only supports numpy<2.
-test-pandas = ["pandas>=2.0.3; python_version < '3.11'", "numpy<2; python_version < '3.11'", "pandas>=3.0; python_version >= '3.11'"]
+test-pandas = ["pandas>=3.0"]
 
 [tool.scikit-build]
 wheel.packages = ["pymongoarrow"]
@@ -158,7 +152,7 @@ benchmark = [
   "asv>=0.6.5"
 ]
 docs = [
-  "sphinx>=5.3,<9",
+  "sphinx>=5.3,<10",
   "sphinx_rtd_theme>=2,<4",
   "sphinxcontrib-shellcheck>=1,<2",
   "furo==2025.12.19"
