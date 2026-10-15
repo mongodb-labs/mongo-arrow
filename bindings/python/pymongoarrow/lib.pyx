@@ -836,7 +836,7 @@ cdef class DocumentBuilder(_ArrayBuilderBase):
 
     def finish(self):
         # Fields must be in order if we were given a schema.
-        return list(f.decode('utf-8') for f in self.field_map)
+        return [f.decode('utf-8') for f in self.field_map]
 
 
 cdef class ListBuilder(_ArrayBuilderBase):

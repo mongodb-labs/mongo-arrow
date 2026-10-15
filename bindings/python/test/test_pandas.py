@@ -13,7 +13,7 @@
 # limitations under the License.
 # from datetime import datetime, timedelta
 import concurrent.futures
-import datetime
+import datetime as dt
 import tempfile
 import threading
 import unittest
@@ -197,7 +197,7 @@ class TestExplicitPandasApi(PandasTestBase):
                 "Int64": [i for i in range(2)] + [None],
                 "float": [i for i in range(2)] + [None],
                 "int": [i for i in range(2)] + [None],
-                "datetime": [datetime.datetime(1970 + i, 1, 1) for i in range(2)] + [None],
+                "datetime": [dt.datetime(1970 + i, 1, 1) for i in range(2)] + [None],
                 "str": [f"a{i}" for i in range(2)] + [None],
                 "bool": [True, False, None],
                 "Binary": [Binary(bytes(i), 10) for i in range(2)] + [None],
@@ -214,7 +214,7 @@ class TestExplicitPandasApi(PandasTestBase):
         # Where pandas does not implement utcoffset for null timestamps.
         def new_replace(k):
             if isinstance(k, pd.NaT.__class__):
-                return datetime.datetime(1970, 1, 1)
+                return dt.datetime(1970, 1, 1)
             return k.replace(tzinfo=None)
 
         data["datetime"] = data.apply(lambda row: new_replace(row["datetime"]), axis=1)
@@ -284,7 +284,7 @@ class TestExplicitPandasApi(PandasTestBase):
             "bool": [True for _ in range(3)],
             "double": [0.1 for _ in range(3)],
             "int32": [i for i in range(3)],
-            "dt": [datetime.datetime(1970 + i, 1, 1) for i in range(3)],
+            "dt": [dt.datetime(1970 + i, 1, 1) for i in range(3)],
         }
 
         def inner(i):
@@ -293,7 +293,7 @@ class TestExplicitPandasApi(PandasTestBase):
                 bool=bool(i),
                 double=i + 0.1,
                 int32=i,
-                dt=datetime.datetime(1970 + i, 1, 1),
+                dt=dt.datetime(1970 + i, 1, 1),
             )
 
         raw_data["nested"] = [inner(i) for i in range(3)]
@@ -337,8 +337,7 @@ class TestExplicitPandasApi(PandasTestBase):
                 "string": [None] + [str(i) for i in range(2)],
                 "bool": [True for _ in range(3)],
                 "dt": [
-                    datetime.datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern"))
-                    for i in range(3)
+                    dt.datetime(1970 + i, 1, 1, tzinfo=timezone("US/Eastern")) for i in range(3)
                 ],
             },
         ).astype(schema)
@@ -443,7 +442,7 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
     def equal_fn(self, left, right):
         left = left.fillna(0)
         right = right.fillna(0)
-        if type(left) == pandas.DataFrame:
+        if type(left) is pandas.DataFrame:
             pandas.testing.assert_frame_equal(left, right, check_dtype=False)
         else:
             pandas.testing.assert_series_equal(left, right, check_dtype=False)
@@ -458,7 +457,7 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         str: "object",
         int: ["int64", "float64"],
         float: "float64",
-        datetime.datetime: "datetime64[ms]",
+        dt.datetime: "datetime64[ms]",
         ObjectId: "bson_PandasObjectId",
         Decimal128: "bson_PandasDecimal128",
         bool: "object",
@@ -470,7 +469,7 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         str: None,
         int: None,
         float: None,
-        datetime.datetime: ValueError,
+        dt.datetime: ValueError,
         ObjectId: pa.lib.ArrowInvalid,
         Decimal128: pa.lib.ArrowInvalid,
         bool: None,
