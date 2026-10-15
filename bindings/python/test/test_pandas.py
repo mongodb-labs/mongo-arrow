@@ -46,6 +46,19 @@ except ImportError:
     pytest.skip("skipping pandas tests", allow_module_level=True)
 
 
+class TestAggregatePandasParallelism(unittest.TestCase):
+    def test_aggregate_pandas_forwards_parallelism(self):
+        collection = mock.Mock()
+        with mock.patch(
+            "pymongoarrow.api.aggregate_arrow_all", return_value=pa.table({"value": [12]})
+        ) as aggregate:
+            result = aggregate_pandas_all(collection, [], parallelism="threads")
+        self.assertEqual(result["value"][0], 12)
+        aggregate.assert_called_once_with(
+            collection, [], schema=None, allow_invalid=False, parallelism="threads"
+        )
+
+
 class PandasTestBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

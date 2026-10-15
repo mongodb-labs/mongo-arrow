@@ -6,6 +6,9 @@
 # Changes in Version 1.17.0 (2026/XX/YY)
 
 - Drop support for Python 3.10.
+- Extend the `parallelism` parameter in `find_*_all` to `aggregate_arrow_all`, `aggregate_pandas_all`,
+  `aggregate_numpy_all`, and `aggregate_polars_all`, supporting `"off"` (default),
+  `"threads"`, and `"processes"` for parallel aggregation batching.
 
 # Changes in Version 1.16.1 (2026/09/24)
 
@@ -21,11 +24,9 @@
 
 - Add support for PyArrow 24.0. Drop support for PyArrow 23.0.
 
-
 # Changes in Version 1.13.1 (2026/05/27)
 
 - Fixes bug where if parallel `find_all` on empty results failed due to trying to concat no tables. Now, the concat is skipped on empty results.
-
 
 # Changes in Version 1.13.0 (2026/03/12)
 
@@ -36,7 +37,6 @@
   `parallelism` are `"off"` (default) and `"processes"`.
 - Fix a bug where schema inference for integer fields could produce an overflow error if the first value in the field fit within the int32 range but later values did not.
 - Fix a bug where parallel batch processing would fail when different batches had different inferred schemas.
-
 
 # Changes in Version 1.12.0 (2026/01/26)
 
