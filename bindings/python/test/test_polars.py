@@ -18,8 +18,6 @@ import unittest
 import unittest.mock as mock
 import uuid
 from datetime import datetime
-from test import client_context
-from test.utils import AllowListEventListener
 
 import bson
 import pyarrow as pa
@@ -38,6 +36,8 @@ from pymongoarrow.types import (
     Decimal128Type,
     ObjectIdType,
 )
+from test import client_context
+from test.utils import AllowListEventListener
 
 try:
     import polars as pl
