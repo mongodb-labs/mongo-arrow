@@ -6,6 +6,7 @@
 # Changes in Version 1.17.0 (2026/XX/YY)
 
 - Drop support for Python 3.10.
+- Add support for PyArrow 26.0. Drop support for PyArrow 25.0.
 - Extend the `parallelism` parameter in `find_*_all` to `aggregate_arrow_all`, `aggregate_pandas_all`,
   `aggregate_numpy_all`, and `aggregate_polars_all`, supporting `"off"` (default),
   `"threads"`, and `"processes"` for parallel aggregation batching.
