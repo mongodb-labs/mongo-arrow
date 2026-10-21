@@ -42,8 +42,5 @@ except ImportError:
 
 if libbson_version is not None and _parse_version is not None:  # noqa: SIM102
     if _parse_version(libbson_version) < _parse_version(_MIN_LIBBSON_VERSION):
-        msg = (
-            f"Expected libbson version {_MIN_LIBBSON_VERSION} or greater, "
-            f"found {libbson_version}"
-        )
+        msg = f"Expected libbson version {_MIN_LIBBSON_VERSION} or greater, found {libbson_version}"
         raise ImportError(msg)
