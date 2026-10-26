@@ -129,6 +129,8 @@ select = [
 ignore = [
   "PLR",        # Design related pylint codes
   "RUF012",     # Mutable class attributes should be annotated with `typing.ClassVar`
+  "PLC0415",    # Delayed imports support optional dependencies and unbuilt extensions
+  "PLW1641",    # Equality does not imply hashability for mutable schemas and arrays
 ]
 unfixable = [
 ]

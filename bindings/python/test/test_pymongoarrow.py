@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import unittest
-from test import client_context
 
 from pymongoarrow.api import find_arrow_all, find_pandas_all, find_polars_all
 from pymongoarrow.schema import Schema
 from pymongoarrow.version import __version__
+from test import client_context
 
 
 class TestPyMongoArrow(unittest.TestCase):

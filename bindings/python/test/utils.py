@@ -11,10 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import datetime
+import datetime as dt
 import unittest
 from collections import defaultdict
-from test import client_context
 
 import numpy as np
 import pyarrow as pa
@@ -30,6 +29,7 @@ from pymongoarrow.types import (
     ObjectIdType,
     _in_type_map,
 )
+from test import client_context
 
 
 def isnan(inp):
@@ -111,7 +111,7 @@ class NullsTestMixin:
         str: str,
         int: int,
         float: float,
-        datetime.datetime: lambda x: datetime.datetime(x + 1970, 1, 1),
+        dt.datetime: lambda x: dt.datetime(x + 1970, 1, 1),
         ObjectId: lambda _: ObjectId(),
         Decimal128: lambda x: Decimal128([x, x]),
     }
@@ -121,7 +121,7 @@ class NullsTestMixin:
         str: string(),
         int: int64(),
         float: float64(),
-        datetime.datetime: timestamp("ms"),
+        dt.datetime: timestamp("ms"),
         ObjectId: ObjectIdType(),
         Decimal128: Decimal128Type(),
         bool: bool_(),
@@ -131,7 +131,7 @@ class NullsTestMixin:
         str: None,
         int: None,
         float: None,
-        datetime.datetime: None,
+        dt.datetime: None,
         ObjectId: pa.lib.ArrowInvalid,
         Decimal128: pa.lib.ArrowInvalid,
         bool: None,
@@ -213,7 +213,7 @@ class NullsTestMixin:
     def test_other_handling(self):
         # Tests other types, which are treated differently in
         # arrow/pandas/numpy.
-        for gen in [str, float, datetime.datetime, ObjectId, Decimal128]:
+        for gen in [str, float, dt.datetime, ObjectId, Decimal128]:
             con_type = self.pytype_tab_map[gen]  # Arrow/Pandas/Numpy
             pytype = NullsTestMixin.pytype_tab_map[gen]  # Arrow type specifically
 
@@ -242,9 +242,7 @@ class NullsTestMixin:
                 self.coll.drop()
                 table_write_schema = Schema({"other": pytype})
                 table_write_schema_arrow = (
-                    pa.schema([("other", pytype)])
-                    if (gen in [str, float, datetime.datetime])
-                    else None
+                    pa.schema([("other", pytype)]) if (gen in [str, float, dt.datetime]) else None
                 )
 
                 table_write = self.table_from_dict(

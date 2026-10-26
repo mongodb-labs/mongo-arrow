@@ -12,10 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # from datetime import datetime, timedelta
-import datetime
+import datetime as dt
 import unittest
-from test import client_context
-from test.utils import AllowListEventListener, NullsTestMixin
 from unittest import mock
 
 import numpy as np
@@ -28,6 +26,8 @@ from pytz import timezone
 from pymongoarrow.api import Schema, aggregate_numpy_all, find_numpy_all, write
 from pymongoarrow.errors import ArrowWriteError
 from pymongoarrow.types import _TYPE_NORMALIZER_FACTORY, Decimal128Type, ObjectIdType
+from test import client_context
+from test.utils import AllowListEventListener, NullsTestMixin
 
 
 class NumpyTestBase(unittest.TestCase):
@@ -234,7 +234,7 @@ class TestExplicitNumPyApi(NumpyTestBase):
         data = {
             "string": [None] + [str(i) for i in range(2)],
             "bool": [True for _ in range(3)],
-            "dt": [datetime.datetime(1970 + i, 1, 1) for i in range(3)],
+            "dt": [dt.datetime(1970 + i, 1, 1) for i in range(3)],
         }
         data = self.schemafied_ndarray_dict(data, schema)
 
@@ -268,7 +268,7 @@ class TestExplicitNumPyApi(NumpyTestBase):
         data = {
             "string": [str(i) for i in range(3)],
             "bool": [True for _ in range(3)],
-            "dt": [datetime.datetime(1970 + i, 1, 1) for i in range(3)],
+            "dt": [dt.datetime(1970 + i, 1, 1) for i in range(3)],
         }
         data = self.schemafied_ndarray_dict(data, schema)
         self.coll.drop()
@@ -349,7 +349,7 @@ class TestNulls(NullsTestMixin, NumpyTestBase):
         str: "str128",
         int: ["int64", "float64"],
         float: "float64",
-        datetime.datetime: "datetime64[ms]",
+        dt.datetime: "datetime64[ms]",
         ObjectId: "object",
         Decimal128: "object",
         bool: "object",
@@ -359,7 +359,7 @@ class TestNulls(NullsTestMixin, NumpyTestBase):
         str: None,
         int: None,
         float: None,
-        datetime.datetime: ValueError,  # TypeError,
+        dt.datetime: ValueError,  # TypeError,
         ObjectId: ValueError,  # TypeError,
         Decimal128: ValueError,  # TypeError,
         bool: None,
