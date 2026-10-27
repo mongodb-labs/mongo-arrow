@@ -82,8 +82,6 @@ jobs:
       - name: Ensure imports with no test deps
         run: just import-check
       - name: Run the tests
-        # Skip testing with optional deps and free-threaded interpreters on Windows due to pandas import issues.
-        if: ${{ runner.os != 'Windows' || ! endsWith(matrix.python-version, 't') }}
         env:
           UV_PYTHON: ${{matrix.python-version}}
         run: just test
