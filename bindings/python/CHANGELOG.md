@@ -3,7 +3,7 @@
 
 ---
 
-# Changes in Version 1.16.0 (2026/XX/YY)
+# Changes in Version 1.16.0 (2026/10/27)
 
 - Drop support for Python 3.10.
 - Add support for Python 3.15 and 3.15 free-threaded.
