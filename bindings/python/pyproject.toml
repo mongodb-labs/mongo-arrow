@@ -42,7 +42,7 @@ classifiers = [
 ]
 readme = "README.md"
 requires-python = ">=3.11"
-version = "1.16.0.dev0"
+version = "1.16.0"
 dependencies = [
     # The floor must equal the build-time pin in "build-system.requires" above.
     "pyarrow >=26.0.0,<26.1",
