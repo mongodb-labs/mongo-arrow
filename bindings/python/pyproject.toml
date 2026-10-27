@@ -4,6 +4,8 @@ requires = [
     "cython>=3.0,<4",
     # Needed for numpy headers at build time.
     "numpy>=2.1.0,<3",
+    # Python 3.15 wheels for Windows were first released in 2.5.2
+    "numpy>=2.5.2; python_version >= '3.15'",
     # Exact pin since PEP 517 build isolation resolves ranges to the
     # NEWEST matching version, but Cython bakes the build-time size of
     # pyarrow's cdef classes into the extension,
@@ -34,6 +36,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Implementation :: CPython",
     "Topic :: Database",
 ]
@@ -45,6 +48,7 @@ dependencies = [
     "pyarrow >=26.0.0,<26.1",
     "pymongo >=4.4,<5",
     "numpy>=2.1.0",
+    "numpy>=2.5.2; python_version >= '3.15'",
     "packaging >=23.2",
 ]
 
@@ -56,8 +60,8 @@ Tracker = "https://jira.mongodb.org/projects/INTPYTHON/issues"
 
 [project.optional-dependencies]
 test = ["pytz>=2025.2", "pytest>=8.0"]
-test-polars = ["polars>=1.10"]
-test-pandas = ["pandas>=3.0"]
+test-polars = ["polars>=2.0"]
+test-pandas = ["pandas>=3.1"]
 
 [tool.scikit-build]
 wheel.packages = ["pymongoarrow"]

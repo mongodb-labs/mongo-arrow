@@ -39,8 +39,6 @@ from test.utils import AllowListEventListener, NullsTestMixin
 try:
     import pandas as pd
     import pandas.testing
-
-    pd.options.future.infer_string = True
 except ImportError:
     pd = None
     pytest.skip("skipping pandas tests", allow_module_level=True)
@@ -440,8 +438,6 @@ class TestNulls(NullsTestMixin, unittest.TestCase):
         return find_pandas_all(coll, query, schema=schema)
 
     def equal_fn(self, left, right):
-        left = left.fillna(0)
-        right = right.fillna(0)
         if type(left) is pandas.DataFrame:
             pandas.testing.assert_frame_equal(left, right, check_dtype=False)
         else:

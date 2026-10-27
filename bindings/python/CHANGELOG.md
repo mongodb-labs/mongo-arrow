@@ -3,17 +3,15 @@
 
 ---
 
-# Changes in Version 1.17.0 (2026/XX/YY)
+# Changes in Version 1.16.0 (2026/XX/YY)
 
 - Drop support for Python 3.10.
+- Add support for Python 3.15 and 3.15 free-threaded.
 - Add support for PyArrow 26.0. Drop support for PyArrow 25.0.
+- Add support for Polars 2.0. Drop support for Polars 1.x.
 - Extend the `parallelism` parameter in `find_*_all` to `aggregate_arrow_all`, `aggregate_pandas_all`,
   `aggregate_numpy_all`, and `aggregate_polars_all`, supporting `"off"` (default),
   `"threads"`, and `"processes"` for parallel aggregation batching.
-
-# Changes in Version 1.16.1 (2026/09/24)
-
-- Raise the minimum supported PyArrow version to 25.0.1. Drop support for PyArrow 25.0.0 (25.0.0 is affected by GH-50471, a segfault when libarrow is first loaded on a non-main thread).
 
 # Changes in Version 1.15.0 (2026/07/16)
 

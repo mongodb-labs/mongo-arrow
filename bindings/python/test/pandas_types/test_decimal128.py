@@ -93,7 +93,9 @@ class TestGetitem(base.BaseGetitemTests):
 
 
 class TestSetitem(base.BaseSetitemTests):
-    pass
+    @pytest.mark.xfail(raises=TypeError, reason="bson.Decimal128 is unhashable")
+    def test_loc_setitem_with_expansion_retains_ea_dtype(self, data):
+        super().test_loc_setitem_with_expansion_retains_ea_dtype(data)
 
 
 class TestIndex(base.BaseIndexTests):
