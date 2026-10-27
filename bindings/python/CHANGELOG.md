@@ -8,6 +8,7 @@
 - Drop support for Python 3.10.
 - Add support for Python 3.15 and 3.15 free-threaded on Linux and MacOS.
 - Add support for PyArrow 26.0. Drop support for PyArrow 25.0.
+- Add support for Polars 2.0. Drop support for Polars 1.x.
 - Extend the `parallelism` parameter in `find_*_all` to `aggregate_arrow_all`, `aggregate_pandas_all`,
   `aggregate_numpy_all`, and `aggregate_polars_all`, supporting `"off"` (default),
   `"threads"`, and `"processes"` for parallel aggregation batching.
