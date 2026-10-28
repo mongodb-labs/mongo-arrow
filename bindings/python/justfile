@@ -7,7 +7,9 @@ default:
   @just --list
 
 build-libbson:
-    uv sync --no-install-project --dev --frozen
+    # Unset ARCHFLAGS set by cibuildwheel when compiling so that any
+    # dev dependencies built from source match the host interpreter.
+    env -u ARCHFLAGS uv sync --no-install-project --dev --frozen
     bash build-libbson.sh
 
 build:
