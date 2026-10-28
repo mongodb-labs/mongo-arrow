@@ -38,10 +38,10 @@ echo "MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET}"
 echo "CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
 echo "LIBBSON_INSTALL_DIR=${LIBBSON_INSTALL_DIR}"
 
-# Activate the virtualenv for the cmake build.
+# Activate the virtualenv for the cmake build, if one exists.
 if [ -d "$(pwd)/.venv/Scripts" ]; then
   . "$(pwd)/.venv/Scripts/activate"
-else
+elif [ -d "$(pwd)/.venv/bin" ]; then
   . "$(pwd)/.venv/bin/activate"
 fi
 
