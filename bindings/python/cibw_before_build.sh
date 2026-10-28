@@ -20,4 +20,4 @@ fi
 pip install rust-just uv
 
 # Build libbson with the appropriate arch.
-CMAKE_BUILD_TYPE=Release just build-libbson
+CMAKE_BUILD_TYPE=Release just build-libbson-only

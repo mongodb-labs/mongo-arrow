@@ -10,6 +10,10 @@ build-libbson:
     uv sync --no-install-project --dev --frozen
     bash build-libbson.sh
 
+# Build libbson without syncing the dev environment since it's not needed for building wheels.
+build-libbson-only:
+    bash build-libbson.sh
+
 build:
     uv sync --dev --reinstall-package pymongoarrow
 
