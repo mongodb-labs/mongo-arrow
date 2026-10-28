@@ -39,10 +39,7 @@ jobs:
         - [ubuntu-24.04, manylinux_aarch64]
         - [macos-14, macosx_*]
         - [windows-2022, win_amd64]
-        python: ["cp311", "cp312", "cp313", "cp314", "cp314t"]
-        exclude:
-          - buildplat: [windows-2022, win_amd64]
-            python: "cp314t"
+        python: ["cp311", "cp312", "cp313", "cp314", "cp314t", "cp315", "cp315t"]
     steps:
       - name: Checkout pymongoarrow
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -79,7 +76,7 @@ jobs:
           enable-cache: false
 
       - name: Install deps
-        run: python -m pip install "cibuildwheel>=3.3,<4" rust-just
+        run: python -m pip install "cibuildwheel>=4,<5" rust-just
 
       - name: Build wheels
         if: ${{ matrix.buildplat[0] != 'macos-11' }}

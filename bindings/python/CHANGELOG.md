@@ -3,6 +3,10 @@
 
 ---
 
+# Changes in Version 1.16.1 (2026/10/28)
+
+- Add wheels for Python 3.15 and Python 3.15 free-threaded.
+
 # Changes in Version 1.16.0 (2026/10/27)
 
 - Drop support for Python 3.10.
