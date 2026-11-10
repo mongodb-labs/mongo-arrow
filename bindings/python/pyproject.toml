@@ -12,7 +12,7 @@ requires = [
     # so the built module only imports on pyarrow >= the compiled-against
     # version. This must equal the minimum pyarrow in "project.dependencies"
     # below so every installable build/runtime combination is safe.
-    "pyarrow==26.0.0",
+    "pyarrow==26.0.1",
 ]
 build-backend = "scikit_build_core.build"
 
