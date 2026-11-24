@@ -21,6 +21,15 @@ then
   git clone --depth 1 -b "$LIBBSON_VERSION" https://github.com/mongodb/mongo-c-driver.git "$WORKDIR"
 fi
 
+# Work around CDRIVER-6534: the driver's build treats warning C4047 as an
+# error (msvc:/we4047 in build/cmake/MongoC-Warnings.cmake), and MSVC 19.52
+# on windows-latest newly flags libbson's pointer-to-bool mlib_check()
+# calls in src/libbson/src/bson/validate.c as C4047. The upstream fix
+# (https://github.com/mongodb/mongo-c-driver/commit/513e7b1aa7) is not in
+# a release yet; drop the flag until it ships.
+sed -i.bak 's|msvc:/we4047||' "$WORKDIR/build/cmake/MongoC-Warnings.cmake"
+rm -f "$WORKDIR/build/cmake/MongoC-Warnings.cmake.bak"
+
 echo "Installing libbson..."
 DEFAULT_ARCH=$(uname -m)
 MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-"10.15"}
