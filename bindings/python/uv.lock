@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
@@ -964,7 +964,7 @@ wheels = [
 
 [[package]]
 name = "pymongoarrow"
-version = "1.16.1.dev0"
+version = "1.16.2.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "numpy", version = "2.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
@@ -978,6 +978,7 @@ dependencies = [
 test = [
     { name = "pytest" },
     { name = "pytz" },
+    { name = "tzdata" },
 ]
 test-pandas = [
     { name = "pandas" },
@@ -1013,6 +1014,7 @@ requires-dist = [
     { name = "pymongo", specifier = ">=4.4,<5" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0" },
     { name = "pytz", marker = "extra == 'test'", specifier = ">=2025.2" },
+    { name = "tzdata", marker = "extra == 'test'", specifier = ">=2025.2" },
 ]
 provides-extras = ["test", "test-polars", "test-pandas"]
 
