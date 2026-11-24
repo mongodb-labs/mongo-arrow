@@ -37,7 +37,7 @@ jobs:
         buildplat:
         - [ubuntu-24.04, manylinux_x86_64]
         - [ubuntu-24.04, manylinux_aarch64]
-        - [macos-14, macosx_*]
+        - [macos-15, macosx_*]
         - [windows-2022, win_amd64]
         python: ["cp311", "cp312", "cp313", "cp314", "cp314t", "cp315", "cp315t"]
     steps:
@@ -79,7 +79,6 @@ jobs:
         run: python -m pip install "cibuildwheel>=4,<5" rust-just
 
       - name: Build wheels
-        if: ${{ matrix.buildplat[0] != 'macos-11' }}
         env:
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}
           MACOSX_DEPLOYMENT_TARGET: "12.0"
